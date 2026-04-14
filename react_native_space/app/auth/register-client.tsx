@@ -33,10 +33,10 @@ export default function RegisterClientScreen() {
     if (!form?.documentId?.trim?.()) errs.documentId = 'Requerido';
     if (!form?.phone?.trim?.()) errs.phone = 'Requerido';
     if (!form?.email?.trim?.()) errs.email = 'Requerido';
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Email inv\u00e1lido';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Email inválido';
     if (!form?.password) errs.password = 'Requerido';
-    else if ((form?.password?.length ?? 0) < 6) errs.password = 'M\u00ednimo 6 caracteres';
-    if (form?.password !== form?.confirmPassword) errs.confirmPassword = 'Las contrase\u00f1as no coinciden';
+    else if ((form?.password?.length ?? 0) < 6) errs.password = 'Mínimo 6 caracteres';
+    if (form?.password !== form?.confirmPassword) errs.confirmPassword = 'Las contraseñas no coinciden';
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -76,16 +76,16 @@ export default function RegisterClientScreen() {
 
           <Input label="Nombre" value={form.firstName} onChangeText={(v) => update('firstName', v)} error={fieldErrors?.firstName} />
           <Input label="Apellido" value={form.lastName} onChangeText={(v) => update('lastName', v)} error={fieldErrors?.lastName} />
-          <Input label="C\u00e9dula" value={form.documentId} onChangeText={(v) => update('documentId', v)} keyboardType="numeric" error={fieldErrors?.documentId} />
-          <Input label="Tel\u00e9fono" value={form.phone} onChangeText={(v) => update('phone', v)} keyboardType="phone-pad" error={fieldErrors?.phone} />
+          <Input label="Cédula" value={form.documentId} onChangeText={(v) => update('documentId', v)} keyboardType="numeric" error={fieldErrors?.documentId} />
+          <Input label="Teléfono" value={form.phone} onChangeText={(v) => update('phone', v)} keyboardType="phone-pad" error={fieldErrors?.phone} />
           <Input label="Email" value={form.email} onChangeText={(v) => update('email', v)} keyboardType="email-address" autoCapitalize="none" error={fieldErrors?.email} />
-          <Input label="Contrase\u00f1a" value={form.password} onChangeText={(v) => update('password', v)} secureTextEntry error={fieldErrors?.password} />
-          <Input label="Confirmar Contrase\u00f1a" value={form.confirmPassword} onChangeText={(v) => update('confirmPassword', v)} secureTextEntry error={fieldErrors?.confirmPassword} />
+          <Input label="Contraseña" value={form.password} onChangeText={(v) => update('password', v)} secureTextEntry error={fieldErrors?.password} />
+          <Input label="Confirmar Contraseña" value={form.confirmPassword} onChangeText={(v) => update('confirmPassword', v)} secureTextEntry error={fieldErrors?.confirmPassword} />
 
           <Button title="Registrarme como Cliente" onPress={handleRegister} loading={loading} />
 
           <Pressable onPress={() => router.push('/auth/login')} style={styles.loginLink}>
-            <Text style={styles.loginText}>\u00bfYa tienes cuenta? <Text style={styles.loginBold}>Inicia Sesi\u00f3n</Text></Text>
+            <Text style={styles.loginText}>¿Ya tienes cuenta? <Text style={styles.loginBold}>Inicia Sesión</Text></Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

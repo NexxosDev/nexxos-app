@@ -175,18 +175,18 @@ export default function RegisterVendorScreen() {
             <Text style={styles.stepTitle}>Datos Personales</Text>
             <Input label="Nombre" value={personal.firstName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), firstName: v }))} />
             <Input label="Apellido" value={personal.lastName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), lastName: v }))} />
-            <Input label="C\u00e9dula" value={personal.documentId} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), documentId: v }))} keyboardType="numeric" />
-            <Input label="Tel\u00e9fono" value={personal.phone} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), phone: v }))} keyboardType="phone-pad" />
+            <Input label="Cédula" value={personal.documentId} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), documentId: v }))} keyboardType="numeric" />
+            <Input label="Teléfono" value={personal.phone} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), phone: v }))} keyboardType="phone-pad" />
             <Input label="Email" value={personal.email} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), email: v }))} keyboardType="email-address" autoCapitalize="none" />
-            <Input label="Contrase\u00f1a" value={personal.password} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), password: v }))} secureTextEntry />
-            <Input label="Confirmar Contrase\u00f1a" value={personal.confirmPassword} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), confirmPassword: v }))} secureTextEntry />
+            <Input label="Contraseña" value={personal.password} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), password: v }))} secureTextEntry />
+            <Input label="Confirmar Contraseña" value={personal.confirmPassword} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), confirmPassword: v }))} secureTextEntry />
           </View>
         );
       case 2:
         return (
           <View>
             <Text style={styles.stepTitle}>Datos del Negocio</Text>
-            <Input label="Raz\u00f3n Social" value={business.businessName} onChangeText={(v) => setBusiness((p) => ({ ...(p ?? {}), businessName: v }))} />
+            <Input label="Razón Social" value={business.businessName} onChangeText={(v) => setBusiness((p) => ({ ...(p ?? {}), businessName: v }))} />
             <Input label="RIF" value={business.rif} onChangeText={(v) => setBusiness((p) => ({ ...(p ?? {}), rif: v }))} />
             <Text style={styles.fieldLabel}>Documento de Identidad</Text>
             <Pressable style={styles.imagePicker} onPress={() => pickImage('doc')}>
@@ -203,7 +203,7 @@ export default function RegisterVendorScreen() {
       case 3:
         return (
           <View>
-            <Text style={styles.stepTitle}>Ubicaci\u00f3n</Text>
+            <Text style={styles.stepTitle}>Ubicación</Text>
             <SelectInput label="Estado" items={catalog?.states ?? []} selectedId={location.stateId} onSelect={(i) => setLocation((p) => ({ ...(p ?? {}), stateId: i?.id ?? '', municipalityId: '' }))} searchable />
             <SelectInput label="Municipio" items={municipalities} selectedId={location.municipalityId} onSelect={(i) => setLocation((p) => ({ ...(p ?? {}), municipalityId: i?.id ?? '' }))} searchable />
             <RadiusSelector value={location.searchRadiusKm} onChange={(v) => setLocation((p) => ({ ...(p ?? {}), searchRadiusKm: v }))} />
@@ -212,7 +212,7 @@ export default function RegisterVendorScreen() {
       case 4:
         return (
           <View>
-            <Text style={styles.stepTitle}>\u00bfQu\u00e9 veh\u00edculos manejas?</Text>
+            <Text style={styles.stepTitle}>¿Qué vehículos manejas?</Text>
             <Text style={styles.stepDesc}>Selecciona marcas y luego modelos</Text>
             <View style={styles.chipContainer}>
               {(catalog?.brands ?? []).map((b) => (
@@ -242,8 +242,8 @@ export default function RegisterVendorScreen() {
       case 5:
         return (
           <View>
-            <Text style={styles.stepTitle}>\u00bfQu\u00e9 repuestos ofreces?</Text>
-            <Text style={styles.stepDesc}>Selecciona categor\u00edas y subcategor\u00edas</Text>
+            <Text style={styles.stepTitle}>¿Qué repuestos ofreces?</Text>
+            <Text style={styles.stepDesc}>Selecciona categorías y subcategorías</Text>
             {(catalog?.categories ?? []).map((cat) => {
               const isSelected = (selectedCategories ?? []).includes(cat?.id ?? '');
               const subs = subcategoriesMap?.[cat?.id ?? ''] ?? [];
@@ -270,7 +270,7 @@ export default function RegisterVendorScreen() {
       case 6:
         return (
           <View>
-            <Text style={styles.stepTitle}>Confirmaci\u00f3n</Text>
+            <Text style={styles.stepTitle}>Confirmación</Text>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Nombre</Text>
               <Text style={styles.summaryValue}>{personal?.firstName ?? ''} {personal?.lastName ?? ''}</Text>
@@ -280,8 +280,8 @@ export default function RegisterVendorScreen() {
               <Text style={styles.summaryValue}>{personal?.email ?? ''}</Text>
               <Text style={styles.summaryLabel}>Modelos seleccionados</Text>
               <Text style={styles.summaryValue}>{selectedModels?.length ?? 0} modelos</Text>
-              <Text style={styles.summaryLabel}>Categor\u00edas seleccionadas</Text>
-              <Text style={styles.summaryValue}>{selectedCategories?.length ?? 0} categor\u00edas</Text>
+              <Text style={styles.summaryLabel}>Categorías seleccionadas</Text>
+              <Text style={styles.summaryValue}>{selectedCategories?.length ?? 0} categorías</Text>
             </View>
           </View>
         );

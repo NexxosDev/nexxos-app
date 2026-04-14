@@ -51,7 +51,7 @@ export default function VendorRequestDetailScreen() {
   };
 
   const handleDecline = () => {
-    Alert.alert('Declinar Solicitud', '\u00bfEst\u00e1s seguro de declinar esta solicitud?', [
+    Alert.alert('Declinar Solicitud', '¿Estás seguro de declinar esta solicitud?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Declinar', style: 'destructive', onPress: async () => {
@@ -93,9 +93,9 @@ export default function VendorRequestDetailScreen() {
         </View>
 
         <View style={styles.infoCard}>
-          <InfoRow icon="car-outline" label="Veh\u00edculo" value={`${req?.vehicleBrand ?? ''} ${req?.vehicleModel ?? ''}`} />
+          <InfoRow icon="car-outline" label="Vehículo" value={`${req?.vehicleBrand ?? ''} ${req?.vehicleModel ?? ''}`} />
           <InfoRow icon="construct-outline" label="Repuesto" value={`${req?.partCategory ?? ''}${req?.partSubcategory ? ` - ${req.partSubcategory}` : ''}`} />
-          <InfoRow icon="document-text-outline" label="Descripci\u00f3n" value={req?.freeDescription ?? ''} />
+          <InfoRow icon="document-text-outline" label="Descripción" value={req?.freeDescription ?? ''} />
           <InfoRow icon="location-outline" label="Radio" value={`${req?.searchRadiusKm ?? 0} km`} />
           <InfoRow icon="calendar-outline" label="Fecha" value={formatDate(req?.createdAt ?? '')} />
         </View>

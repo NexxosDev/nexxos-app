@@ -87,7 +87,7 @@ export default function ChatScreen() {
           )}
           inverted
           contentContainerStyle={styles.messageList}
-          ListEmptyComponent={<Text style={styles.emptyChat}>No hay mensajes a\u00fan. \u00a1Inicia la conversaci\u00f3n!</Text>}
+          ListEmptyComponent={<Text style={styles.emptyChat}>No hay mensajes aún. ¡Inicia la conversación!</Text>}
         />
 
         <View style={styles.inputBar}>

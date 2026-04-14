@@ -81,10 +81,10 @@ export default function RequestDetailScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={Colors.primary} />}>
         <View style={styles.infoCard}>
-          <InfoRow icon="location-outline" label="Ubicaci\u00f3n" value={`${detail?.municipality?.name ?? ''}, ${detail?.state?.name ?? ''} (${detail?.searchRadiusKm ?? 0}km)`} />
-          <InfoRow icon="car-outline" label="Veh\u00edculo" value={`${detail?.vehicleBrand?.name ?? ''} ${detail?.vehicleModel?.name ?? ''}`} />
+          <InfoRow icon="location-outline" label="Ubicación" value={`${detail?.municipality?.name ?? ''}, ${detail?.state?.name ?? ''} (${detail?.searchRadiusKm ?? 0}km)`} />
+          <InfoRow icon="car-outline" label="Vehículo" value={`${detail?.vehicleBrand?.name ?? ''} ${detail?.vehicleModel?.name ?? ''}`} />
           <InfoRow icon="construct-outline" label="Repuesto" value={`${detail?.partCategory?.name ?? ''}${detail?.partSubcategory?.name ? ` - ${detail.partSubcategory.name}` : ''}`} />
-          <InfoRow icon="document-text-outline" label="Descripci\u00f3n" value={detail?.freeDescription ?? ''} />
+          <InfoRow icon="document-text-outline" label="Descripción" value={detail?.freeDescription ?? ''} />
           <InfoRow icon="calendar-outline" label="Fecha" value={formatDate(detail?.createdAt ?? '')} />
         </View>
 
@@ -100,7 +100,7 @@ export default function RequestDetailScreen() {
             />
           ))
         ) : (
-          <Text style={styles.noResponses}>A\u00fan no hay respuestas. Los vendedores est\u00e1n revisando tu solicitud.</Text>
+          <Text style={styles.noResponses}>Aún no hay respuestas. Los vendedores están revisando tu solicitud.</Text>
         )}
 
         {detail?.status !== 'CERRADA' ? (
@@ -114,10 +114,10 @@ export default function RequestDetailScreen() {
           <Text style={styles.sheetTitle}>Cerrar Solicitud</Text>
           {closeError ? <Text style={styles.error}>{closeError}</Text> : null}
 
-          <Text style={styles.sheetLabel}>\u00bfSe resolvi\u00f3 tu solicitud?</Text>
+          <Text style={styles.sheetLabel}>¿Se resolvió tu solicitud?</Text>
           <View style={styles.radioRow}>
             <Pressable style={[styles.radio, resolved && styles.radioActive]} onPress={() => setResolved(true)}>
-              <Text style={[styles.radioText, resolved && styles.radioTextActive]}>S\u00ed</Text>
+              <Text style={[styles.radioText, resolved && styles.radioTextActive]}>Sí</Text>
             </Pressable>
             <Pressable style={[styles.radio, !resolved && styles.radioActive]} onPress={() => setResolved(false)}>
               <Text style={[styles.radioText, !resolved && styles.radioTextActive]}>No</Text>
@@ -126,14 +126,14 @@ export default function RequestDetailScreen() {
 
           {resolved ? (
             <View>
-              <Text style={styles.sheetLabel}>\u00bfQui\u00e9n te ayud\u00f3?</Text>
+              <Text style={styles.sheetLabel}>¿Quién te ayudó?</Text>
               {(responses ?? []).map((resp) => (
                 <Pressable key={resp?.id} style={[styles.vendorOption, selectedVendorId === resp?.vendor?.id && styles.vendorOptionActive]} onPress={() => setSelectedVendorId(resp?.vendor?.id ?? '')}>
                   <Text style={styles.vendorName}>{resp?.vendor?.businessName ?? ''}</Text>
                   {selectedVendorId === resp?.vendor?.id ? <Ionicons name="checkmark-circle" size={20} color={Colors.primary} /> : null}
                 </Pressable>
               ))}
-              <Text style={styles.sheetLabel}>Calificaci\u00f3n</Text>
+              <Text style={styles.sheetLabel}>Calificación</Text>
               <StarRating rating={rating} onChange={setRating} />
               <TextInput
                 style={styles.commentInput}

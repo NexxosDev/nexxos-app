@@ -19,8 +19,8 @@ export default function RoleSelectionScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.greeting}>\u00a1Hola, {user?.firstName ?? 'Usuario'}!</Text>
-        <Text style={styles.title}>\u00bfQu\u00e9 modo deseas usar hoy?</Text>
+        <Text style={styles.greeting}>¡Hola, {user?.firstName ?? 'Usuario'}!</Text>
+        <Text style={styles.title}>¿Qué modo deseas usar hoy?</Text>
 
         <Pressable style={styles.card} onPress={() => router.replace('/client')}>
           <View style={styles.cardIcon}>
@@ -28,7 +28,7 @@ export default function RoleSelectionScreen() {
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>Cliente</Text>
-            <Text style={styles.cardDesc}>Solicita lo que necesites y obt\u00e9n respuestas en minutos</Text>
+            <Text style={styles.cardDesc}>Solicita lo que necesites y obtén respuestas en minutos</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color={Colors.textSecondary} />
         </Pressable>

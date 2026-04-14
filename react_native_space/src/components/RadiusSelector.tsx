@@ -23,7 +23,7 @@ export default function RadiusSelector({ value = 5, onChange, min = 5, max = 30,
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Radio de b\u00fasqueda</Text>
+      <Text style={styles.label}>Radio de búsqueda</Text>
       <View style={styles.row}>
         <Pressable style={[styles.btn, (value ?? min) <= min && styles.btnDisabled]} onPress={decrease} disabled={(value ?? min) <= min}>
           <Ionicons name="remove" size={20} color={(value ?? min) <= min ? Colors.border : Colors.textPrimary} />

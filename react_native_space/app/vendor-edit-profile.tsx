@@ -93,7 +93,7 @@ export default function VendorEditProfileScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {success ? <Text style={styles.success}>Perfil actualizado \u2713</Text> : null}
 
-          <Input label="Raz\u00f3n Social" value={businessName} onChangeText={setBusinessName} />
+          <Input label="Razón Social" value={businessName} onChangeText={setBusinessName} />
           <Input label="RIF" value={rif} onChangeText={setRif} />
           <SelectInput label="Estado" items={catalog?.states ?? []} selectedId={stateId} onSelect={(i) => { setStateId(i?.id ?? ''); setMunicipalityId(''); }} searchable />
           <SelectInput label="Municipio" items={municipalities} selectedId={municipalityId} onSelect={(i) => setMunicipalityId(i?.id ?? '')} searchable />

@@ -9,7 +9,7 @@ export default function NotFound() {
   return (
     <View style={styles.container}>
       <Text style={styles.code}>404</Text>
-      <Text style={styles.title}>P\u00e1gina no encontrada</Text>
+      <Text style={styles.title}>Página no encontrada</Text>
       <Button title="Ir al inicio" onPress={() => router.replace('/')} />
     </View>
   );

@@ -13,7 +13,7 @@ export default function RegisterTypeScreen() {
       <Pressable onPress={() => router.back()} style={styles.back}>
         <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
       </Pressable>
-      <Text style={styles.title}>\u00bfC\u00f3mo deseas registrarte?</Text>
+      <Text style={styles.title}>¿Cómo deseas registrarte?</Text>
 
       <View style={styles.cards}>
         <Pressable style={styles.card} onPress={() => router.push('/auth/register-client')}>
@@ -21,7 +21,7 @@ export default function RegisterTypeScreen() {
             <Ionicons name="person-outline" size={40} color={Colors.primary} />
           </View>
           <Text style={styles.cardTitle}>Cliente</Text>
-          <Text style={styles.cardSub}>Busca repuestos f\u00e1cilmente</Text>
+          <Text style={styles.cardSub}>Busca repuestos fácilmente</Text>
         </Pressable>
 
         <Pressable style={styles.card} onPress={() => router.push('/auth/register-vendor')}>
@@ -34,7 +34,7 @@ export default function RegisterTypeScreen() {
       </View>
 
       <Pressable onPress={() => router.push('/auth/login')} style={styles.loginLink}>
-        <Text style={styles.loginText}>\u00bfYa tienes cuenta? <Text style={styles.loginBold}>Inicia Sesi\u00f3n</Text></Text>
+        <Text style={styles.loginText}>¿Ya tienes cuenta? <Text style={styles.loginBold}>Inicia Sesión</Text></Text>
       </Pressable>
     </SafeAreaView>
   );

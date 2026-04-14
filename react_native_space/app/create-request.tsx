@@ -91,7 +91,7 @@ export default function CreateRequestScreen() {
       case 1:
         return (
           <View>
-            <Text style={styles.stepTitle}>\u00bfD\u00f3nde necesitas el repuesto?</Text>
+            <Text style={styles.stepTitle}>¿Dónde necesitas el repuesto?</Text>
             <SelectInput label="Estado" items={catalog?.states ?? []} selectedId={stateId} onSelect={(i) => { setStateId(i?.id ?? ''); setMunicipalityId(''); }} searchable />
             <SelectInput label="Municipio" items={municipalities} selectedId={municipalityId} onSelect={(i) => setMunicipalityId(i?.id ?? '')} searchable />
             <RadiusSelector value={searchRadius} onChange={setSearchRadius} />
@@ -100,7 +100,7 @@ export default function CreateRequestScreen() {
       case 2:
         return (
           <View>
-            <Text style={styles.stepTitle}>\u00bfPara qu\u00e9 veh\u00edculo?</Text>
+            <Text style={styles.stepTitle}>¿Para qué vehículo?</Text>
             <SelectInput label="Marca" items={catalog?.brands ?? []} selectedId={brandId} onSelect={(i) => { setBrandId(i?.id ?? ''); setModelId(''); }} searchable />
             <SelectInput label="Modelo" items={models} selectedId={modelId} onSelect={(i) => setModelId(i?.id ?? '')} searchable />
           </View>
@@ -108,12 +108,12 @@ export default function CreateRequestScreen() {
       case 3:
         return (
           <View>
-            <Text style={styles.stepTitle}>\u00bfQu\u00e9 repuesto necesitas?</Text>
-            <SelectInput label="Categor\u00eda" items={catalog?.categories ?? []} selectedId={categoryId} onSelect={(i) => { setCategoryId(i?.id ?? ''); setSubcategoryId(''); }} searchable />
+            <Text style={styles.stepTitle}>¿Qué repuesto necesitas?</Text>
+            <SelectInput label="Categoría" items={catalog?.categories ?? []} selectedId={categoryId} onSelect={(i) => { setCategoryId(i?.id ?? ''); setSubcategoryId(''); }} searchable />
             {(subcategories?.length ?? 0) > 0 ? (
-              <SelectInput label="Subcategor\u00eda (opcional)" items={subcategories} selectedId={subcategoryId} onSelect={(i) => setSubcategoryId(i?.id ?? '')} />
+              <SelectInput label="Subcategoría (opcional)" items={subcategories} selectedId={subcategoryId} onSelect={(i) => setSubcategoryId(i?.id ?? '')} />
             ) : null}
-            <Text style={styles.fieldLabel}>Descripci\u00f3n</Text>
+            <Text style={styles.fieldLabel}>Descripción</Text>
             <TextInput
               style={styles.textarea}
               value={description}
@@ -133,10 +133,10 @@ export default function CreateRequestScreen() {
           <View>
             <Text style={styles.stepTitle}>Confirma tu solicitud</Text>
             <View style={styles.summaryCard}>
-              <SummaryRow label="Ubicaci\u00f3n" value={`${getMuniName()}, ${getStateName()} (${searchRadius}km)`} onEdit={() => setStep(1)} />
-              <SummaryRow label="Veh\u00edculo" value={`${getBrandName()} ${getModelName()}`} onEdit={() => setStep(2)} />
+              <SummaryRow label="Ubicación" value={`${getMuniName()}, ${getStateName()} (${searchRadius}km)`} onEdit={() => setStep(1)} />
+              <SummaryRow label="Vehículo" value={`${getBrandName()} ${getModelName()}`} onEdit={() => setStep(2)} />
               <SummaryRow label="Repuesto" value={`${getCatName()}${getSubName() ? ` - ${getSubName()}` : ''}`} onEdit={() => setStep(3)} />
-              <SummaryRow label="Descripci\u00f3n" value={description ?? ''} onEdit={() => setStep(3)} />
+              <SummaryRow label="Descripción" value={description ?? ''} onEdit={() => setStep(3)} />
             </View>
           </View>
         );
@@ -178,7 +178,7 @@ export default function CreateRequestScreen() {
             <View style={styles.successIcon}>
               <Ionicons name="checkmark-circle" size={56} color={Colors.success} />
             </View>
-            <Text style={styles.modalTitle}>\u00a1Solicitud enviada!</Text>
+            <Text style={styles.modalTitle}>¡Solicitud enviada!</Text>
             <Text style={styles.modalText}>
               Se ha enviado a {successModal?.count ?? 0} vendedores compatibles
             </Text>

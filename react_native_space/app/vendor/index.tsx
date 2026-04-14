@@ -52,7 +52,7 @@ export default function VendorHome() {
           <Ionicons name="swap-horizontal-outline" size={24} color={Colors.textPrimary} />
         </Pressable>
       </View>
-      <Text style={styles.greeting}>\u00a1Hola, {dashboard?.businessName ?? 'Vendedor'}!</Text>
+      <Text style={styles.greeting}>¡Hola, {dashboard?.businessName ?? 'Vendedor'}!</Text>
 
       <View style={styles.availRow}>
         <View style={{ flex: 1 }}>
@@ -102,7 +102,7 @@ export default function VendorHome() {
           />
         )}
         ListHeaderComponent={renderHeader}
-        ListEmptyComponent={<EmptyState icon="mail-outline" title="Sin solicitudes" message="A\u00fan no has recibido solicitudes" />}
+        ListEmptyComponent={<EmptyState icon="mail-outline" title="Sin solicitudes" message="Aún no has recibido solicitudes" />}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={Colors.primary} />}
       />
