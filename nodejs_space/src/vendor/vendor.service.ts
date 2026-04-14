@@ -1,0 +1,196 @@
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { UpdateVendorDto } from './dto/update-vendor.dto';
+import { getFileUrl } from '../lib/s3';
+
+@Injectable()
+export class VendorService {
+  private readonly logger = new Logger(VendorService.name);
+
+  constructor(private readonly prisma: PrismaService) {}
+
+  async getVendorProfile(userId: string) {
+    const vendor = await this.prisma.vendor.findUnique({
+      where: { userId },
+      include: {
+        state: true,
+        municipality: true,
+        vendorVehicleModels: { include: { vehicleModel: { include: { brand: true } } } },
+        vendorPartSubcategories: { include: { partSubcategory: { include: { category: true } } } },
+        vendorMetrics: true,
+      },
+    });
+    if (!vendor) throw new NotFoundException('Vendor profile not found');
+
+    let logoUrl: string | null = null;
+    if (vendor.logoUrl) {
+      try { logoUrl = await getFileUrl(vendor.logoUrl, true); } catch { logoUrl = null; }
+    }
+
+    return {
+      id: vendor.id,
+      userId: vendor.userId,
+      businessName: vendor.businessName,
+      rif: vendor.rif,
+      logoUrl,
+      state: { id: vendor.state.id, name: vendor.state.name },
+      municipality: { id: vendor.municipality.id, name: vendor.municipality.name },
+      searchRadiusKm: vendor.searchRadiusKm,
+      isAvailable: vendor.isAvailable,
+      vehicleModels: vendor.vendorVehicleModels.map((vvm) => ({
+        id: vvm.vehicleModel.id,
+        name: vvm.vehicleModel.name,
+        brand: { id: vvm.vehicleModel.brand.id, name: vvm.vehicleModel.brand.name },
+      })),
+      partSubcategories: vendor.vendorPartSubcategories.map((vps) => ({
+        id: vps.partSubcategory.id,
+        name: vps.partSubcategory.name,
+        category: { id: vps.partSubcategory.category.id, name: vps.partSubcategory.category.name },
+      })),
+      metrics: vendor.vendorMetrics
+        ? {
+            totalRequestsReceived: vendor.vendorMetrics.totalRequestsReceived,
+            totalRequestsAnswered: vendor.vendorMetrics.totalRequestsAnswered,
+            avgRating: vendor.vendorMetrics.avgRating,
+            totalRatings: vendor.vendorMetrics.totalRatings,
+          }
+        : { totalRequestsReceived: 0, totalRequestsAnswered: 0, avgRating: null, totalRatings: 0 },
+    };
+  }
+
+  async getVendorById(vendorId: string) {
+    const vendor = await this.prisma.vendor.findUnique({
+      where: { id: vendorId },
+      include: {
+        state: true, municipality: true,
+        vendorMetrics: true,
+      },
+    });
+    if (!vendor) throw new NotFoundException('Vendor not found');
+    let logoUrl: string | null = null;
+    if (vendor.logoUrl) {
+      try { logoUrl = await getFileUrl(vendor.logoUrl, true); } catch { logoUrl = null; }
+    }
+    return {
+      id: vendor.id,
+      businessName: vendor.businessName,
+      rif: vendor.rif,
+      logoUrl,
+      state: { id: vendor.state.id, name: vendor.state.name },
+      municipality: { id: vendor.municipality.id, name: vendor.municipality.name },
+      isAvailable: vendor.isAvailable,
+      metrics: vendor.vendorMetrics
+        ? {
+            totalRequestsReceived: vendor.vendorMetrics.totalRequestsReceived,
+            totalRequestsAnswered: vendor.vendorMetrics.totalRequestsAnswered,
+            avgRating: vendor.vendorMetrics.avgRating,
+            totalRatings: vendor.vendorMetrics.totalRatings,
+          }
+        : null,
+    };
+  }
+
+  async updateVendor(userId: string, dto: UpdateVendorDto) {
+    const vendor = await this.prisma.vendor.findUnique({ where: { userId } });
+    if (!vendor) throw new NotFoundException('Vendor profile not found');
+
+    const data: Record<string, any> = {};
+    if (dto.businessName !== undefined) data.businessName = dto.businessName;
+    if (dto.rif !== undefined) data.rif = dto.rif;
+    if (dto.logoPath !== undefined) data.logoUrl = dto.logoPath;
+    if (dto.stateId !== undefined) data.stateId = dto.stateId;
+    if (dto.municipalityId !== undefined) data.municipalityId = dto.municipalityId;
+    if (dto.searchRadiusKm !== undefined) data.searchRadiusKm = dto.searchRadiusKm;
+
+    const updated = await this.prisma.vendor.update({ where: { id: vendor.id }, data });
+
+    if (dto.vehicleModelIds) {
+      await this.prisma.vendorVehicleModel.deleteMany({ where: { vendorId: vendor.id } });
+      await this.prisma.vendorVehicleModel.createMany({
+        data: dto.vehicleModelIds.map((id) => ({ vendorId: vendor.id, vehicleModelId: id })),
+      });
+    }
+    if (dto.partSubcategoryIds) {
+      await this.prisma.vendorPartSubcategory.deleteMany({ where: { vendorId: vendor.id } });
+      await this.prisma.vendorPartSubcategory.createMany({
+        data: dto.partSubcategoryIds.map((id) => ({ vendorId: vendor.id, partSubcategoryId: id })),
+      });
+    }
+
+    let logoUrl: string | null = null;
+    if (updated.logoUrl) {
+      try { logoUrl = await getFileUrl(updated.logoUrl, true); } catch { logoUrl = null; }
+    }
+
+    return {
+      id: updated.id,
+      businessName: updated.businessName,
+      rif: updated.rif,
+      logoUrl,
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  }
+
+  async toggleAvailability(userId: string, isAvailable: boolean) {
+    const vendor = await this.prisma.vendor.findUnique({ where: { userId } });
+    if (!vendor) throw new NotFoundException('Vendor profile not found');
+    const updated = await this.prisma.vendor.update({
+      where: { id: vendor.id },
+      data: { isAvailable },
+    });
+    return { isAvailable: updated.isAvailable };
+  }
+
+  async getDashboard(userId: string) {
+    const vendor = await this.prisma.vendor.findUnique({
+      where: { userId },
+      include: {
+        vendorMetrics: true,
+        requestVendorMatches: {
+          take: 10,
+          orderBy: { deliveredAt: 'desc' },
+          include: {
+            request: {
+              include: {
+                vehicleBrand: true,
+                vehicleModel: true,
+                partCategory: true,
+                partSubcategory: true,
+                municipality: true,
+                state: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!vendor) throw new NotFoundException('Vendor profile not found');
+
+    return {
+      businessName: vendor.businessName,
+      isAvailable: vendor.isAvailable,
+      metrics: vendor.vendorMetrics
+        ? {
+            totalRequestsReceived: vendor.vendorMetrics.totalRequestsReceived,
+            totalRequestsAnswered: vendor.vendorMetrics.totalRequestsAnswered,
+            avgRating: vendor.vendorMetrics.avgRating,
+            totalRatings: vendor.vendorMetrics.totalRatings,
+          }
+        : { totalRequestsReceived: 0, totalRequestsAnswered: 0, avgRating: null, totalRatings: 0 },
+      recentRequests: vendor.requestVendorMatches.map((m) => ({
+        matchId: m.id,
+        request: {
+          id: m.request.id,
+          vehicleBrand: m.request.vehicleBrand.name,
+          vehicleModel: m.request.vehicleModel.name,
+          partCategory: m.request.partCategory.name,
+          partSubcategory: m.request.partSubcategory?.name ?? null,
+          municipality: m.request.municipality.name,
+          state: m.request.state.name,
+          createdAt: m.request.createdAt.toISOString(),
+        },
+        status: m.declined ? 'DECLINED' : m.responded ? 'RESPONDED' : 'PENDING',
+      })),
+    };
+  }
+}

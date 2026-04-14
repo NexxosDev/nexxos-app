@@ -1,0 +1,135 @@
+import { Injectable, ConflictException, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
+import { PrismaService } from '../prisma/prisma.service';
+import { SignupDto } from './dto/signup.dto';
+import { LoginDto } from './dto/login.dto';
+
+@Injectable()
+export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  async signup(dto: SignupDto) {
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existing) throw new ConflictException('Email already registered');
+
+    if (dto.role === 'VENDEDOR' && !dto.vendor) {
+      throw new BadRequestException('Vendor data is required for VENDEDOR role');
+    }
+
+    const role = await this.prisma.role.findUnique({ where: { name: dto.role } });
+    if (!role) throw new BadRequestException('Invalid role');
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        password: hashedPassword,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        name: `${dto.firstName} ${dto.lastName}`,
+        phone: dto.phone,
+        documentId: dto.documentId,
+        userRoles: { create: { roleId: role.id } },
+      },
+      include: { userRoles: { include: { role: true } } },
+    });
+
+    if (dto.role === 'VENDEDOR' && dto.vendor) {
+      const v = dto.vendor;
+      const vendor = await this.prisma.vendor.create({
+        data: {
+          userId: user.id,
+          businessName: v.businessName,
+          rif: v.rif,
+          stateId: v.stateId,
+          municipalityId: v.municipalityId,
+          searchRadiusKm: v.searchRadiusKm ?? 5,
+          logoUrl: v.logoPath || null,
+          documentImageUrl: v.documentImagePath || null,
+          vendorVehicleModels: {
+            create: v.vehicleModelIds.map((id) => ({ vehicleModelId: id })),
+          },
+          vendorPartSubcategories: {
+            create: v.partSubcategoryIds.map((id) => ({ partSubcategoryId: id })),
+          },
+        },
+      });
+      await this.prisma.vendorMetrics.create({ data: { vendorId: vendor.id } });
+    }
+
+    const token = this.generateToken(user.id, user.email);
+    this.logger.log(`User registered: ${user.email}`);
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: user.userRoles.map((ur) => ur.role.name),
+      },
+    };
+  }
+
+  async login(dto: LoginDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      include: { userRoles: { include: { role: true } } },
+    });
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    const valid = await bcrypt.compare(dto.password, user.password);
+    if (!valid) throw new UnauthorizedException('Invalid credentials');
+
+    if (!user.isActive) throw new UnauthorizedException('Account is deactivated');
+
+    const token = this.generateToken(user.id, user.email);
+    this.logger.log(`User logged in: ${user.email}`);
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: user.userRoles.map((ur) => ur.role.name),
+      },
+    };
+  }
+
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } }, vendor: true },
+    });
+    if (!user) throw new UnauthorizedException();
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        documentId: user.documentId,
+        roles: user.userRoles.map((ur) => ur.role.name),
+        hasVendorProfile: !!user.vendor,
+      },
+    };
+  }
+
+  private generateToken(userId: string, email: string): string {
+    return this.jwtService.sign({ sub: userId, email });
+  }
+}

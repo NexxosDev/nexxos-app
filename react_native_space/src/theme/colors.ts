@@ -1,0 +1,45 @@
+export const Colors = {
+  primary: '#FFC107',
+  primaryDark: '#FFB300',
+  accent: '#121212',
+  background: '#FFFFFF',
+  backgroundSection: '#F5F5F5',
+  textPrimary: '#121212',
+  textSecondary: '#757575',
+  textSubtitle: '#333333',
+  border: '#E0E0E0',
+  success: '#4CAF50',
+  error: '#F44336',
+  info: '#2196F3',
+  white: '#FFFFFF',
+  black: '#121212',
+  cardBg: '#FFFFFF',
+  tabActive: '#FFC107',
+  tabInactive: '#757575',
+  statusOpen: '#2196F3',
+  statusInProgress: '#FFC107',
+  statusClosed: '#E0E0E0',
+  statusPending: '#2196F3',
+  statusResponded: '#4CAF50',
+  statusDeclined: '#F44336',
+  chipBg: '#F5F5F5',
+  chipSelectedBg: '#FFC107',
+  overlay: 'rgba(0,0,0,0.5)',
+} as const;
+
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+} as const;
+
+export const BorderRadius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  full: 9999,
+} as const;
