@@ -75,7 +75,7 @@ export class AuthService {
         name: user.name,
         firstName: user.firstName,
         lastName: user.lastName,
-        roles: user.userRoles.map((ur) => ur.role.name),
+        roles: user.userRoles.map((ur: any) => ur.role.name),
       },
     };
   }
@@ -103,7 +103,7 @@ export class AuthService {
         name: user.name,
         firstName: user.firstName,
         lastName: user.lastName,
-        roles: user.userRoles.map((ur) => ur.role.name),
+        roles: user.userRoles.map((ur: any) => ur.role.name),
       },
     };
   }
@@ -123,7 +123,7 @@ export class AuthService {
         lastName: user.lastName,
         phone: user.phone,
         documentId: user.documentId,
-        roles: user.userRoles.map((ur) => ur.role.name),
+        roles: user.userRoles.map((ur: any) => ur.role.name),
         hasVendorProfile: !!user.vendor,
       },
     };

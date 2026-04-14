@@ -37,12 +37,12 @@ export class VendorService {
       municipality: { id: vendor.municipality.id, name: vendor.municipality.name },
       searchRadiusKm: vendor.searchRadiusKm,
       isAvailable: vendor.isAvailable,
-      vehicleModels: vendor.vendorVehicleModels.map((vvm) => ({
+      vehicleModels: vendor.vendorVehicleModels.map((vvm: any) => ({
         id: vvm.vehicleModel.id,
         name: vvm.vehicleModel.name,
         brand: { id: vvm.vehicleModel.brand.id, name: vvm.vehicleModel.brand.name },
       })),
-      partSubcategories: vendor.vendorPartSubcategories.map((vps) => ({
+      partSubcategories: vendor.vendorPartSubcategories.map((vps: any) => ({
         id: vps.partSubcategory.id,
         name: vps.partSubcategory.name,
         category: { id: vps.partSubcategory.category.id, name: vps.partSubcategory.category.name },
@@ -177,7 +177,7 @@ export class VendorService {
             totalRatings: vendor.vendorMetrics.totalRatings,
           }
         : { totalRequestsReceived: 0, totalRequestsAnswered: 0, avgRating: null, totalRatings: 0 },
-      recentRequests: vendor.requestVendorMatches.map((m) => ({
+      recentRequests: vendor.requestVendorMatches.map((m: any) => ({
         matchId: m.id,
         request: {
           id: m.request.id,

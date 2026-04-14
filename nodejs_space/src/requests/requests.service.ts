@@ -49,7 +49,7 @@ export class RequestsService {
       });
       if (subcats.length > 0) {
         matchingConditions.vendorPartSubcategories = {
-          some: { partSubcategoryId: { in: subcats.map((s) => s.id) } },
+          some: { partSubcategoryId: { in: subcats.map((s: any) => s.id) } },
         };
       }
     }
@@ -64,7 +64,7 @@ export class RequestsService {
 
     if (matchedVendors.length > 0) {
       await this.prisma.requestVendorMatch.createMany({
-        data: matchedVendors.map((v) => ({
+        data: matchedVendors.map((v: any) => ({
           requestId: request.id,
           vendorId: v.id,
         })),
@@ -72,7 +72,7 @@ export class RequestsService {
 
       // Increment metrics
       await this.prisma.vendorMetrics.updateMany({
-        where: { vendorId: { in: matchedVendors.map((v) => v.id) } },
+        where: { vendorId: { in: matchedVendors.map((v: any) => v.id) } },
         data: { totalRequestsReceived: { increment: 1 } },
       });
     }
@@ -121,7 +121,7 @@ export class RequestsService {
     ]);
 
     return {
-      items: items.map((r) => ({
+      items: items.map((r: any) => ({
         id: r.id,
         vehicleBrand: r.vehicleBrand.name,
         vehicleModel: r.vehicleModel.name,
@@ -198,7 +198,7 @@ export class RequestsService {
     });
 
     const items = await Promise.all(
-      responses.map(async (r) => {
+      responses.map(async (r: any) => {
         let logoUrl: string | null = null;
         if (r.vendor.logoUrl) {
           try { logoUrl = await getFileUrl(r.vendor.logoUrl, true); } catch { logoUrl = null; }
@@ -260,7 +260,7 @@ export class RequestsService {
         where: { vendorId: dto.vendorId },
         select: { rating: true },
       });
-      const avgRating = allRatings.reduce((sum, r) => sum + r.rating, 0) / allRatings.length;
+      const avgRating = allRatings.reduce((sum: any, r: any) => sum + r.rating, 0) / allRatings.length;
       await this.prisma.vendorMetrics.upsert({
         where: { vendorId: dto.vendorId },
         update: { avgRating, totalRatings: allRatings.length },
@@ -316,7 +316,7 @@ export class RequestsService {
     ]);
 
     return {
-      items: matches.map((m) => ({
+      items: matches.map((m: any) => ({
         matchId: m.id,
         request: {
           id: m.request.id,

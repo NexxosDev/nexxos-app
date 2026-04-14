@@ -69,7 +69,7 @@ export class ChatService {
     const items = messages.slice(0, limit).reverse();
 
     return {
-      items: items.map((m) => ({
+      items: items.map((m: any) => ({
         id: m.id,
         senderId: m.sender.id,
         senderName: `${m.sender.firstName} ${m.sender.lastName}`,
