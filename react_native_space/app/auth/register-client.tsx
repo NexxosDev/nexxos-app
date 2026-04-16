@@ -19,7 +19,13 @@ export default function RegisterClientScreen() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (user) router.replace('/role-selection');
+    if (user) {
+      if (!user?.emailVerified) {
+        router.replace('/verify-email');
+      } else {
+        router.replace('/role-selection');
+      }
+    }
   }, [user]);
 
   const update = (key: string, val: string) => {

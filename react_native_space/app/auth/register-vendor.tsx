@@ -51,7 +51,13 @@ export default function RegisterVendorScreen() {
   const [subcategoriesMap, setSubcategoriesMap] = useState<Record<string, CatalogItem[]>>({});
 
   useEffect(() => {
-    if (user) router.replace('/role-selection');
+    if (user) {
+      if (!user?.emailVerified) {
+        router.replace('/verify-email');
+      } else {
+        router.replace('/role-selection');
+      }
+    }
   }, [user]);
 
   useEffect(() => { catalog?.loadBrands?.(); catalog?.loadCategories?.(); }, []);

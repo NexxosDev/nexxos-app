@@ -9,6 +9,7 @@ export const Colors = {
   textSubtitle: '#333333',
   border: '#E0E0E0',
   success: '#4CAF50',
+  warning: '#FFC107',
   error: '#F44336',
   info: '#2196F3',
   white: '#FFFFFF',

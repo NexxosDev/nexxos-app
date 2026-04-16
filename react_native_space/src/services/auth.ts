@@ -48,3 +48,27 @@ export async function forgotPasswordApi(email: string): Promise<{ success: boole
   const res = await api.post('/auth/forgot-password', { email });
   return res?.data;
 }
+
+export async function verifyEmailApi(token: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(new URL(`auth/verify-email?token=${encodeURIComponent(token)}`, process.env.EXPO_PUBLIC_API_URL).toString(), {
+    method: 'GET',
+  });
+  if (!response?.ok) {
+    const error = await response.json().catch(() => ({ message: 'Error de verificación' }));
+    throw new Error(error?.message || 'Error al verificar email');
+  }
+  return response.json();
+}
+
+export async function resendVerificationEmailApi(email: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(new URL('auth/resend-verification', process.env.EXPO_PUBLIC_API_URL).toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!response?.ok) {
+    const error = await response.json().catch(() => ({ message: 'Error al reenviar email' }));
+    throw new Error(error?.message || 'Error al reenviar email de verificación');
+  }
+  return response.json();
+}

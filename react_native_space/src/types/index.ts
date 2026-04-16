@@ -6,6 +6,7 @@ export interface User {
   lastName: string;
   phone?: string;
   documentId?: string;
+  emailVerified?: boolean;
   roles: string[];
   hasVendorProfile?: boolean;
 }

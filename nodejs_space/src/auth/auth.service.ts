@@ -2,6 +2,7 @@ import { Injectable, ConflictException, UnauthorizedException, BadRequestExcepti
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailVerificationService } from './email-verification.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -12,6 +13,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly emailVerificationService: EmailVerificationService,
   ) {}
 
   async signup(dto: SignupDto) {
@@ -72,6 +74,15 @@ export class AuthService {
       await this.prisma.vendorMetrics.create({ data: { vendorId: vendor.id } });
     }
 
+    // Send verification email
+    try {
+      await this.emailVerificationService.sendVerificationEmail(user.id);
+      this.logger.log(`Verification email sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send verification email: ${error.message}`);
+      // Don't fail registration if email fails
+    }
+
     const token = this.generateToken(user.id, user.email);
     this.logger.log(`User registered: ${user.email}`);
 
@@ -83,6 +94,7 @@ export class AuthService {
         name: user.name,
         firstName: user.firstName,
         lastName: user.lastName,
+        emailVerified: user.emailVerified,
         roles: user.userRoles.map((ur: any) => ur.role.name),
       },
     };
@@ -111,6 +123,7 @@ export class AuthService {
         name: user.name,
         firstName: user.firstName,
         lastName: user.lastName,
+        emailVerified: user.emailVerified,
         roles: user.userRoles.map((ur: any) => ur.role.name),
       },
     };
@@ -131,6 +144,7 @@ export class AuthService {
         lastName: user.lastName,
         phone: user.phone,
         documentId: user.documentId,
+        emailVerified: user.emailVerified,
         roles: user.userRoles.map((ur: any) => ur.role.name),
         hasVendorProfile: !!user.vendor,
       },

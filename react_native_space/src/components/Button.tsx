@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 interface ButtonProps {
   title: string;
   onPress?: () => void;
-  variant?: 'primary' | 'secondary' | 'destructive' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'destructive' | 'ghost';
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
@@ -38,6 +38,7 @@ export default function Button({ title, onPress, variant = 'primary', loading, d
     styles.base,
     variant === 'primary' && styles.primary,
     variant === 'secondary' && styles.secondary,
+    variant === 'outline' && styles.outline,
     variant === 'destructive' && styles.destructive,
     variant === 'ghost' && styles.ghost,
     isDisabled && styles.disabled,
@@ -48,6 +49,7 @@ export default function Button({ title, onPress, variant = 'primary', loading, d
     styles.text,
     variant === 'primary' && styles.primaryText,
     variant === 'secondary' && styles.secondaryText,
+    variant === 'outline' && styles.outlineText,
     variant === 'destructive' && styles.destructiveText,
     variant === 'ghost' && styles.ghostText,
     textStyle,
@@ -90,12 +92,14 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: Colors.primary },
   secondary: { backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.primary },
+  outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: Colors.border },
   destructive: { backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.error },
   ghost: { backgroundColor: 'transparent' },
   disabled: { opacity: 0.5 },
   text: { fontSize: 16, fontWeight: '600' },
   primaryText: { color: Colors.accent },
   secondaryText: { color: Colors.primary },
+  outlineText: { color: Colors.textPrimary },
   destructiveText: { color: Colors.error },
   ghostText: { color: Colors.textSecondary },
 });

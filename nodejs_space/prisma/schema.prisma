@@ -19,6 +19,7 @@ model User {
   phone        String
   documentId   String   @map("document_id")
   isActive     Boolean  @default(true) @map("is_active")
+  emailVerified Boolean @default(false) @map("email_verified")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -29,6 +30,7 @@ model User {
   requestRatingsGiven RequestRating[] @relation("RatingClient")
   chatsAsClient       Chat[]          @relation("ChatClient")
   files               File[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@map("users")
 }
@@ -350,4 +352,16 @@ model VendorSubscription {
   plan   Plan   @relation(fields: [planId], references: [id])
 
   @@map("vendor_subscriptions")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_tokens")
 }
