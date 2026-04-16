@@ -31,6 +31,7 @@ interface LocationData {
   parish?: string;
   street?: string;
   postalCode?: string;
+  referencePoint?: string;
   fullAddress?: string;
 }
 
@@ -53,6 +54,7 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
   const [loading, setLoading] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(Platform.OS !== 'web');
   const [address, setAddress] = useState<string>('');
+  const [referencePoint, setReferencePoint] = useState<string>('');
 
   // Estados para modo web (formulario manual)
   const [webForm, setWebForm] = useState({
@@ -63,6 +65,7 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
     parish: '',
     street: '',
     postalCode: '',
+    referencePoint: '',
   });
 
   useEffect(() => {
@@ -145,6 +148,7 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
       ].filter(Boolean);
 
       locationData.fullAddress = parts.join(', ') || data?.display_name || 'Dirección no disponible';
+      locationData.referencePoint = referencePoint; // Agregar punto de referencia manual
       setAddress(locationData.fullAddress ?? 'Dirección no disponible');
       onLocationUpdate(locationData);
 
@@ -181,6 +185,7 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
       parish: webForm.parish,
       street: webForm.street,
       postalCode: webForm.postalCode,
+      referencePoint: webForm.referencePoint,
       fullAddress,
     };
 
@@ -255,6 +260,13 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
             placeholder="1010"
           />
 
+          <Input
+            label="Punto de Referencia"
+            value={webForm.referencePoint}
+            onChangeText={(text: string) => setWebForm({ ...webForm, referencePoint: text })}
+            placeholder="Cerca del Centro Comercial..."
+          />
+
           <Button
             title="Guardar Ubicación"
             onPress={handleWebFormSubmit}
@@ -302,6 +314,14 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
             <Text style={styles.addressText}>{address}</Text>
           </View>
         ) : null}
+
+        <Input
+          label="Punto de Referencia"
+          value={referencePoint}
+          onChangeText={setReferencePoint}
+          placeholder="Ej: Cerca del Centro Comercial..."
+          containerStyle={styles.referenceInput}
+        />
 
         <Button
           title="Actualizar Dirección"
@@ -368,6 +388,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textPrimary,
     lineHeight: 20,
+  },
+  referenceInput: {
+    marginTop: Spacing.md,
+    marginBottom: 0,
   },
   updateButton: {
     marginTop: Spacing.sm,
