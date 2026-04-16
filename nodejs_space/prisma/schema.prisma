@@ -61,16 +61,22 @@ model Vendor {
   rif                     String
   logoUrl                 String?  @map("logo_url")
   documentImageUrl        String?  @map("document_image_url")
-  stateId                 String   @map("state_id") @db.Uuid
-  municipalityId          String   @map("municipality_id") @db.Uuid
-  searchRadiusKm          Int      @default(5) @map("search_radius_km")
+  country                 String?
+  city                    String?
+  state                   String?
+  municipality            String?
+  parish                  String?
+  street                  String?
+  postalCode              String?  @map("postal_code")
+  latitude                Float?
+  longitude               Float?
+  referencePoint          String?  @map("reference_point")
+  fullAddress             String?  @map("full_address")
   isAvailable             Boolean  @default(true) @map("is_available")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
   user                    User                    @relation(fields: [userId], references: [id])
-  state                   State                   @relation(fields: [stateId], references: [id])
-  municipality            Municipality            @relation(fields: [municipalityId], references: [id])
   vendorVehicleModels     VendorVehicleModel[]
   vendorPartSubcategories VendorPartSubcategory[]
   vendorMetrics           VendorMetrics?
@@ -148,7 +154,6 @@ model State {
   name String @unique
 
   municipalities Municipality[]
-  vendors        Vendor[]
   requests       Request[]
 
   @@map("states")
@@ -160,7 +165,6 @@ model Municipality {
   name    String
 
   state    State    @relation(fields: [stateId], references: [id])
-  vendors  Vendor[]
   requests Request[]
 
   @@unique([stateId, name])

@@ -13,7 +13,7 @@ import Input from '../../src/components/Input';
 import Button from '../../src/components/Button';
 import StepIndicator from '../../src/components/StepIndicator';
 import SelectInput from '../../src/components/SelectInput';
-import RadiusSelector from '../../src/components/RadiusSelector';
+import MapLocationPicker from '../../src/components/MapLocationPicker';
 import type { CatalogItem } from '../../src/types';
 
 const TOTAL_STEPS = 6;
@@ -28,13 +28,23 @@ export default function RegisterVendorScreen() {
 
   const [personal, setPersonal] = useState({ firstName: '', lastName: '', phone: '', documentId: '', email: '', password: '', confirmPassword: '' });
   const [business, setBusiness] = useState({ businessName: '', rif: '', docImageUri: '', docImagePath: '', logoUri: '', logoPath: '' });
-  const [location, setLocation] = useState({ stateId: '', municipalityId: '', searchRadiusKm: 5 });
+  const [location, setLocation] = useState({
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined,
+    country: '',
+    city: '',
+    state: '',
+    municipality: '',
+    parish: '',
+    street: '',
+    postalCode: '',
+    fullAddress: '',
+  });
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
 
-  const [municipalities, setMunicipalities] = useState<CatalogItem[]>([]);
   const [modelsMap, setModelsMap] = useState<Record<string, CatalogItem[]>>({});
   const [subcategoriesMap, setSubcategoriesMap] = useState<Record<string, CatalogItem[]>>({});
 
@@ -42,15 +52,7 @@ export default function RegisterVendorScreen() {
     if (user) router.replace('/role-selection');
   }, [user]);
 
-  useEffect(() => { catalog?.loadStates?.(); catalog?.loadBrands?.(); catalog?.loadCategories?.(); }, []);
-
-  useEffect(() => {
-    if (location?.stateId) {
-      catalog?.loadMunicipalities?.(location.stateId)?.then?.((items) => setMunicipalities(items ?? []));
-    } else {
-      setMunicipalities([]);
-    }
-  }, [location?.stateId]);
+  useEffect(() => { catalog?.loadBrands?.(); catalog?.loadCategories?.(); }, []);
 
   const loadModelsForBrand = useCallback(async (brandId: string) => {
     if (!modelsMap?.[brandId]) {
@@ -114,10 +116,10 @@ export default function RegisterVendorScreen() {
     });
   };
 
-  const canNext = (): boolean => {
+    const canNext = (): boolean => {
     if (step === 1) return !!(personal?.firstName?.trim?.() && personal?.lastName?.trim?.() && personal?.phone?.trim?.() && personal?.documentId?.trim?.() && personal?.email?.trim?.() && personal?.password && personal?.password === personal?.confirmPassword && (personal?.password?.length ?? 0) >= 6);
     if (step === 2) return !!(business?.businessName?.trim?.() && business?.rif?.trim?.());
-    if (step === 3) return !!(location?.stateId && location?.municipalityId);
+    if (step === 3) return !!(location?.latitude && location?.longitude && location?.fullAddress?.trim?.());
     if (step === 4) return (selectedModels?.length ?? 0) > 0;
     if (step === 5) return (selectedSubcategories?.length ?? 0) > 0 || (selectedCategories?.length ?? 0) > 0;
     return true;
@@ -151,9 +153,16 @@ export default function RegisterVendorScreen() {
         vendor: {
           businessName: business?.businessName?.trim?.() ?? '',
           rif: business?.rif?.trim?.() ?? '',
-          stateId: location?.stateId ?? '',
-          municipalityId: location?.municipalityId ?? '',
-          searchRadiusKm: location?.searchRadiusKm ?? 5,
+          country: location?.country ?? '',
+          city: location?.city ?? '',
+          state: location?.state ?? '',
+          municipality: location?.municipality ?? '',
+          parish: location?.parish ?? '',
+          street: location?.street ?? '',
+          postalCode: location?.postalCode ?? '',
+          latitude: location?.latitude,
+          longitude: location?.longitude,
+          fullAddress: location?.fullAddress ?? '',
           vehicleModelIds: selectedModels ?? [],
           partSubcategoryIds: subcatIds ?? [],
           documentImagePath: docPath || undefined,
@@ -204,9 +213,13 @@ export default function RegisterVendorScreen() {
         return (
           <View>
             <Text style={styles.stepTitle}>Ubicación</Text>
-            <SelectInput label="Estado" items={catalog?.states ?? []} selectedId={location.stateId} onSelect={(i) => setLocation((p) => ({ ...(p ?? {}), stateId: i?.id ?? '', municipalityId: '' }))} searchable />
-            <SelectInput label="Municipio" items={municipalities} selectedId={location.municipalityId} onSelect={(i) => setLocation((p) => ({ ...(p ?? {}), municipalityId: i?.id ?? '' }))} searchable />
-            <RadiusSelector value={location.searchRadiusKm} onChange={(v) => setLocation((p) => ({ ...(p ?? {}), searchRadiusKm: v }))} />
+            <Text style={styles.stepDesc}>
+              Selecciona tu ubicación exacta en el mapa. Arrastra el marcador para ajustar y presiona el botón para actualizar la dirección.
+            </Text>
+            <MapLocationPicker
+              onLocationUpdate={(loc) => setLocation((p) => ({ ...(p ?? {}), ...loc }))}
+              initialLocation={location?.latitude && location?.longitude ? { latitude: location.latitude, longitude: location.longitude } : undefined}
+            />
           </View>
         );
       case 4:

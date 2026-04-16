@@ -168,16 +168,23 @@ async function main() {
   const dcStateId = stateMap['Distrito Capital'];
   const libertadorMunId = municipalityMap['Distrito Capital-Libertador'];
 
-  const vendor = await prisma.vendor.upsert({
+    const vendor = await prisma.vendor.upsert({
     where: { userId: testUser.id },
     update: {},
     create: {
       userId: testUser.id,
       businessName: 'NEXXOS Test',
       rif: 'J-12345678-9',
-      stateId: dcStateId,
-      municipalityId: libertadorMunId,
-      searchRadiusKm: 15,
+      country: 'Venezuela',
+      state: 'Distrito Capital',
+      city: 'Caracas',
+      municipality: 'Libertador',
+      parish: 'El Recreo',
+      street: 'Av. Francisco de Miranda',
+      postalCode: '1060',
+      latitude: 10.4806,
+      longitude: -66.9036,
+      fullAddress: 'Av. Francisco de Miranda, El Recreo, Libertador, Caracas, Distrito Capital, Venezuela',
       isAvailable: true,
     },
   });

@@ -13,8 +13,6 @@ export class VendorService {
     const vendor = await this.prisma.vendor.findUnique({
       where: { userId },
       include: {
-        state: true,
-        municipality: true,
         vendorVehicleModels: { include: { vehicleModel: { include: { brand: true } } } },
         vendorPartSubcategories: { include: { partSubcategory: { include: { category: true } } } },
         vendorMetrics: true,
@@ -33,9 +31,17 @@ export class VendorService {
       businessName: vendor.businessName,
       rif: vendor.rif,
       logoUrl,
-      state: { id: vendor.state.id, name: vendor.state.name },
-      municipality: { id: vendor.municipality.id, name: vendor.municipality.name },
-      searchRadiusKm: vendor.searchRadiusKm,
+      country: vendor.country,
+      city: vendor.city,
+      state: vendor.state,
+      municipality: vendor.municipality,
+      parish: vendor.parish,
+      street: vendor.street,
+      postalCode: vendor.postalCode,
+      latitude: vendor.latitude,
+      longitude: vendor.longitude,
+      referencePoint: vendor.referencePoint,
+      fullAddress: vendor.fullAddress,
       isAvailable: vendor.isAvailable,
       vehicleModels: vendor.vendorVehicleModels.map((vvm: any) => ({
         id: vvm.vehicleModel.id,
@@ -62,7 +68,6 @@ export class VendorService {
     const vendor = await this.prisma.vendor.findUnique({
       where: { id: vendorId },
       include: {
-        state: true, municipality: true,
         vendorMetrics: true,
       },
     });
@@ -76,8 +81,11 @@ export class VendorService {
       businessName: vendor.businessName,
       rif: vendor.rif,
       logoUrl,
-      state: { id: vendor.state.id, name: vendor.state.name },
-      municipality: { id: vendor.municipality.id, name: vendor.municipality.name },
+      country: vendor.country,
+      city: vendor.city,
+      state: vendor.state,
+      municipality: vendor.municipality,
+      fullAddress: vendor.fullAddress,
       isAvailable: vendor.isAvailable,
       metrics: vendor.vendorMetrics
         ? {
