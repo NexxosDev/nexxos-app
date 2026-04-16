@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getVendorRequestDetail, respondToRequest, declineRequest } from '../src/services/vendor';
 import { getErrorMessage } from '../src/services/api';
+import { useAuth } from '../src/contexts/AuthContext';
 import { Colors, Spacing, BorderRadius } from '../src/theme/colors';
 import Badge from '../src/components/Badge';
 import Button from '../src/components/Button';
@@ -13,6 +14,7 @@ import type { VendorRequestDetailType } from '../src/types';
 
 export default function VendorRequestDetailScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const { matchId = '' } = useLocalSearchParams<{ matchId: string }>();
   const [detail, setDetail] = useState<VendorRequestDetailType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +36,21 @@ export default function VendorRequestDetailScreen() {
   }, [matchId]);
 
   useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
+
+  const handleRespondClick = () => {
+    if (!user?.emailVerified) {
+      Alert.alert(
+        'Email No Verificado',
+        'Debes verificar tu correo electrónico antes de responder a solicitudes. ¿Quieres ir a la pantalla de verificación?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Verificar Email', onPress: () => router.push('/verify-email') },
+        ]
+      );
+      return;
+    }
+    setRespondModal(true);
+  };
 
   const handleRespond = async () => {
     if ((message?.trim?.()?.length ?? 0) < 10) { setError('El mensaje debe tener al menos 10 caracteres'); return; }
@@ -102,7 +119,7 @@ export default function VendorRequestDetailScreen() {
 
         {detail?.status === 'PENDING' ? (
           <View style={styles.actions}>
-            <Button title="Responder" onPress={() => setRespondModal(true)} />
+            <Button title="Responder" onPress={handleRespondClick} />
             <Button title="Declinar" variant="ghost" onPress={handleDecline} loading={declining} />
           </View>
         ) : detail?.status === 'RESPONDED' && detail?.chatId ? (

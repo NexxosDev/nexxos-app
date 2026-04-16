@@ -386,6 +386,12 @@ export class RequestsService {
 
   // ── Vendor: Respond to request (creates chat) ──
   async respondToRequest(userId: string, matchId: string, dto: RespondRequestDto) {
+    // Verificar que el vendedor tenga su email verificado
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.emailVerified) {
+      throw new BadRequestException('Debes verificar tu correo electrónico antes de responder a solicitudes');
+    }
+
     const vendor = await this.prisma.vendor.findUnique({ where: { userId } });
     if (!vendor) throw new NotFoundException('Vendor profile not found');
 

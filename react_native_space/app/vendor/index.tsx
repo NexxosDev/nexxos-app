@@ -4,6 +4,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getVendorDashboard, updateVendorAvailability } from '../../src/services/vendor';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
 import MetricCard from '../../src/components/MetricCard';
 import RequestCard from '../../src/components/RequestCard';
@@ -14,6 +15,7 @@ import type { VendorDashboard } from '../../src/types';
 
 export default function VendorHome() {
   const router = useRouter();
+  const { user } = useAuth();
   const [dashboard, setDashboard] = useState<VendorDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,6 +54,20 @@ export default function VendorHome() {
           <Ionicons name="swap-horizontal-outline" size={24} color={Colors.textPrimary} />
         </Pressable>
       </View>
+
+      {!user?.emailVerified && (
+        <Pressable style={styles.verifyBanner} onPress={() => router.push('/verify-email')}>
+          <Ionicons name="warning-outline" size={20} color="#856404" />
+          <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+            <Text style={styles.verifyBannerTitle}>Verifica tu correo electrónico</Text>
+            <Text style={styles.verifyBannerText}>
+              No podrás responder solicitudes hasta que verifiques tu correo.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#856404" />
+        </Pressable>
+      )}
+
       <Text style={styles.greeting}>¡Hola, {dashboard?.businessName ?? 'Vendedor'}!</Text>
 
       <View style={styles.availRow}>
@@ -115,6 +131,26 @@ const styles = StyleSheet.create({
   list: { padding: Spacing.md, paddingBottom: 100 },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
   logo: { fontSize: 22, fontWeight: '800', color: Colors.primary, letterSpacing: 2 },
+  verifyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3CD',
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.warning,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  verifyBannerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#856404',
+    marginBottom: 2,
+  },
+  verifyBannerText: {
+    fontSize: 13,
+    color: '#856404',
+  },
   greeting: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.md },
   availRow: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.cardBg,
