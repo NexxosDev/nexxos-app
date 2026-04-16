@@ -18,9 +18,17 @@ export async function signupApi(data: {
   vendor?: {
     businessName: string;
     rif: string;
-    stateId: string;
-    municipalityId: string;
-    searchRadiusKm: number;
+    country?: string;
+    city?: string;
+    state?: string;
+    municipality?: string;
+    parish?: string;
+    street?: string;
+    postalCode?: string;
+    latitude?: number;
+    longitude?: number;
+    fullAddress?: string;
+    referencePoint?: string;
     vehicleModelIds: string[];
     partSubcategoryIds: string[];
     documentImagePath?: string;

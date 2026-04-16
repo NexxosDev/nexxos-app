@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { View, Text, StyleSheet, Alert, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import * as Location from 'expo-location';
 import { Colors, Spacing, BorderRadius } from '../theme/colors';
 import Button from './Button';
+import Input from './Input';
+
+// Importación condicional de react-native-maps (solo móvil, no web)
+let MapView: any = null;
+let Marker: any = null;
+let PROVIDER_GOOGLE: any = undefined;
+
+if (Platform.OS !== 'web') {
+  try {
+    const Maps = require('react-native-maps');
+    MapView = Maps.default;
+    Marker = Maps.Marker;
+    PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+  } catch (e) {
+    console.warn('react-native-maps not available');
+  }
+}
 
 interface LocationData {
   latitude: number;
@@ -35,11 +51,24 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
     longitude: initialLocation?.longitude || -66.9036,
   });
   const [loading, setLoading] = useState(false);
-  const [loadingLocation, setLoadingLocation] = useState(true);
+  const [loadingLocation, setLoadingLocation] = useState(Platform.OS !== 'web');
   const [address, setAddress] = useState<string>('');
 
+  // Estados para modo web (formulario manual)
+  const [webForm, setWebForm] = useState({
+    country: 'Venezuela',
+    state: '',
+    city: '',
+    municipality: '',
+    parish: '',
+    street: '',
+    postalCode: '',
+  });
+
   useEffect(() => {
-    getCurrentLocation();
+    if (Platform.OS !== 'web') {
+      getCurrentLocation();
+    }
   }, []);
 
   const getCurrentLocation = async () => {
@@ -116,7 +145,7 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
       ].filter(Boolean);
 
       locationData.fullAddress = parts.join(', ') || data?.display_name || 'Dirección no disponible';
-      setAddress(locationData.fullAddress);
+      setAddress(locationData.fullAddress ?? 'Dirección no disponible');
       onLocationUpdate(locationData);
 
       Alert.alert('Ubicación actualizada', 'La dirección ha sido actualizada correctamente');
@@ -132,6 +161,33 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
     reverseGeocode(markerPosition.latitude, markerPosition.longitude);
   };
 
+  const handleWebFormSubmit = () => {
+    const fullAddress = [
+      webForm.street,
+      webForm.parish,
+      webForm.municipality,
+      webForm.city,
+      webForm.state,
+      webForm.country,
+    ].filter(Boolean).join(', ') || 'Dirección ingresada manualmente';
+
+    const locationData: LocationData = {
+      latitude: 10.4806, // Coordenadas por defecto de Caracas
+      longitude: -66.9036,
+      country: webForm.country || 'Venezuela',
+      state: webForm.state,
+      city: webForm.city,
+      municipality: webForm.municipality,
+      parish: webForm.parish,
+      street: webForm.street,
+      postalCode: webForm.postalCode,
+      fullAddress,
+    };
+
+    onLocationUpdate(locationData);
+    Alert.alert('Éxito', 'Dirección guardada correctamente');
+  };
+
   if (loadingLocation) {
     return (
       <View style={styles.loadingContainer}>
@@ -141,23 +197,98 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
     );
   }
 
+  // Modo Web: Formulario manual
+  if (Platform.OS === 'web') {
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.webFormContainer}>
+          <Text style={styles.webInfoText}>
+            📍 En la versión web, ingresa tu dirección manualmente. El mapa interactivo estará disponible en la app móvil.
+          </Text>
+
+          <Input
+            label="País"
+            value={webForm.country}
+            onChangeText={(text: string) => setWebForm({ ...webForm, country: text })}
+            placeholder="Venezuela"
+          />
+
+          <Input
+            label="Estado"
+            value={webForm.state}
+            onChangeText={(text: string) => setWebForm({ ...webForm, state: text })}
+            placeholder="Distrito Capital"
+          />
+
+          <Input
+            label="Ciudad"
+            value={webForm.city}
+            onChangeText={(text: string) => setWebForm({ ...webForm, city: text })}
+            placeholder="Caracas"
+          />
+
+          <Input
+            label="Municipio"
+            value={webForm.municipality}
+            onChangeText={(text: string) => setWebForm({ ...webForm, municipality: text })}
+            placeholder="Libertador"
+          />
+
+          <Input
+            label="Parroquia (opcional)"
+            value={webForm.parish}
+            onChangeText={(text: string) => setWebForm({ ...webForm, parish: text })}
+            placeholder="Catedral"
+          />
+
+          <Input
+            label="Calle/Avenida (opcional)"
+            value={webForm.street}
+            onChangeText={(text: string) => setWebForm({ ...webForm, street: text })}
+            placeholder="Av. Universidad"
+          />
+
+          <Input
+            label="Código Postal (opcional)"
+            value={webForm.postalCode}
+            onChangeText={(text: string) => setWebForm({ ...webForm, postalCode: text })}
+            placeholder="1010"
+          />
+
+          <Button
+            title="Guardar Ubicación"
+            onPress={handleWebFormSubmit}
+            style={styles.submitButton}
+          />
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // Modo Móvil: Mapa interactivo
   return (
     <View style={styles.container}>
       <View style={styles.mapContainer}>
-        <MapView
-          provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-          style={styles.map}
-          region={region}
-          onRegionChangeComplete={setRegion}
-        >
-          <Marker
-            coordinate={markerPosition}
-            draggable
-            onDragEnd={(e) => setMarkerPosition(e?.nativeEvent?.coordinate ?? markerPosition)}
-            title="Tu ubicación"
-            description="Arrastra para ajustar"
-          />
-        </MapView>
+        {MapView && Marker ? (
+          <MapView
+            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            style={styles.map}
+            region={region}
+            onRegionChangeComplete={setRegion}
+          >
+            <Marker
+              coordinate={markerPosition}
+              draggable
+              onDragEnd={(e: any) => setMarkerPosition(e?.nativeEvent?.coordinate ?? markerPosition)}
+              title="Tu ubicación"
+              description="Arrastra para ajustar"
+            />
+          </MapView>
+        ) : (
+          <View style={styles.mapPlaceholder}>
+            <Text>Mapa no disponible</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.infoContainer}>
@@ -240,5 +371,26 @@ const styles = StyleSheet.create({
   },
   updateButton: {
     marginTop: Spacing.sm,
+  },
+  webFormContainer: {
+    padding: Spacing.lg,
+  },
+  webInfoText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    backgroundColor: Colors.backgroundSection,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.lg,
+    lineHeight: 20,
+  },
+  submitButton: {
+    marginTop: Spacing.md,
+  },
+  mapPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundSection,
   },
 });
