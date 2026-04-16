@@ -76,14 +76,51 @@ export default function RegisterVendorScreen() {
     }
   }, [subcategoriesMap, catalog]);
 
-  const pickImage = async (type: 'doc' | 'logo') => {
+  const pickImageFromLibrary = async (type: 'doc' | 'logo') => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+      const result = await ImagePicker.launchImageLibraryAsync({ 
+        mediaTypes: ['images'], 
+        quality: 0.8,
+        allowsEditing: true,
+        aspect: type === 'logo' ? [1, 1] : [4, 3],
+      });
       if (!result?.canceled && result?.assets?.[0]?.uri) {
         if (type === 'doc') setBusiness((p) => ({ ...(p ?? {}), docImageUri: result.assets[0].uri }));
         else setBusiness((p) => ({ ...(p ?? {}), logoUri: result.assets[0].uri }));
       }
     } catch { }
+  };
+
+  const takePhoto = async (type: 'doc' | 'logo') => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (permission?.status !== 'granted') {
+        Alert.alert('Permiso Denegado', 'Necesitamos acceso a la cámara para tomar fotos.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ 
+        quality: 0.8,
+        allowsEditing: true,
+        aspect: type === 'logo' ? [1, 1] : [4, 3],
+      });
+      if (!result?.canceled && result?.assets?.[0]?.uri) {
+        if (type === 'doc') setBusiness((p) => ({ ...(p ?? {}), docImageUri: result.assets[0].uri }));
+        else setBusiness((p) => ({ ...(p ?? {}), logoUri: result.assets[0].uri }));
+      }
+    } catch { }
+  };
+
+  const showImageOptions = (type: 'doc' | 'logo') => {
+    Alert.alert(
+      type === 'doc' ? 'Documento de Identidad' : 'Logo del Negocio',
+      'Selecciona una opción',
+      [
+        { text: 'Tomar Foto', onPress: () => takePhoto(type) },
+        { text: 'Seleccionar del Dispositivo', onPress: () => pickImageFromLibrary(type) },
+        { text: 'Cancelar', style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
   };
 
   const toggleBrand = (brandId: string) => {
@@ -124,12 +161,15 @@ export default function RegisterVendorScreen() {
     });
   };
 
-    const canNext = (): boolean => {
+  const canNext = (): boolean => {
     if (step === 1) {
       const emailValid = personal?.email?.trim?.() && /\S+@\S+\.\S+/.test(personal.email);
       return !!(personal?.firstName?.trim?.() && personal?.lastName?.trim?.() && personal?.phone?.trim?.() && personal?.documentId?.trim?.() && emailValid && personal?.password && personal?.password === personal?.confirmPassword && (personal?.password?.length ?? 0) >= 6);
     }
-    if (step === 2) return !!(business?.businessName?.trim?.() && business?.rif?.trim?.());
+    if (step === 2) {
+      // Requiere: businessName, rif, docImageUri (obligatorio) y logoUri (obligatorio)
+      return !!(business?.businessName?.trim?.() && business?.rif?.trim?.() && business?.docImageUri && business?.logoUri);
+    }
     if (step === 3) return !!(location?.latitude && location?.longitude && location?.fullAddress?.trim?.());
     if (step === 4) return (selectedModels?.length ?? 0) > 0;
     if (step === 5) return (selectedSubcategories?.length ?? 0) > 0 || (selectedCategories?.length ?? 0) > 0;
@@ -209,16 +249,44 @@ export default function RegisterVendorScreen() {
             <Text style={styles.stepTitle}>Datos del Negocio</Text>
             <Input label="Razón Social" value={business.businessName} onChangeText={(v) => setBusiness((p) => ({ ...(p ?? {}), businessName: v }))} />
             <Input label="RIF" value={business.rif} onChangeText={(v) => setBusiness((p) => ({ ...(p ?? {}), rif: v }))} />
-            <Text style={styles.fieldLabel}>Documento de Identidad</Text>
-            <Pressable style={styles.imagePicker} onPress={() => pickImage('doc')}>
-              {business?.docImageUri ? <Image source={{ uri: business.docImageUri }} style={styles.imagePreview} /> : <Ionicons name="camera-outline" size={32} color={Colors.textSecondary} />}
-              <Text style={styles.imagePickerText}>{business?.docImageUri ? 'Cambiar foto' : 'Seleccionar foto'}</Text>
-            </Pressable>
-            <Text style={styles.fieldLabel}>Logo (opcional)</Text>
-            <Pressable style={styles.imagePicker} onPress={() => pickImage('logo')}>
-              {business?.logoUri ? <Image source={{ uri: business.logoUri }} style={styles.imagePreview} /> : <Ionicons name="image-outline" size={32} color={Colors.textSecondary} />}
-              <Text style={styles.imagePickerText}>{business?.logoUri ? 'Cambiar logo' : 'Seleccionar logo'}</Text>
-            </Pressable>
+            
+            <Text style={styles.fieldLabel}>
+              Documento de Identidad <Text style={styles.requiredStar}>*</Text>
+            </Text>
+            {business?.docImageUri ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: business.docImageUri }} style={styles.imagePreviewFull} />
+                <Pressable style={styles.changeImageButton} onPress={() => showImageOptions('doc')}>
+                  <Ionicons name="camera-outline" size={20} color={Colors.white} />
+                  <Text style={styles.changeImageText}>Cambiar</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable style={styles.imagePicker} onPress={() => showImageOptions('doc')}>
+                <Ionicons name="camera-outline" size={40} color={Colors.textSecondary} />
+                <Text style={styles.imagePickerTitle}>Cargar Documento de Identidad</Text>
+                <Text style={styles.imagePickerSubtitle}>Tomar foto o seleccionar del dispositivo</Text>
+              </Pressable>
+            )}
+            
+            <Text style={styles.fieldLabel}>
+              Logo del Negocio <Text style={styles.requiredStar}>*</Text>
+            </Text>
+            {business?.logoUri ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: business.logoUri }} style={styles.imagePreviewFull} />
+                <Pressable style={styles.changeImageButton} onPress={() => showImageOptions('logo')}>
+                  <Ionicons name="image-outline" size={20} color={Colors.white} />
+                  <Text style={styles.changeImageText}>Cambiar</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable style={styles.imagePicker} onPress={() => showImageOptions('logo')}>
+                <Ionicons name="image-outline" size={40} color={Colors.textSecondary} />
+                <Text style={styles.imagePickerTitle}>Cargar Logo del Negocio</Text>
+                <Text style={styles.imagePickerSubtitle}>Tomar foto o seleccionar del dispositivo</Text>
+              </Pressable>
+            )}
           </View>
         );
       case 3:
@@ -381,4 +449,47 @@ const styles = StyleSheet.create({
   summaryCard: { backgroundColor: Colors.backgroundSection, borderRadius: BorderRadius.md, padding: Spacing.md },
   summaryLabel: { fontSize: 12, color: Colors.textSecondary, marginTop: Spacing.sm },
   summaryValue: { fontSize: 15, fontWeight: '500', color: Colors.textPrimary },
+  requiredStar: { color: Colors.error, fontSize: 13 },
+  imagePreviewContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: Colors.backgroundSection,
+  },
+  imagePreviewFull: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  changeImageButton: {
+    position: 'absolute',
+    bottom: Spacing.md,
+    right: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.full,
+    gap: 6,
+  },
+  changeImageText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  imagePickerTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginTop: Spacing.sm,
+  },
+  imagePickerSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
 });
