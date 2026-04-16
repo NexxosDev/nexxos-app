@@ -124,15 +124,23 @@ export default function MapLocationPicker({ onLocationUpdate, initialLocation }:
       const data = await response.json();
       const addr = data?.address ?? {};
 
+      // Construir street concatenando suburb + neighbourhood + road
+      const streetParts = [
+        addr?.suburb ?? '',
+        addr?.neighbourhood ?? '',
+        addr?.road ?? '',
+      ].filter(Boolean);
+      const streetValue = streetParts.join(' ').trim();
+
       const locationData: LocationData = {
         latitude: lat,
         longitude: lon,
         country: addr?.country ?? 'Venezuela',
-        state: addr?.state ?? addr?.province ?? '',
-        city: addr?.city ?? addr?.town ?? addr?.village ?? '',
-        municipality: addr?.municipality ?? addr?.county ?? '',
-        parish: addr?.suburb ?? addr?.neighbourhood ?? '',
-        street: addr?.road ?? addr?.street ?? '',
+        state: addr?.state ?? '',
+        city: addr?.city ?? '',
+        municipality: addr?.county ?? '',
+        parish: addr?.municipality ?? '',
+        street: streetValue,
         postalCode: addr?.postcode ?? '',
         fullAddress: data?.display_name ?? '',
       };
