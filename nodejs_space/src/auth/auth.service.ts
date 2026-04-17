@@ -1,5 +1,6 @@
 import { Injectable, ConflictException, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailVerificationService } from './email-verification.service';
@@ -14,6 +15,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly emailVerificationService: EmailVerificationService,
+    private readonly configService: ConfigService,
   ) {}
 
   async signup(dto: SignupDto) {
@@ -29,6 +31,10 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
+    // Modo de desarrollo: auto-verificar email si SKIP_EMAIL_VERIFICATION=true
+    const skipEmailVerification = this.configService.get<string>('SKIP_EMAIL_VERIFICATION') === 'true';
+    const emailVerified = skipEmailVerification;
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
@@ -38,6 +44,7 @@ export class AuthService {
         name: `${dto.firstName} ${dto.lastName}`,
         phone: dto.phone,
         documentId: dto.documentId,
+        emailVerified, // Auto-verificar en modo desarrollo
         userRoles: { create: { roleId: role.id } },
       },
       include: { userRoles: { include: { role: true } } },
@@ -74,13 +81,17 @@ export class AuthService {
       await this.prisma.vendorMetrics.create({ data: { vendorId: vendor.id } });
     }
 
-    // Send verification email
-    try {
-      await this.emailVerificationService.sendVerificationEmail(user.id);
-      this.logger.log(`Verification email sent to ${user.email}`);
-    } catch (error) {
-      this.logger.error(`Failed to send verification email: ${error.message}`);
-      // Don't fail registration if email fails
+    // Enviar email de verificación solo si NO estamos en modo desarrollo
+    if (!skipEmailVerification) {
+      try {
+        await this.emailVerificationService.sendVerificationEmail(user.id);
+        this.logger.log(`Verification email sent to ${user.email}`);
+      } catch (error) {
+        this.logger.error(`Failed to send verification email: ${error.message}`);
+        // Don't fail registration if email fails
+      }
+    } else {
+      this.logger.log(`[DEV MODE] Email verification skipped for ${user.email}`);
     }
 
     const token = this.generateToken(user.id, user.email);

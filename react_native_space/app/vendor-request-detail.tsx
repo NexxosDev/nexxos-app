@@ -38,7 +38,10 @@ export default function VendorRequestDetailScreen() {
   useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
 
   const handleRespondClick = () => {
-    if (!user?.emailVerified) {
+    // Modo de desarrollo: saltar validación de email si EXPO_PUBLIC_SKIP_EMAIL_VERIFICATION=true
+    const skipEmailVerification = process.env.EXPO_PUBLIC_SKIP_EMAIL_VERIFICATION === 'true';
+    
+    if (!skipEmailVerification && !user?.emailVerified) {
       Alert.alert(
         'Email No Verificado',
         'Debes verificar tu correo electrónico antes de responder a solicitudes. ¿Quieres ir a la pantalla de verificación?',

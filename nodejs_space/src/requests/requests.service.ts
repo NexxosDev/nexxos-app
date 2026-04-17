@@ -1,6 +1,7 @@
 import {
   Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { CloseRequestDto } from './dto/close-request.dto';
@@ -11,7 +12,10 @@ import { getFileUrl } from '../lib/s3';
 export class RequestsService {
   private readonly logger = new Logger(RequestsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
 
   // ── Client: Create request with auto-matching ──
   async createRequest(clientId: string, dto: CreateRequestDto) {
@@ -394,10 +398,17 @@ export class RequestsService {
 
   // ── Vendor: Respond to request (creates chat) ──
   async respondToRequest(userId: string, matchId: string, dto: RespondRequestDto) {
-    // Verificar que el vendedor tenga su email verificado
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user?.emailVerified) {
-      throw new BadRequestException('Debes verificar tu correo electrónico antes de responder a solicitudes');
+    // Modo de desarrollo: saltar validación de email si SKIP_EMAIL_VERIFICATION=true
+    const skipEmailVerification = this.configService.get<string>('SKIP_EMAIL_VERIFICATION') === 'true';
+    
+    if (!skipEmailVerification) {
+      // Verificar que el vendedor tenga su email verificado
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user?.emailVerified) {
+        throw new BadRequestException('Debes verificar tu correo electrónico antes de responder a solicitudes');
+      }
+    } else {
+      this.logger.log(`[DEV MODE] Email verification check skipped for user ${userId}`);
     }
 
     const vendor = await this.prisma.vendor.findUnique({ where: { userId } });
