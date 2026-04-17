@@ -19,9 +19,15 @@ const api = axios.create({
 
 api.interceptors.request.use(async (config) => {
   try {
-    const token = await getToken();
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // No enviar token en rutas públicas (signup, login, forgot-password, reset-password, verify-email)
+    const publicRoutes = ['/signup', '/auth/login', '/auth/forgot-password', '/auth/reset-password', '/auth/verify-email'];
+    const isPublicRoute = publicRoutes.some((route) => config?.url?.includes?.(route));
+    
+    if (!isPublicRoute) {
+      const token = await getToken();
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
   } catch {}
   return config;
