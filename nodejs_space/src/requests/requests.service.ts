@@ -31,11 +31,19 @@ export class RequestsService {
 
     // Matching logic
     const matchingConditions: any = {
-      stateId: dto.stateId,
-      municipalityId: dto.municipalityId,
       isAvailable: true,
       vendorVehicleModels: { some: { vehicleModelId: dto.vehicleModelId } },
     };
+
+    // Filtros geográficos opcionales
+    if (dto.municipalityId) {
+      // Si hay municipio, filtrar por municipio específico
+      matchingConditions.municipalityId = dto.municipalityId;
+    } else if (dto.stateId) {
+      // Si solo hay estado, filtrar por estado
+      matchingConditions.stateId = dto.stateId;
+    }
+    // Si no hay ninguno (modo radio), buscar en cualquier ubicación
 
     if (dto.partSubcategoryId) {
       matchingConditions.vendorPartSubcategories = {
@@ -170,9 +178,9 @@ export class RequestsService {
       partSubcategory: request.partSubcategory
         ? { id: request.partSubcategory.id, name: request.partSubcategory.name }
         : null,
-      state: { id: request.state.id, name: request.state.name },
-      municipality: { id: request.municipality.id, name: request.municipality.name },
-      searchRadiusKm: request.searchRadiusKm,
+      state: request.state ? { id: request.state.id, name: request.state.name } : null,
+      municipality: request.municipality ? { id: request.municipality.id, name: request.municipality.name } : null,
+      searchRadiusKm: request.searchRadiusKm ?? null,
       freeDescription: request.freeDescription,
       status: request.status,
       responseCount: request._count.requestResponses,
@@ -372,9 +380,9 @@ export class RequestsService {
         partCategory: match.request.partCategory.name,
         partSubcategory: match.request.partSubcategory?.name ?? null,
         freeDescription: match.request.freeDescription,
-        municipality: match.request.municipality.name,
-        state: match.request.state.name,
-        searchRadiusKm: match.request.searchRadiusKm,
+        municipality: match.request.municipality?.name ?? null,
+        state: match.request.state?.name ?? null,
+        searchRadiusKm: match.request.searchRadiusKm ?? null,
         createdAt: match.request.createdAt.toISOString(),
         clientFirstName: match.request.client.firstName,
         status: match.request.status,

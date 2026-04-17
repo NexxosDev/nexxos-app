@@ -10,7 +10,7 @@ import { Colors, Spacing, BorderRadius } from '../src/theme/colors';
 import Button from '../src/components/Button';
 import StepIndicator from '../src/components/StepIndicator';
 import SelectInput from '../src/components/SelectInput';
-import RadiusSelector from '../src/components/RadiusSelector';
+import RequestLocationMap from '../src/components/RequestLocationMap';
 import type { CatalogItem } from '../src/types';
 
 const TOTAL_STEPS = 4;
@@ -23,11 +23,21 @@ export default function CreateRequestScreen() {
   const [error, setError] = useState('');
   const [successModal, setSuccessModal] = useState<{ count: number } | null>(null);
 
-  const [stateId, setStateId] = useState('');
-  const [municipalityId, setMunicipalityId] = useState('');
-  const [searchRadius, setSearchRadius] = useState(5);
+  // Paso 1: Ubicaci\u00f3n
+  const [locationData, setLocationData] = useState<{
+    filterType: 'radius' | 'state' | 'municipality';
+    stateId?: string;
+    municipalityId?: string;
+    radiusKm?: number;
+    latitude?: number;
+    longitude?: number;
+  } | null>(null);
+
+  // Paso 2: Veh\u00edculo
   const [brandId, setBrandId] = useState('');
   const [modelId, setModelId] = useState('');
+
+  // Paso 3: Repuesto
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
   const [description, setDescription] = useState('');
@@ -37,11 +47,6 @@ export default function CreateRequestScreen() {
   const [subcategories, setSubcategories] = useState<CatalogItem[]>([]);
 
   useEffect(() => { catalog?.loadStates?.(); catalog?.loadBrands?.(); catalog?.loadCategories?.(); }, []);
-
-  useEffect(() => {
-    if (stateId) { catalog?.loadMunicipalities?.(stateId)?.then?.((items) => setMunicipalities(items ?? [])); }
-    else { setMunicipalities([]); setMunicipalityId(''); }
-  }, [stateId]);
 
   useEffect(() => {
     if (brandId) { catalog?.loadModels?.(brandId)?.then?.((items) => setModels(items ?? [])); }
@@ -54,26 +59,59 @@ export default function CreateRequestScreen() {
   }, [categoryId]);
 
   const canNext = (): boolean => {
-    if (step === 1) return !!(stateId && municipalityId);
+    if (step === 1) {
+      if (!locationData) return false;
+      // Si est\u00e1 en modo Radio (default), se habilita cuando tenga ubicaci\u00f3n
+      if (locationData.filterType === 'radius') {
+        return !!(locationData.latitude && locationData.longitude);
+      }
+      // Si est\u00e1 en modo Estado, debe seleccionar un estado
+      if (locationData.filterType === 'state') {
+        return !!locationData.stateId;
+      }
+      // Si est\u00e1 en modo Municipio, debe seleccionar estado Y municipio
+      if (locationData.filterType === 'municipality') {
+        return !!(locationData.stateId && locationData.municipalityId);
+      }
+      return false;
+    }
     if (step === 2) return !!(brandId && modelId);
     if (step === 3) return !!(categoryId && description?.trim?.());
     return true;
   };
 
-  const getStateName = () => (catalog?.states ?? []).find((s) => s?.id === stateId)?.name ?? '';
-  const getMuniName = () => (municipalities ?? []).find((m) => m?.id === municipalityId)?.name ?? '';
+  const getLocationSummary = () => {
+    if (!locationData) return '';
+    if (locationData.filterType === 'radius') {
+      return `Radio de ${locationData.radiusKm ?? 5} km`;
+    }
+    if (locationData.filterType === 'state') {
+      const stateName = (catalog?.states ?? []).find((s) => s?.id === locationData.stateId)?.name ?? '';
+      return `Estado: ${stateName}`;
+    }
+    if (locationData.filterType === 'municipality') {
+      const stateName = (catalog?.states ?? []).find((s) => s?.id === locationData.stateId)?.name ?? '';
+      const muniName = (municipalities ?? []).find((m) => m?.id === locationData.municipalityId)?.name ?? '';
+      return `${muniName}, ${stateName}`;
+    }
+    return '';
+  };
   const getBrandName = () => (catalog?.brands ?? []).find((b) => b?.id === brandId)?.name ?? '';
   const getModelName = () => (models ?? []).find((m) => m?.id === modelId)?.name ?? '';
   const getCatName = () => (catalog?.categories ?? []).find((c) => c?.id === categoryId)?.name ?? '';
   const getSubName = () => (subcategories ?? []).find((s) => s?.id === subcategoryId)?.name ?? '';
 
   const handleSubmit = async () => {
+    if (!locationData) return;
     setError('');
     setLoading(true);
     try {
       const result = await createRequest({
-        stateId, municipalityId, searchRadiusKm: searchRadius,
-        vehicleBrandId: brandId, vehicleModelId: modelId,
+        stateId: locationData.stateId ?? undefined,
+        municipalityId: locationData.municipalityId ?? undefined,
+        searchRadiusKm: locationData.radiusKm ?? undefined,
+        vehicleBrandId: brandId,
+        vehicleModelId: modelId,
         partCategoryId: categoryId,
         partSubcategoryId: subcategoryId || undefined,
         freeDescription: description?.trim?.() ?? '',
@@ -86,16 +124,20 @@ export default function CreateRequestScreen() {
     }
   };
 
+  const handleMunicipalitiesNeeded = (stateId: string) => {
+    catalog?.loadMunicipalities?.(stateId)?.then?.((items) => setMunicipalities(items ?? []));
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
-          <View>
-            <Text style={styles.stepTitle}>¿Dónde necesitas el repuesto?</Text>
-            <SelectInput label="Estado" items={catalog?.states ?? []} selectedId={stateId} onSelect={(i) => { setStateId(i?.id ?? ''); setMunicipalityId(''); }} searchable />
-            <SelectInput label="Municipio" items={municipalities} selectedId={municipalityId} onSelect={(i) => setMunicipalityId(i?.id ?? '')} searchable />
-            <RadiusSelector value={searchRadius} onChange={setSearchRadius} />
-          </View>
+          <RequestLocationMap
+            states={catalog?.states ?? []}
+            municipalities={municipalities}
+            onLocationChange={setLocationData}
+            onMunicipalitiesNeeded={handleMunicipalitiesNeeded}
+          />
         );
       case 2:
         return (
@@ -133,7 +175,7 @@ export default function CreateRequestScreen() {
           <View>
             <Text style={styles.stepTitle}>Confirma tu solicitud</Text>
             <View style={styles.summaryCard}>
-              <SummaryRow label="Ubicación" value={`${getMuniName()}, ${getStateName()} (${searchRadius}km)`} onEdit={() => setStep(1)} />
+              <SummaryRow label="Ubicación" value={getLocationSummary()} onEdit={() => setStep(1)} />
               <SummaryRow label="Vehículo" value={`${getBrandName()} ${getModelName()}`} onEdit={() => setStep(2)} />
               <SummaryRow label="Repuesto" value={`${getCatName()}${getSubName() ? ` - ${getSubName()}` : ''}`} onEdit={() => setStep(3)} />
               <SummaryRow label="Descripción" value={description ?? ''} onEdit={() => setStep(3)} />

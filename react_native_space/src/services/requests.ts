@@ -2,9 +2,9 @@ import api from './api';
 import type { RequestListItem, RequestDetail, RequestResponseItem } from '../types';
 
 export async function createRequest(data: {
-  stateId: string;
-  municipalityId: string;
-  searchRadiusKm: number;
+  stateId?: string;
+  municipalityId?: string;
+  searchRadiusKm?: number;
   vehicleBrandId: string;
   vehicleModelId: string;
   partCategoryId: string;

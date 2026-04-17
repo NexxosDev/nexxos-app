@@ -205,9 +205,9 @@ model Request {
   vehicleModelId    String    @map("vehicle_model_id") @db.Uuid
   partCategoryId    String    @map("part_category_id") @db.Uuid
   partSubcategoryId String?   @map("part_subcategory_id") @db.Uuid
-  stateId           String    @map("state_id") @db.Uuid
-  municipalityId    String    @map("municipality_id") @db.Uuid
-  searchRadiusKm    Int       @map("search_radius_km")
+  stateId           String?   @map("state_id") @db.Uuid
+  municipalityId    String?   @map("municipality_id") @db.Uuid
+  searchRadiusKm    Int?      @map("search_radius_km")
   freeDescription   String    @map("free_description")
   status            String    @default("ABIERTA")
   createdAt         DateTime  @default(now()) @map("created_at")
@@ -218,8 +218,8 @@ model Request {
   vehicleModel        VehicleModel         @relation(fields: [vehicleModelId], references: [id])
   partCategory        PartCategory         @relation(fields: [partCategoryId], references: [id])
   partSubcategory     PartSubcategory?     @relation(fields: [partSubcategoryId], references: [id])
-  state               State                @relation(fields: [stateId], references: [id])
-  municipality        Municipality         @relation(fields: [municipalityId], references: [id])
+  state               State?               @relation(fields: [stateId], references: [id])
+  municipality        Municipality?        @relation(fields: [municipalityId], references: [id])
   requestVendorMatches RequestVendorMatch[]
   requestResponses    RequestResponse[]
   chats               Chat[]
