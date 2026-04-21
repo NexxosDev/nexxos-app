@@ -75,8 +75,24 @@ export default function VendorProfileScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ubicación</Text>
-          <Text style={styles.sectionValue}>{profile?.municipality?.name ?? ''}, {profile?.state?.name ?? ''}</Text>
-          <Text style={styles.sectionValue}>Radio: {profile?.searchRadiusKm ?? 0} km</Text>
+          {profile?.fullAddress ? (
+            <Text style={styles.sectionValue}>{profile.fullAddress}</Text>
+          ) : (
+            <>
+              {(profile?.street || profile?.parish) ? (
+                <Text style={styles.sectionValue}>{[profile?.street, profile?.parish].filter(Boolean).join(', ')}</Text>
+              ) : null}
+              {(profile?.municipality || profile?.city || profile?.state) ? (
+                <Text style={styles.sectionValue}>{[profile?.municipality, profile?.city, profile?.state].filter(Boolean).join(', ')}</Text>
+              ) : null}
+              {profile?.country ? (
+                <Text style={styles.sectionValue}>{profile.country}</Text>
+              ) : null}
+            </>
+          )}
+          {profile?.referencePoint ? (
+            <Text style={styles.sectionValueMuted}>Ref: {profile.referencePoint}</Text>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -130,6 +146,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary, marginBottom: Spacing.sm },
   sectionValue: { fontSize: 14, color: Colors.textSubtitle, marginBottom: 4 },
+  sectionValueMuted: { fontSize: 13, color: Colors.textSecondary, marginBottom: 4, fontStyle: 'italic' },
   chipGroup: { marginBottom: Spacing.sm },
   chipGroupTitle: { fontSize: 13, fontWeight: '600', color: Colors.textSubtitle, marginBottom: 4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

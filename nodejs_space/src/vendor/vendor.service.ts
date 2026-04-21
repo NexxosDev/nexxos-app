@@ -107,9 +107,17 @@ export class VendorService {
     if (dto.rif !== undefined) data.rif = dto.rif;
     if (dto.logoPath !== undefined) data.logoUrl = dto.logoPath;
     if (dto.documentImagePath !== undefined) data.documentImageUrl = dto.documentImagePath;
-    if (dto.stateId !== undefined) data.stateId = dto.stateId;
-    if (dto.municipalityId !== undefined) data.municipalityId = dto.municipalityId;
-    if (dto.searchRadiusKm !== undefined) data.searchRadiusKm = dto.searchRadiusKm;
+    if (dto.country !== undefined) data.country = dto.country;
+    if (dto.city !== undefined) data.city = dto.city;
+    if (dto.state !== undefined) data.state = dto.state;
+    if (dto.municipality !== undefined) data.municipality = dto.municipality;
+    if (dto.parish !== undefined) data.parish = dto.parish;
+    if (dto.street !== undefined) data.street = dto.street;
+    if (dto.postalCode !== undefined) data.postalCode = dto.postalCode;
+    if (dto.latitude !== undefined) data.latitude = dto.latitude;
+    if (dto.longitude !== undefined) data.longitude = dto.longitude;
+    if (dto.referencePoint !== undefined) data.referencePoint = dto.referencePoint;
+    if (dto.fullAddress !== undefined) data.fullAddress = dto.fullAddress;
 
     const updated = await this.prisma.vendor.update({ where: { id: vendor.id }, data });
 
