@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Pressable, StyleSheet, Platform } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import * as Haptics from 'expo-haptics';
 
@@ -24,8 +24,8 @@ export default function StarRating({ rating = 0, onChange, size = 28, readonly =
     <View style={styles.row}>
       {[1, 2, 3, 4, 5].map((star) => (
         <Pressable key={star} onPress={() => handlePress(star)} hitSlop={4} disabled={readonly}>
-          <FontAwesome
-            name={(rating ?? 0) >= star ? 'star' : 'star-o'}
+          <Ionicons
+            name={(rating ?? 0) >= star ? 'star' : 'star-outline'}
             size={size}
             color={(rating ?? 0) >= star ? Colors.primary : Colors.border}
           />

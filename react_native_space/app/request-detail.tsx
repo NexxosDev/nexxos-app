@@ -43,12 +43,20 @@ export default function RequestDetailScreen() {
 
   const handleClose = async () => {
     setCloseError('');
+    if (resolved && !selectedVendorId) {
+      setCloseError('Selecciona el vendedor que te ayudó');
+      return;
+    }
+    if (resolved && rating < 1) {
+      setCloseError('Debes seleccionar una calificación');
+      return;
+    }
     setClosing(true);
     try {
       const body: Parameters<typeof closeRequest>[1] = { resolved };
-      if (resolved && selectedVendorId) {
+      if (resolved) {
         body.vendorId = selectedVendorId;
-        if (rating > 0) body.rating = rating;
+        body.rating = rating;
         if (comment?.trim?.()) body.comment = comment.trim();
       }
       await closeRequest(id, body);
