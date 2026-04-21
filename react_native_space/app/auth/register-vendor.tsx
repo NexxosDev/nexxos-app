@@ -52,11 +52,7 @@ export default function RegisterVendorScreen() {
 
   useEffect(() => {
     if (user) {
-      if (!user?.emailVerified) {
-        router.replace('/verify-email');
-      } else {
-        router.replace('/role-selection');
-      }
+      router.replace('/role-selection');
     }
   }, [user]);
 
