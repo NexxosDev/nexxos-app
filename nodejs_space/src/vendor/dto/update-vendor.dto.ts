@@ -5,6 +5,7 @@ export class UpdateVendorDto {
   @ApiPropertyOptional() @IsOptional() @IsString() businessName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() rif?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() logoPath?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() documentImagePath?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() stateId?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() municipalityId?: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(1) @Max(100) searchRadiusKm?: number;

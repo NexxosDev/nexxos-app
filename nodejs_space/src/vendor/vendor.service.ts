@@ -106,6 +106,7 @@ export class VendorService {
     if (dto.businessName !== undefined) data.businessName = dto.businessName;
     if (dto.rif !== undefined) data.rif = dto.rif;
     if (dto.logoPath !== undefined) data.logoUrl = dto.logoPath;
+    if (dto.documentImagePath !== undefined) data.documentImageUrl = dto.documentImagePath;
     if (dto.stateId !== undefined) data.stateId = dto.stateId;
     if (dto.municipalityId !== undefined) data.municipalityId = dto.municipalityId;
     if (dto.searchRadiusKm !== undefined) data.searchRadiusKm = dto.searchRadiusKm;

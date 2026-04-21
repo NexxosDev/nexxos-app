@@ -8,6 +8,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useCatalog } from '../../src/contexts/CatalogContext';
 import { getErrorMessage } from '../../src/services/api';
 import { uploadFile } from '../../src/services/upload';
+import { updateVendorProfile } from '../../src/services/vendor';
 import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
 import Input from '../../src/components/Input';
 import PhoneInput from '../../src/components/PhoneInput';
@@ -176,18 +177,9 @@ export default function RegisterVendorScreen() {
     setError('');
     setLoading(true);
     try {
-      let docPath = business?.docImagePath ?? '';
-      let logoPathVal = business?.logoPath ?? '';
-
-      if (business?.docImageUri && !docPath) {
-        docPath = await uploadFile(business.docImageUri, 'doc_id.jpg', 'image/jpeg', false);
-      }
-      if (business?.logoUri && !logoPathVal) {
-        logoPathVal = await uploadFile(business.logoUri, 'logo.jpg', 'image/jpeg', true);
-      }
-
       const subcatIds = (selectedSubcategories?.length ?? 0) > 0 ? selectedSubcategories : [];
 
+      // Paso 1: Crear cuenta primero (sin imágenes, el usuario aún no tiene token)
       await signup({
         email: personal?.email?.trim?.() ?? '',
         password: personal?.password ?? '',
@@ -213,10 +205,31 @@ export default function RegisterVendorScreen() {
           fullAddress: location?.fullAddress ?? '',
           vehicleModelIds: selectedModels ?? [],
           partSubcategoryIds: subcatIds ?? [],
-          documentImagePath: docPath || undefined,
-          logoPath: logoPathVal || undefined,
         },
       });
+
+      // Paso 2: Ahora el usuario tiene token, subir imágenes y actualizar perfil
+      try {
+        let docPath = '';
+        let logoPathVal = '';
+
+        if (business?.docImageUri) {
+          docPath = await uploadFile(business.docImageUri, 'doc_id.jpg', 'image/jpeg', false);
+        }
+        if (business?.logoUri) {
+          logoPathVal = await uploadFile(business.logoUri, 'logo.jpg', 'image/jpeg', true);
+        }
+
+        if (docPath || logoPathVal) {
+          const updateData: Record<string, unknown> = {};
+          if (docPath) updateData.documentImagePath = docPath;
+          if (logoPathVal) updateData.logoPath = logoPathVal;
+          await updateVendorProfile(updateData);
+        }
+      } catch (imgErr) {
+        // No fallar el registro si las imágenes fallan, el usuario ya está registrado
+        console.warn('Image upload failed after signup:', imgErr);
+      }
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
