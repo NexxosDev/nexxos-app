@@ -8,10 +8,19 @@ interface ResponseCardProps {
   businessName: string;
   avgRating?: number | null;
   initialMessage: string;
+  distanceKm?: number | null;
   onOpenChat?: () => void;
 }
 
-export default function ResponseCard({ businessName, avgRating, initialMessage, onOpenChat }: ResponseCardProps) {
+function formatDistance(km: number): string {
+  if (km < 1) {
+    return `A ${Math.round(km * 1000)} m de tu ubicación`;
+  }
+  return `A ${km.toFixed(1)} km de tu ubicación`;
+}
+
+export default function ResponseCard({ businessName, avgRating, initialMessage, distanceKm, onOpenChat }: ResponseCardProps) {
+  const hasDistance = typeof distanceKm === 'number' && isFinite(distanceKm);
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -20,12 +29,20 @@ export default function ResponseCard({ businessName, avgRating, initialMessage, 
         </View>
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>{businessName ?? ''}</Text>
-          {typeof avgRating === 'number' ? (
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={12} color={Colors.primary} />
-              <Text style={styles.rating}>{avgRating?.toFixed?.(1) ?? '0'}</Text>
-            </View>
-          ) : null}
+          <View style={styles.metaRow}>
+            {typeof avgRating === 'number' ? (
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={12} color={Colors.primary} />
+                <Text style={styles.rating}>{avgRating?.toFixed?.(1) ?? '0'}</Text>
+              </View>
+            ) : null}
+            {hasDistance ? (
+              <View style={styles.distanceRow}>
+                <Ionicons name="location-outline" size={12} color={Colors.textSecondary} />
+                <Text style={styles.distance}>{formatDistance(distanceKm as number)}</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       </View>
       <Text style={styles.message} numberOfLines={2}>{initialMessage ?? ''}</Text>
@@ -57,8 +74,11 @@ const styles = StyleSheet.create({
   },
   info: { flex: 1 },
   name: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 2, flexWrap: 'wrap' },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   rating: { fontSize: 12, color: Colors.textSecondary },
+  distanceRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  distance: { fontSize: 12, color: Colors.textSecondary },
   message: { fontSize: 13, color: Colors.textSubtitle, marginBottom: Spacing.sm, lineHeight: 18 },
   chatBtn: { alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: Spacing.md },
 });

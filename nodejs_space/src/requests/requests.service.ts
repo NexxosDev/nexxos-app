@@ -17,6 +17,23 @@ export class RequestsService {
     private readonly configService: ConfigService,
   ) {}
 
+  // Haversine distance in kilometers
+  private haversineKm(
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number,
+  ): number {
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
   // ── Client: Create request with auto-matching ──
   async createRequest(clientId: string, dto: CreateRequestDto) {
     const request = await this.prisma.request.create({
@@ -104,22 +121,12 @@ export class RequestsService {
       const clientLat = dto.latitude as number;
       const clientLng = dto.longitude as number;
       const radiusKm = dto.searchRadiusKm as number;
-      const toRad = (d: number) => (d * Math.PI) / 180;
-      const haversine = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-        const R = 6371;
-        const dLat = toRad(lat2 - lat1);
-        const dLng = toRad(lng2 - lng1);
-        const a =
-          Math.sin(dLat / 2) ** 2 +
-          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      };
       matchedVendors = candidates
         .filter(
           (v: any) =>
             typeof v.latitude === 'number' &&
             typeof v.longitude === 'number' &&
-            haversine(clientLat, clientLng, v.latitude, v.longitude) <= radiusKm,
+            this.haversineKm(clientLat, clientLng, v.latitude, v.longitude) <= radiusKm,
         )
         .map((v: any) => ({ id: v.id }));
     } else {
@@ -264,6 +271,9 @@ export class RequestsService {
       orderBy: { createdAt: 'asc' },
     });
 
+    const clientLat = request.latitude;
+    const clientLng = request.longitude;
+
     const items = await Promise.all(
       responses.map(async (r: any) => {
         let logoUrl: string | null = null;
@@ -273,6 +283,22 @@ export class RequestsService {
         const chat = await this.prisma.chat.findFirst({
           where: { requestId, vendorId: r.vendorId },
         });
+
+        let distanceKm: number | null = null;
+        if (
+          typeof clientLat === 'number' &&
+          typeof clientLng === 'number' &&
+          typeof r.vendor.latitude === 'number' &&
+          typeof r.vendor.longitude === 'number'
+        ) {
+          distanceKm = this.haversineKm(
+            clientLat,
+            clientLng,
+            r.vendor.latitude,
+            r.vendor.longitude,
+          );
+        }
+
         return {
           id: r.id,
           vendor: {
@@ -283,6 +309,7 @@ export class RequestsService {
           },
           initialMessage: r.initialMessage,
           chatId: chat?.id ?? null,
+          distanceKm,
           createdAt: r.createdAt.toISOString(),
         };
       }),

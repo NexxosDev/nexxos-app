@@ -110,8 +110,9 @@ export default function CreateRequestScreen() {
         stateId: locationData.filterType === 'radius' ? undefined : (locationData.stateId ?? undefined),
         municipalityId: locationData.filterType === 'radius' ? undefined : (locationData.municipalityId ?? undefined),
         searchRadiusKm: locationData.filterType === 'radius' ? (locationData.radiusKm ?? undefined) : undefined,
-        latitude: locationData.filterType === 'radius' ? (locationData.latitude ?? undefined) : undefined,
-        longitude: locationData.filterType === 'radius' ? (locationData.longitude ?? undefined) : undefined,
+        // Siempre enviamos lat/lng del cliente para poder calcular distancia a vendedores
+        latitude: locationData.latitude ?? undefined,
+        longitude: locationData.longitude ?? undefined,
         vehicleBrandId: brandId,
         vehicleModelId: modelId,
         partCategoryId: categoryId,

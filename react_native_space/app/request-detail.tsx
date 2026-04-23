@@ -104,6 +104,7 @@ export default function RequestDetailScreen() {
               businessName={resp?.vendor?.businessName ?? ''}
               avgRating={resp?.vendor?.avgRating}
               initialMessage={resp?.initialMessage ?? ''}
+              distanceKm={resp?.distanceKm}
               onOpenChat={detail?.status !== 'CERRADA' ? () => router.push(`/chat?chatId=${resp?.chatId ?? ''}`) : undefined}
             />
           ))

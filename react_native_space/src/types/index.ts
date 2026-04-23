@@ -63,6 +63,7 @@ export interface RequestResponseItem {
   };
   initialMessage: string;
   chatId: string;
+  distanceKm: number | null;
   createdAt: string;
 }
 

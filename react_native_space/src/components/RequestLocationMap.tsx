@@ -104,15 +104,20 @@ export default function RequestLocationMap({
       onLocationChange?.({
         filterType: 'state',
         stateId: selectedStateId || undefined,
+        // Mandamos lat/lng del cliente para calcular distancia a vendedores
+        latitude: location?.coords?.latitude,
+        longitude: location?.coords?.longitude,
       });
     } else if (filterType === 'municipality') {
       onLocationChange?.({
         filterType: 'municipality',
         stateId: selectedStateId || undefined,
         municipalityId: selectedMunicipalityId || undefined,
+        latitude: location?.coords?.latitude,
+        longitude: location?.coords?.longitude,
       });
     }
-  }, [filterType, selectedStateId, selectedMunicipalityId]);
+  }, [filterType, selectedStateId, selectedMunicipalityId, location]);
 
   const handleFilterChange = (item: { id: FilterType; name: string } | null) => {
     if (!item) return;
