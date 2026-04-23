@@ -90,23 +90,26 @@ export default function RequestLocationMap({
   }, []);
 
   useEffect(() => {
-    // Notificar cambios en el filtro
-    if (filterType === 'radius' && location) {
-      onLocationChange?.({
-        filterType: 'radius',
-        radiusKm: DEFAULT_RADIUS_KM,
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-    } else if (filterType === 'state' && selectedStateId) {
+    // Notificar cambios en el filtro — cada tipo es independiente
+    if (filterType === 'radius') {
+      if (location) {
+        onLocationChange?.({
+          filterType: 'radius',
+          radiusKm: DEFAULT_RADIUS_KM,
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      }
+    } else if (filterType === 'state') {
       onLocationChange?.({
         filterType: 'state',
-        stateId: selectedStateId,
+        stateId: selectedStateId || undefined,
       });
-    } else if (filterType === 'municipality' && selectedMunicipalityId) {
+    } else if (filterType === 'municipality') {
       onLocationChange?.({
         filterType: 'municipality',
-        municipalityId: selectedMunicipalityId,
+        stateId: selectedStateId || undefined,
+        municipalityId: selectedMunicipalityId || undefined,
       });
     }
   }, [filterType, selectedStateId, selectedMunicipalityId]);
