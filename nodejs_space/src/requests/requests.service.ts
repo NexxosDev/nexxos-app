@@ -58,14 +58,18 @@ export class RequestsService {
           include: { state: true },
         });
         if (muni) {
-          matchingConditions.municipality = muni.name;
-          if (muni.state?.name) matchingConditions.state = muni.state.name;
+          matchingConditions.municipality = { contains: muni.name, mode: 'insensitive' };
+          if (muni.state?.name) {
+            matchingConditions.state = { contains: muni.state.name, mode: 'insensitive' };
+          }
         }
       } else if (dto.stateId) {
         const state = await this.prisma.state.findUnique({
           where: { id: dto.stateId },
         });
-        if (state) matchingConditions.state = state.name;
+        if (state) {
+          matchingConditions.state = { contains: state.name, mode: 'insensitive' };
+        }
       }
     }
 
