@@ -50,11 +50,22 @@ export class RequestsService {
       !dto.stateId;
 
     // Filtros geográficos (solo cuando NO estamos en modo radio)
+    // Vendor guarda state/municipality como strings (nombres), no como FKs
     if (!radiusMode) {
       if (dto.municipalityId) {
-        matchingConditions.municipalityId = dto.municipalityId;
+        const muni = await this.prisma.municipality.findUnique({
+          where: { id: dto.municipalityId },
+          include: { state: true },
+        });
+        if (muni) {
+          matchingConditions.municipality = muni.name;
+          if (muni.state?.name) matchingConditions.state = muni.state.name;
+        }
       } else if (dto.stateId) {
-        matchingConditions.stateId = dto.stateId;
+        const state = await this.prisma.state.findUnique({
+          where: { id: dto.stateId },
+        });
+        if (state) matchingConditions.state = state.name;
       }
     }
 
