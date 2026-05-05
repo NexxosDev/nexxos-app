@@ -176,6 +176,16 @@ export interface ChatInfo {
   createdAt: string;
 }
 
+export interface VendorResponseMetrics {
+  totalResponded: number;
+  totalReceived: number;
+  responseRate: number;
+  avgResponseTimeMs: number | null;
+  medianResponseTimeMs: number | null;
+  fastestResponseTimeMs: number | null;
+  slowestResponseTimeMs: number | null;
+}
+
 export interface ChatMessageItem {
   id: string;
   senderId: string;

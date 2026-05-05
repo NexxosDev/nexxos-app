@@ -1,5 +1,5 @@
 import api from './api';
-import type { VendorProfile, VendorDashboard, VendorRequestListItem, VendorRequestDetailType } from '../types';
+import type { VendorProfile, VendorDashboard, VendorRequestListItem, VendorRequestDetailType, VendorResponseMetrics } from '../types';
 
 export async function getVendorProfile(): Promise<VendorProfile> {
   const res = await api.get('/vendor/profile');
@@ -42,5 +42,10 @@ export async function respondToRequest(matchId: string, message: string): Promis
 
 export async function declineRequest(matchId: string): Promise<{ success: boolean }> {
   const res = await api.post(`/vendor/requests/${encodeURIComponent(matchId)}/decline`);
+  return res?.data;
+}
+
+export async function getVendorResponseMetrics(): Promise<VendorResponseMetrics> {
+  const res = await api.get('/vendor/response-metrics');
   return res?.data;
 }

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, Switch, Pressable, RefreshControl, Pl
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { getVendorDashboard, updateVendorAvailability } from '../../src/services/vendor';
+import { getVendorDashboard, updateVendorAvailability, getVendorResponseMetrics } from '../../src/services/vendor';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
 import MetricCard from '../../src/components/MetricCard';
@@ -11,7 +11,7 @@ import RequestCard from '../../src/components/RequestCard';
 import StarRating from '../../src/components/StarRating';
 import EmptyState from '../../src/components/EmptyState';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
-import type { VendorDashboard } from '../../src/types';
+import type { VendorDashboard, VendorResponseMetrics } from '../../src/types';
 
 /** Format milliseconds to human-readable time string */
 function formatDuration(ms: number): string {
@@ -71,6 +71,7 @@ export default function VendorHome() {
   const router = useRouter();
   const { user } = useAuth();
   const [dashboard, setDashboard] = useState<VendorDashboard | null>(null);
+  const [responseMetrics, setResponseMetrics] = useState<VendorResponseMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [toggling, setToggling] = useState(false);
@@ -78,8 +79,12 @@ export default function VendorHome() {
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const data = await getVendorDashboard();
-      setDashboard(data ?? null);
+      const [dashData, metricsData] = await Promise.all([
+        getVendorDashboard(),
+        getVendorResponseMetrics().catch(() => null),
+      ]);
+      setDashboard(dashData ?? null);
+      setResponseMetrics(metricsData ?? null);
     } catch { }
     if (isRefresh) setRefreshing(false); else setLoading(false);
   }, []);
@@ -147,6 +152,55 @@ export default function VendorHome() {
         <View style={styles.ratingContainer}>
           <StarRating rating={Math.round(metrics.avgRating)} readonly size={20} />
           <Text style={styles.ratingText}>{metrics?.avgRating?.toFixed?.(1) ?? '0'} ({metrics?.totalRatings ?? 0} calificaciones)</Text>
+        </View>
+      ) : null}
+
+      {/* Response Time Metrics */}
+      {responseMetrics ? (
+        <View style={styles.responseMetricsCard}>
+          <View style={styles.rmHeader}>
+            <Ionicons name="speedometer-outline" size={18} color={Colors.primary} />
+            <Text style={styles.rmTitle}>Tiempos de Respuesta</Text>
+          </View>
+          <View style={styles.rmGrid}>
+            <View style={styles.rmItem}>
+              <Text style={styles.rmValue}>
+                {responseMetrics?.avgResponseTimeMs != null
+                  ? formatDuration(responseMetrics.avgResponseTimeMs)
+                  : '—'}
+              </Text>
+              <Text style={styles.rmLabel}>Promedio</Text>
+            </View>
+            <View style={styles.rmDivider} />
+            <View style={styles.rmItem}>
+              <Text style={styles.rmValue}>
+                {responseMetrics?.medianResponseTimeMs != null
+                  ? formatDuration(responseMetrics.medianResponseTimeMs)
+                  : '—'}
+              </Text>
+              <Text style={styles.rmLabel}>Mediana</Text>
+            </View>
+            <View style={styles.rmDivider} />
+            <View style={styles.rmItem}>
+              <Text style={styles.rmValue}>
+                {responseMetrics?.fastestResponseTimeMs != null
+                  ? formatDuration(responseMetrics.fastestResponseTimeMs)
+                  : '—'}
+              </Text>
+              <Text style={styles.rmLabel}>Más rápida</Text>
+            </View>
+          </View>
+          <View style={styles.rmFooter}>
+            <View style={styles.rmFooterItem}>
+              <Ionicons name="trending-up-outline" size={14} color={Colors.success} />
+              <Text style={styles.rmFooterText}>
+                Tasa de respuesta: <Text style={{ fontWeight: '700', color: Colors.success }}>{responseMetrics?.responseRate ?? 0}%</Text>
+              </Text>
+            </View>
+            <Text style={styles.rmFooterSub}>
+              {responseMetrics?.totalResponded ?? 0} de {responseMetrics?.totalReceived ?? 0} solicitudes
+            </Text>
+          </View>
         </View>
       ) : null}
 
@@ -221,4 +275,77 @@ const styles = StyleSheet.create({
   ratingContainer: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.lg },
   ratingText: { fontSize: 14, color: Colors.textSecondary },
   sectionTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary, marginBottom: Spacing.md },
+  responseMetricsCard: {
+    backgroundColor: Colors.cardBg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: Spacing.md,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
+      android: { elevation: 1 },
+      default: {},
+    }),
+  },
+  rmHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+  },
+  rmTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginLeft: Spacing.sm,
+  },
+  rmGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
+  },
+  rmItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  rmDivider: {
+    width: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 2,
+  },
+  rmValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  rmLabel: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
+  rmFooter: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.backgroundSection,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rmFooterItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rmFooterText: {
+    fontSize: 13,
+    color: Colors.textPrimary,
+    marginLeft: 4,
+  },
+  rmFooterSub: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
 });
