@@ -79,13 +79,15 @@ export class ChatService {
         senderId: m.sender.id,
         senderName: `${m.sender.firstName} ${m.sender.lastName}`,
         messageText: m.messageText,
+        messageType: m.messageType ?? 'text',
+        imageUrl: m.imageUrl ?? null,
         createdAt: m.createdAt.toISOString(),
       })),
       hasMore,
     };
   }
 
-  async sendMessage(chatId: string, userId: string, messageText: string) {
+  async sendMessage(chatId: string, userId: string, messageText: string, messageType = 'text', imageUrl?: string) {
     const chat = await this.prisma.chat.findUnique({
       where: { id: chatId },
       include: { vendor: { select: { userId: true } } },
@@ -98,7 +100,7 @@ export class ChatService {
     if (!isClient && !isVendor) throw new ForbiddenException();
 
     const message = await this.prisma.chatMessage.create({
-      data: { chatId, senderId: userId, messageText },
+      data: { chatId, senderId: userId, messageText, messageType, imageUrl: imageUrl ?? null },
       include: { sender: { select: { id: true, firstName: true, lastName: true } } },
     });
 
@@ -108,7 +110,7 @@ export class ChatService {
       ? (chat as any).vendor?.userId
       : chat.clientId;
     if (recipientUserId) {
-      const preview = messageText.length > 100 ? messageText.substring(0, 97) + '...' : messageText;
+      const preview = messageType === 'image' ? '📷 Imagen' : (messageText.length > 100 ? messageText.substring(0, 97) + '...' : messageText);
       this.notificationService.sendToUser(
         recipientUserId,
         `💬 ${senderName}`,
@@ -122,6 +124,8 @@ export class ChatService {
       senderId: message.sender.id,
       senderName,
       messageText: message.messageText,
+      messageType: message.messageType,
+      imageUrl: message.imageUrl,
       createdAt: message.createdAt.toISOString(),
     };
   }

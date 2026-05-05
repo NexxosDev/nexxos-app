@@ -1,6 +1,14 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
 
 export class SendMessageDto {
   @ApiProperty() @IsString() @IsNotEmpty() messageText: string;
+
+  @ApiPropertyOptional({ enum: ['text', 'image'], default: 'text' })
+  @IsOptional() @IsString() @IsIn(['text', 'image'])
+  messageType?: string;
+
+  @ApiPropertyOptional({ description: 'S3 image URL (required when messageType=image)' })
+  @IsOptional() @IsString()
+  imageUrl?: string;
 }

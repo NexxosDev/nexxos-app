@@ -1,10 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../src/contexts/AuthContext';
 import { getChatInfo, getChatMessages, sendChatMessage } from '../src/services/chat';
+// upload helpers are dynamically imported in uploadFileWithUrl
 import { Colors, Spacing } from '../src/theme/colors';
 import ChatMessageComp from '../src/components/ChatMessage';
 import LoadingSpinner from '../src/components/LoadingSpinner';
@@ -19,6 +21,8 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchMessages = useCallback(async () => {
@@ -50,13 +54,68 @@ export default function ChatScreen() {
     if (!trimmed || sending) return;
     setSending(true);
     try {
-      const newMsg = await sendChatMessage(chatId, trimmed);
+      const newMsg = await sendChatMessage(chatId, trimmed, 'text');
       if (newMsg) {
         setMessages((prev) => [newMsg, ...(prev ?? [])]);
       }
       setText('');
     } catch { }
     setSending(false);
+  };
+
+  const pickAndSendImage = async (source: 'gallery' | 'camera') => {
+    setShowAttachMenu(false);
+    try {
+      let result: ImagePicker.ImagePickerResult;
+
+      if (source === 'camera') {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm?.granted) {
+          Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a la cámara.');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          quality: 0.7,
+          allowsEditing: true,
+        });
+      } else {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm?.granted) {
+          Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a la galería.');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 0.7,
+          allowsEditing: true,
+        });
+      }
+
+      if (result?.canceled || !result?.assets?.[0]) return;
+
+      const asset = result.assets[0];
+      const uri = asset?.uri ?? '';
+      if (!uri) return;
+
+      const fileName = uri.split('/').pop() ?? `image_${Date.now()}.jpg`;
+      const contentType = asset?.mimeType ?? 'image/jpeg';
+
+      setUploading(true);
+      // Upload to S3 and get the public URL
+      const uploadRes = await uploadFileWithUrl(uri, fileName, contentType);
+      const imageUrl = uploadRes?.url ?? '';
+
+      if (imageUrl) {
+        const newMsg = await sendChatMessage(chatId, '📷 Imagen', 'image', imageUrl);
+        if (newMsg) {
+          setMessages((prev) => [newMsg, ...(prev ?? [])]);
+        }
+      }
+    } catch (err) {
+      Alert.alert('Error', 'No se pudo enviar la imagen. Intenta de nuevo.');
+    }
+    setUploading(false);
   };
 
   if (loading) return <LoadingSpinner />;
@@ -84,6 +143,8 @@ export default function ChatScreen() {
               createdAt={item?.createdAt ?? ''}
               isOwn={item?.senderId === user?.id}
               isVendorMessage={item?.senderId === chatInfo?.vendorUserId}
+              messageType={item?.messageType}
+              imageUrl={item?.imageUrl}
             />
           )}
           inverted
@@ -91,7 +152,36 @@ export default function ChatScreen() {
           ListEmptyComponent={<Text style={styles.emptyChat}>No hay mensajes aún. ¡Inicia la conversación!</Text>}
         />
 
+        {/* Uploading indicator */}
+        {uploading ? (
+          <View style={styles.uploadingBar}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={styles.uploadingText}>Subiendo imagen...</Text>
+          </View>
+        ) : null}
+
+        {/* Attach menu popover */}
+        {showAttachMenu ? (
+          <View style={styles.attachMenu}>
+            <Pressable style={styles.attachOption} onPress={() => pickAndSendImage('gallery')}>
+              <Ionicons name="images" size={24} color={Colors.primary} />
+              <Text style={styles.attachOptionText}>Galería</Text>
+            </Pressable>
+            <Pressable style={styles.attachOption} onPress={() => pickAndSendImage('camera')}>
+              <Ionicons name="camera" size={24} color={Colors.primary} />
+              <Text style={styles.attachOptionText}>Cámara</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={styles.inputBar}>
+          <Pressable
+            style={styles.attachBtn}
+            onPress={() => setShowAttachMenu((v) => !v)}
+            disabled={uploading}
+          >
+            <Ionicons name={showAttachMenu ? 'close' : 'attach'} size={24} color={uploading ? Colors.textSecondary : Colors.primary} />
+          </Pressable>
           <TextInput
             style={styles.input}
             value={text}
@@ -100,6 +190,7 @@ export default function ChatScreen() {
             placeholderTextColor={Colors.textSecondary}
             multiline
             maxLength={1000}
+            onFocus={() => setShowAttachMenu(false)}
           />
           <Pressable
             style={[styles.sendBtn, (!text?.trim?.() || sending) && styles.sendBtnDisabled]}
@@ -114,6 +205,29 @@ export default function ChatScreen() {
   );
 }
 
+// Helper that uploads and returns the public URL
+async function uploadFileWithUrl(
+  uri: string, fileName: string, contentType: string,
+): Promise<{ url: string; storagePath: string }> {
+  const { getPresignedUrl, completeUpload } = await import('../src/services/upload');
+  const presigned = await getPresignedUrl(fileName, contentType, true);
+  const uploadUrl = presigned?.uploadUrl ?? '';
+  const storagePath = presigned?.cloud_storage_path ?? '';
+
+  const fileResponse = await fetch(uri);
+  const blob = await fileResponse.blob();
+
+  const headers: Record<string, string> = { 'Content-Type': contentType };
+  const signedHeaders = new URL(uploadUrl).searchParams?.get?.('X-Amz-SignedHeaders') ?? '';
+  if (signedHeaders?.includes?.('content-disposition')) {
+    headers['Content-Disposition'] = 'attachment';
+  }
+
+  await fetch(uploadUrl, { method: 'PUT', body: blob, headers });
+  const result = await completeUpload(storagePath, fileName, contentType);
+  return { url: result?.url ?? '', storagePath };
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: {
@@ -126,9 +240,26 @@ const styles = StyleSheet.create({
   headerSummary: { fontSize: 12, color: Colors.textSecondary },
   messageList: { padding: Spacing.sm, paddingBottom: Spacing.md },
   emptyChat: { textAlign: 'center', color: Colors.textSecondary, padding: Spacing.xl },
+  uploadingBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 8, backgroundColor: Colors.backgroundSection,
+  },
+  uploadingText: { marginLeft: 8, fontSize: 13, color: Colors.textSecondary },
+  attachMenu: {
+    flexDirection: 'row', justifyContent: 'space-evenly',
+    paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  attachOption: {
+    alignItems: 'center', paddingVertical: 8, paddingHorizontal: 24,
+  },
+  attachOptionText: { fontSize: 12, color: Colors.textPrimary, marginTop: 4 },
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', padding: Spacing.sm,
     borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.white,
+  },
+  attachBtn: {
+    width: 40, height: 44, justifyContent: 'center', alignItems: 'center',
   },
   input: {
     flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 20,

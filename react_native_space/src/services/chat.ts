@@ -14,7 +14,14 @@ export async function getChatMessages(chatId: string, params?: {
   return { items: res?.data?.items ?? [], hasMore: res?.data?.hasMore ?? false };
 }
 
-export async function sendChatMessage(chatId: string, messageText: string): Promise<ChatMessageItem> {
-  const res = await api.post(`/chats/${encodeURIComponent(chatId)}/messages`, { messageText });
+export async function sendChatMessage(
+  chatId: string,
+  messageText: string,
+  messageType = 'text',
+  imageUrl?: string,
+): Promise<ChatMessageItem> {
+  const body: Record<string, string> = { messageText, messageType };
+  if (imageUrl) body.imageUrl = imageUrl;
+  const res = await api.post(`/chats/${encodeURIComponent(chatId)}/messages`, body);
   return res?.data;
 }

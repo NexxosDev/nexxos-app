@@ -176,5 +176,7 @@ export interface ChatMessageItem {
   senderId: string;
   senderName: string;
   messageText: string;
+  messageType?: string;
+  imageUrl?: string | null;
   createdAt: string;
 }
