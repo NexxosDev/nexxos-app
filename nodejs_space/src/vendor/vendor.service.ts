@@ -194,20 +194,86 @@ export class VendorService {
             totalRatings: vendor.vendorMetrics.totalRatings,
           }
         : { totalRequestsReceived: 0, totalRequestsAnswered: 0, avgRating: null, totalRatings: 0 },
-      recentRequests: vendor.requestVendorMatches.map((m: any) => ({
-        matchId: m.id,
-        request: {
-          id: m.request.id,
-          vehicleBrand: m.request.vehicleBrand.name,
-          vehicleModel: m.request.vehicleModel.name,
-          partCategory: m.request.partCategory.name,
-          partSubcategory: m.request.partSubcategory?.name ?? null,
-          municipality: m.request.municipality?.name ?? null,
-          state: m.request.state?.name ?? null,
-          createdAt: m.request.createdAt.toISOString(),
-        },
-        status: m.request.status === 'CERRADA' ? 'CERRADA' : m.declined ? 'DECLINED' : m.responded ? 'RESPONDED' : 'PENDING',
-      })),
+      recentRequests: vendor.requestVendorMatches.map((m: any) => {
+        const deliveredAt = m.deliveredAt ? m.deliveredAt.toISOString() : null;
+        const respondedAt = m.respondedAt ? m.respondedAt.toISOString() : null;
+        const declinedAt = m.declinedAt ? m.declinedAt.toISOString() : null;
+
+        let status = 'PENDING';
+        if (m.request.status === 'CERRADA') status = 'CERRADA';
+        else if (m.declined) status = 'DECLINED';
+        else if (m.responded) status = 'RESPONDED';
+
+        return {
+          matchId: m.id,
+          request: {
+            id: m.request.id,
+            vehicleBrand: m.request.vehicleBrand.name,
+            vehicleModel: m.request.vehicleModel.name,
+            partCategory: m.request.partCategory.name,
+            partSubcategory: m.request.partSubcategory?.name ?? null,
+            municipality: m.request.municipality?.name ?? null,
+            state: m.request.state?.name ?? null,
+            createdAt: m.request.createdAt.toISOString(),
+          },
+          status,
+          deliveredAt,
+          respondedAt,
+          declinedAt,
+          responded: !!m.responded,
+          declined: !!m.declined,
+        };
+      }),
+    };
+  }
+
+  async getResponseTimeMetrics(userId: string) {
+    const vendor = await this.prisma.vendor.findUnique({ where: { userId } });
+    if (!vendor) throw new NotFoundException('Vendor profile not found');
+
+    const matches = await this.prisma.requestVendorMatch.findMany({
+      where: { vendorId: vendor.id, responded: true, respondedAt: { not: null } },
+      select: { deliveredAt: true, respondedAt: true },
+    });
+
+    if (matches.length === 0) {
+      return {
+        totalResponded: 0,
+        totalReceived: 0,
+        responseRate: 0,
+        avgResponseTimeMs: null,
+        medianResponseTimeMs: null,
+        fastestResponseTimeMs: null,
+        slowestResponseTimeMs: null,
+      };
+    }
+
+    const totalReceived = await this.prisma.requestVendorMatch.count({
+      where: { vendorId: vendor.id },
+    });
+
+    const deltas = matches
+      .filter((m: any) => m.respondedAt && m.deliveredAt)
+      .map((m: any) => new Date(m.respondedAt).getTime() - new Date(m.deliveredAt).getTime())
+      .filter((d: number) => d >= 0)
+      .sort((a: number, b: number) => a - b);
+
+    const sum = deltas.reduce((a: number, b: number) => a + b, 0);
+    const avg = deltas.length > 0 ? Math.round(sum / deltas.length) : null;
+    const median = deltas.length > 0
+      ? deltas.length % 2 === 0
+        ? Math.round((deltas[deltas.length / 2 - 1] + deltas[deltas.length / 2]) / 2)
+        : deltas[Math.floor(deltas.length / 2)]
+      : null;
+
+    return {
+      totalResponded: deltas.length,
+      totalReceived,
+      responseRate: totalReceived > 0 ? Math.round((deltas.length / totalReceived) * 100) : 0,
+      avgResponseTimeMs: avg,
+      medianResponseTimeMs: median,
+      fastestResponseTimeMs: deltas.length > 0 ? deltas[0] : null,
+      slowestResponseTimeMs: deltas.length > 0 ? deltas[deltas.length - 1] : null,
     };
   }
 }

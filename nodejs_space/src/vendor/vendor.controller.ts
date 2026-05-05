@@ -43,6 +43,13 @@ export class VendorController {
     return this.vendorService.getDashboard(userId);
   }
 
+  @Get('response-metrics')
+  @Roles('VENDEDOR')
+  @ApiOperation({ summary: 'Get vendor response time metrics (avg, median, fastest, slowest, rate)' })
+  getResponseTimeMetrics(@CurrentUser('id') userId: string) {
+    return this.vendorService.getResponseTimeMetrics(userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get vendor by ID' })
   getVendorById(@Param('id') id: string) {

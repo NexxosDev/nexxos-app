@@ -13,6 +13,60 @@ import EmptyState from '../../src/components/EmptyState';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
 import type { VendorDashboard } from '../../src/types';
 
+/** Format milliseconds to human-readable time string */
+function formatDuration(ms: number): string {
+  if (ms < 0) return '0s';
+  const totalSec = Math.floor(ms / 1000);
+  if (totalSec < 60) return `${totalSec}s`;
+  const totalMin = Math.floor(totalSec / 60);
+  if (totalMin < 60) return `${totalMin}min`;
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  if (hours < 24) return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  const remH = hours % 24;
+  return remH > 0 ? `${days}d ${remH}h` : `${days}d`;
+}
+
+/** Build the time label + color for a vendor match item */
+function getTimeInfo(item: VendorDashboard['recentRequests'][number]): { label: string; color: string } {
+  const delivered = item?.deliveredAt ? new Date(item.deliveredAt).getTime() : 0;
+  const now = Date.now();
+
+  switch (item?.status) {
+    case 'PENDING': {
+      if (!delivered) return { label: 'Pendiente', color: '#F57C00' };
+      const elapsed = now - delivered;
+      return { label: `⏳ Sin responder · ${formatDuration(elapsed)}`, color: '#F57C00' };
+    }
+    case 'RESPONDED': {
+      const responded = item?.respondedAt ? new Date(item.respondedAt).getTime() : 0;
+      if (!delivered || !responded) return { label: '✅ Respondida', color: Colors.success };
+      const delta = responded - delivered;
+      return { label: `✅ Respondida en ${formatDuration(delta)}`, color: Colors.success };
+    }
+    case 'DECLINED': {
+      const declined = item?.declinedAt ? new Date(item.declinedAt).getTime() : 0;
+      if (!delivered || !declined) return { label: '✖ Declinada', color: Colors.error };
+      const delta = declined - delivered;
+      return { label: `✖ Declinada en ${formatDuration(delta)}`, color: Colors.error };
+    }
+    case 'CERRADA': {
+      if (item?.responded && item?.respondedAt && delivered) {
+        const delta = new Date(item.respondedAt).getTime() - delivered;
+        return { label: `🔒 Cerrada · Respondida en ${formatDuration(delta)}`, color: Colors.textSecondary };
+      }
+      if (item?.declined && item?.declinedAt && delivered) {
+        const delta = new Date(item.declinedAt).getTime() - delivered;
+        return { label: `🔒 Cerrada · Declinada en ${formatDuration(delta)}`, color: Colors.textSecondary };
+      }
+      return { label: '🔒 Cerrada · No respondida', color: Colors.textSecondary };
+    }
+    default:
+      return { label: '', color: Colors.textSecondary };
+  }
+}
+
 export default function VendorHome() {
   const router = useRouter();
   const { user } = useAuth();
@@ -105,18 +159,23 @@ export default function VendorHome() {
       <FlatList
         data={reqs}
         keyExtractor={(item) => item?.matchId ?? ''}
-        renderItem={({ item }) => (
-          <RequestCard
-            vehicleBrand={item?.request?.vehicleBrand ?? ''}
-            vehicleModel={item?.request?.vehicleModel ?? ''}
-            partCategory={item?.request?.partCategory ?? ''}
-            status={item?.status ?? ''}
-            municipality={item?.request?.municipality}
-            state={item?.request?.state}
-            createdAt={item?.request?.createdAt ?? ''}
-            onPress={() => router.push(`/vendor-request-detail?matchId=${item?.matchId ?? ''}`)}
-          />
-        )}
+        renderItem={({ item }) => {
+          const timeInfo = getTimeInfo(item);
+          return (
+            <RequestCard
+              vehicleBrand={item?.request?.vehicleBrand ?? ''}
+              vehicleModel={item?.request?.vehicleModel ?? ''}
+              partCategory={item?.request?.partCategory ?? ''}
+              status={item?.status ?? ''}
+              municipality={item?.request?.municipality}
+              state={item?.request?.state}
+              createdAt={item?.request?.createdAt ?? ''}
+              timeLabel={timeInfo?.label}
+              timeLabelColor={timeInfo?.color}
+              onPress={() => router.push(`/vendor-request-detail?matchId=${item?.matchId ?? ''}`)}
+            />
+          );
+        }}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={<EmptyState icon="mail-outline" title="Sin solicitudes" message="Aún no has recibido solicitudes" />}
         contentContainerStyle={styles.list}

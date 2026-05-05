@@ -129,6 +129,11 @@ export interface VendorDashboard {
       createdAt: string;
     };
     status: string;
+    deliveredAt: string | null;
+    respondedAt: string | null;
+    declinedAt: string | null;
+    responded: boolean;
+    declined: boolean;
   }[];
 }
 

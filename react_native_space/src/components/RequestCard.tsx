@@ -13,12 +13,16 @@ interface RequestCardProps {
   municipality?: string;
   state?: string;
   createdAt: string;
+  /** Time label to show (e.g. "⏱ 2h 15min") */
+  timeLabel?: string;
+  /** Color for the time label */
+  timeLabelColor?: string;
   onPress?: () => void;
 }
 
 export default function RequestCard({
   vehicleBrand, vehicleModel, partCategory, status,
-  responseCount, municipality, state, createdAt, onPress,
+  responseCount, municipality, state, createdAt, timeLabel, timeLabelColor, onPress,
 }: RequestCardProps) {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -60,6 +64,14 @@ export default function RequestCard({
             <Text style={styles.date}>{formatDate(createdAt ?? '')}</Text>
           </View>
         </View>
+        {timeLabel ? (
+          <View style={styles.timeRow}>
+            <Ionicons name="time-outline" size={13} color={timeLabelColor ?? Colors.textSecondary} />
+            <Text style={[styles.timeText, { color: timeLabelColor ?? Colors.textSecondary }]} numberOfLines={1}>
+              {timeLabel}
+            </Text>
+          </View>
+        ) : null}
       </Pressable>
     </Animated.View>
   );
@@ -93,4 +105,9 @@ const styles = StyleSheet.create({
   right: { alignItems: 'flex-end', gap: 4 },
   responses: { fontSize: 11, color: Colors.textSecondary },
   date: { fontSize: 11, color: Colors.textSecondary },
+  timeRow: {
+    flexDirection: 'row', alignItems: 'center', marginTop: 8,
+    paddingTop: 8, borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  timeText: { fontSize: 12, marginLeft: 4, flex: 1 },
 });
