@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   async getChatDetail(chatId: string, userId: string) {
     const chat = await this.prisma.chat.findUnique({
@@ -82,7 +86,10 @@ export class ChatService {
   }
 
   async sendMessage(chatId: string, userId: string, messageText: string) {
-    const chat = await this.prisma.chat.findUnique({ where: { id: chatId } });
+    const chat = await this.prisma.chat.findUnique({
+      where: { id: chatId },
+      include: { vendor: { select: { userId: true } } },
+    });
     if (!chat) throw new NotFoundException('Chat not found');
 
     const vendor = await this.prisma.vendor.findUnique({ where: { userId } });
@@ -95,10 +102,25 @@ export class ChatService {
       include: { sender: { select: { id: true, firstName: true, lastName: true } } },
     });
 
+    // 🔔 Push: Notificar al otro participante del chat
+    const senderName = `${message.sender.firstName} ${message.sender.lastName}`;
+    const recipientUserId = isClient
+      ? (chat as any).vendor?.userId
+      : chat.clientId;
+    if (recipientUserId) {
+      const preview = messageText.length > 100 ? messageText.substring(0, 97) + '...' : messageText;
+      this.notificationService.sendToUser(
+        recipientUserId,
+        `💬 ${senderName}`,
+        preview,
+        { type: 'NEW_MESSAGE', chatId },
+      ).catch((err) => this.logger.error('Push error (new message)', err));
+    }
+
     return {
       id: message.id,
       senderId: message.sender.id,
-      senderName: `${message.sender.firstName} ${message.sender.lastName}`,
+      senderName,
       messageText: message.messageText,
       createdAt: message.createdAt.toISOString(),
     };

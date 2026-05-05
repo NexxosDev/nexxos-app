@@ -7,6 +7,7 @@ import { CreateRequestDto } from './dto/create-request.dto';
 import { CloseRequestDto } from './dto/close-request.dto';
 import { RespondRequestDto } from './dto/respond-request.dto';
 import { getFileUrl } from '../lib/s3';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class RequestsService {
@@ -15,6 +16,7 @@ export class RequestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   // Haversine distance in kilometers
@@ -152,6 +154,25 @@ export class RequestsService {
     }
 
     this.logger.log(`Request ${request.id} created, matched ${matchedVendors.length} vendors`);
+
+    // 🔔 Push: Notificar vendedores matcheados
+    if (matchedVendors.length > 0) {
+      const brand = await this.prisma.vehicleBrand.findUnique({ where: { id: dto.vehicleBrandId } });
+      const model = await this.prisma.vehicleModel.findUnique({ where: { id: dto.vehicleModelId } });
+      const cat = await this.prisma.partCategory.findUnique({ where: { id: dto.partCategoryId } });
+      const vendorRows = await this.prisma.vendor.findMany({
+        where: { id: { in: matchedVendors.map((v) => v.id) } },
+        select: { userId: true },
+      });
+      const vendorUserIds = vendorRows.map((v) => v.userId);
+      const summary = `${brand?.name ?? ''} ${model?.name ?? ''} - ${cat?.name ?? ''}`;
+      this.notificationService.sendToMultiple(
+        vendorUserIds,
+        '📩 Nueva solicitud',
+        summary,
+        { type: 'NEW_REQUEST', requestId: request.id },
+      ).catch((err) => this.logger.error('Push error (new request)', err));
+    }
 
     return {
       id: request.id,
@@ -367,6 +388,37 @@ export class RequestsService {
       data: { status: 'CERRADA', closedAt: new Date() },
     });
 
+    // 🔔 Push: Notificar a vendedores que respondieron que la solicitud fue cerrada
+    const respondedMatches = await this.prisma.requestVendorMatch.findMany({
+      where: { requestId, responded: true },
+      include: { vendor: { select: { userId: true, businessName: true } } },
+    });
+    const vendorUserIds = respondedMatches.map((m: any) => m.vendor.userId);
+    if (vendorUserIds.length > 0) {
+      this.notificationService.sendToMultiple(
+        vendorUserIds,
+        '🔒 Solicitud cerrada',
+        'Una solicitud que respondiste fue cerrada por el cliente',
+        { type: 'REQUEST_CLOSED', requestId },
+      ).catch((err) => this.logger.error('Push error (request closed)', err));
+    }
+
+    // 🔔 Push: Notificar al vendedor calificado
+    if (dto.resolved && dto.vendorId && dto.rating) {
+      const ratedVendor = await this.prisma.vendor.findUnique({
+        where: { id: dto.vendorId },
+        select: { userId: true },
+      });
+      if (ratedVendor) {
+        this.notificationService.sendToUser(
+          ratedVendor.userId,
+          '⭐ Nueva calificación',
+          `Recibiste una calificación de ${dto.rating} estrella${dto.rating > 1 ? 's' : ''}`,
+          { type: 'RATING_RECEIVED', requestId },
+        ).catch((err) => this.logger.error('Push error (rating)', err));
+      }
+    }
+
     return {
       id: updated.id,
       status: updated.status,
@@ -554,6 +606,14 @@ export class RequestsService {
     });
 
     this.logger.log(`Vendor ${vendor.id} responded to match ${matchId}`);
+
+    // 🔔 Push: Notificar al cliente que un vendedor respondió
+    this.notificationService.sendToUser(
+      match.request.clientId,
+      '💬 Nueva respuesta',
+      `${vendor.businessName} respondió tu solicitud`,
+      { type: 'NEW_RESPONSE', requestId: match.requestId },
+    ).catch((err) => this.logger.error('Push error (vendor response)', err));
 
     return {
       responseId: response.id,

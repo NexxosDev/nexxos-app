@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { loginApi, signupApi, getMeApi } from '../services/auth';
 import { getToken, setToken, removeToken } from '../services/token';
 import { setOnUnauthorized } from '../services/api';
+import { registerForPushNotifications, unregisterPushToken } from '../services/pushNotifications';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -29,8 +30,11 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const pushTokenRef = useRef<string | null>(null);
 
   const clearAuth = useCallback(async () => {
+    await unregisterPushToken(pushTokenRef.current);
+    pushTokenRef.current = null;
     await removeToken();
     setUser(null);
   }, []);
@@ -60,6 +64,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
     return () => { mounted = false; };
   }, []);
+
+  // Registrar push token cuando el usuario está autenticado
+  useEffect(() => {
+    if (user && !pushTokenRef.current) {
+      registerForPushNotifications().then((token) => {
+        pushTokenRef.current = token;
+      }).catch(() => {});
+    }
+  }, [user]);
 
   const login = useCallback(async (email: string, password: string) => {
     const data = await loginApi(email, password);

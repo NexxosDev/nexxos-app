@@ -6,5 +6,6 @@ import { VendorRequestsController } from './vendor-requests.controller';
 @Module({
   controllers: [RequestsController, VendorRequestsController],
   providers: [RequestsService],
+  exports: [RequestsService],
 })
 export class RequestsModule {}

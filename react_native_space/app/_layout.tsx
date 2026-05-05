@@ -1,14 +1,65 @@
-import React, { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { CatalogProvider } from '../src/contexts/CatalogContext';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+function NotificationNavigator() {
+  const router = useRouter();
+  const responseListener = useRef<Notifications.Subscription | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response?.notification?.request?.content?.data;
+      if (!data?.type) return;
+
+      try {
+        switch (data.type) {
+          case 'NEW_REQUEST':
+            // Vendedor: ir al listado de solicitudes
+            router.push('/vendor/requests');
+            break;
+          case 'NEW_RESPONSE':
+            // Cliente: ir al detalle de su solicitud
+            if (data.requestId) router.push(`/request-detail?id=${data.requestId}`);
+            break;
+          case 'NEW_MESSAGE':
+            // Abrir chat
+            if (data.chatId) router.push(`/chat?chatId=${data.chatId}`);
+            break;
+          case 'REQUEST_CLOSED':
+            // Vendedor: ir al listado
+            router.push('/vendor/requests');
+            break;
+          case 'RATING_RECEIVED':
+            // Vendedor: ir al dashboard
+            router.push('/vendor');
+            break;
+        }
+      } catch (err) {
+        console.error('Error navigating from notification:', err);
+      }
+    });
+
+    return () => {
+      if (responseListener.current) {
+        responseListener.current.remove();
+      }
+    };
+  }, [router]);
+
+  return null;
+}
 
 export default function RootLayout() {
   useEffect(() => {
@@ -24,6 +75,7 @@ export default function RootLayout() {
         <ErrorBoundary>
           <AuthProvider>
             <CatalogProvider>
+              <NotificationNavigator />
               <StatusBar style="dark" />
               <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
                 <Stack.Screen name="index" />

@@ -61,6 +61,12 @@
         {
           "locationAlwaysAndWhenInUsePermission": "NEXXOS necesita acceso a tu ubicación para mostrarte vendedores cercanos."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "default"
+        }
       ]
     ],
     "scheme": "abacusai1776194339",
