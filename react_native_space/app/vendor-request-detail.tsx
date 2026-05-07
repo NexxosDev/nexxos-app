@@ -109,7 +109,7 @@ export default function VendorRequestDetailScreen() {
       <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={Colors.primary} />}>
         <View style={styles.clientInfo}>
           <Ionicons name="person-circle-outline" size={28} color={Colors.primary} />
-          <Text style={styles.clientName}>{req?.clientFirstName ?? 'Cliente'} de {req?.municipality ?? ''}, {req?.state ?? ''}</Text>
+          <Text style={styles.clientName}>{`${req?.clientFirstName ?? ''} ${req?.clientLastName ?? ''}`.trim() || 'Cliente'}</Text>
         </View>
 
         <View style={styles.infoCard}>

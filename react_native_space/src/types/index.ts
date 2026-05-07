@@ -84,6 +84,7 @@ export interface VendorRequestListItem {
     searchRadiusKm: number;
     createdAt: string;
     clientFirstName: string;
+    clientLastName?: string;
   };
   status: string;
   respondedAt: string | null;
@@ -104,6 +105,7 @@ export interface VendorRequestDetailType {
     searchRadiusKm: number;
     createdAt: string;
     clientFirstName: string;
+    clientLastName?: string;
     status: string;
   };
   status: string;
