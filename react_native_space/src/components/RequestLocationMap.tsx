@@ -12,11 +12,15 @@ let Marker: any;
 let PROVIDER_GOOGLE: any;
 
 if (Platform.OS !== 'web') {
-  const maps = require('react-native-maps');
-  MapView = maps.default;
-  Circle = maps.Circle;
-  Marker = maps.Marker;
-  PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
+  try {
+    const maps = require('react-native-maps');
+    MapView = maps.default;
+    Circle = maps.Circle;
+    Marker = maps.Marker;
+    PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
+  } catch (e) {
+    console.warn('react-native-maps not available');
+  }
 }
 
 interface RequestLocationMapProps {

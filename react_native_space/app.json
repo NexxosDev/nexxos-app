@@ -48,7 +48,12 @@
             "DEFAULT"
           ]
         }
-      ]
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBt0bUnhx5dz8uqiNgB3NKEoANQ-264j_M"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/images/icon.png",
