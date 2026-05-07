@@ -105,6 +105,8 @@ export default function RequestDetailScreen() {
               avgRating={resp?.vendor?.avgRating}
               initialMessage={resp?.initialMessage ?? ''}
               distanceKm={resp?.distanceKm}
+              vendorLatitude={resp?.vendor?.latitude}
+              vendorLongitude={resp?.vendor?.longitude}
               onOpenChat={detail?.status !== 'CERRADA' ? () => router.push(`/chat?chatId=${resp?.chatId ?? ''}`) : undefined}
             />
           ))

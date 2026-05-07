@@ -61,6 +61,8 @@ export interface RequestResponseItem {
     businessName: string;
     logoUrl: string | null;
     avgRating: number | null;
+    latitude: number | null;
+    longitude: number | null;
   };
   initialMessage: string;
   chatId: string;

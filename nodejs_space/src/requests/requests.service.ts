@@ -327,6 +327,8 @@ export class RequestsService {
             businessName: r.vendor.businessName,
             logoUrl,
             avgRating: r.vendor.vendorMetrics?.avgRating ?? null,
+            latitude: r.vendor.latitude ?? null,
+            longitude: r.vendor.longitude ?? null,
           },
           initialMessage: r.initialMessage,
           chatId: chat?.id ?? null,

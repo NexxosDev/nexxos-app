@@ -1,14 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../theme/colors';
 import Button from './Button';
+
+const LINK_COLOR = '#34ff07';
 
 interface ResponseCardProps {
   businessName: string;
   avgRating?: number | null;
   initialMessage: string;
   distanceKm?: number | null;
+  vendorLatitude?: number | null;
+  vendorLongitude?: number | null;
   onOpenChat?: () => void;
 }
 
@@ -19,8 +23,29 @@ function formatDistance(km: number): string {
   return `A ${km.toFixed(1)} km de tu ubicación`;
 }
 
-export default function ResponseCard({ businessName, avgRating, initialMessage, distanceKm, onOpenChat }: ResponseCardProps) {
+function openGoogleMaps(lat: number, lng: number) {
+  const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+  const iosUrl = `comgooglemaps://?daddr=${lat},${lng}&directionsmode=driving`;
+
+  if (Platform.OS === 'ios') {
+    Linking.canOpenURL(iosUrl)
+      .then((supported) => {
+        if (supported) return Linking.openURL(iosUrl);
+        return Linking.openURL(webUrl);
+      })
+      .catch(() => Linking.openURL(webUrl).catch(() => {}));
+  } else {
+    Linking.openURL(webUrl).catch(() =>
+      Alert.alert('Error', 'No se pudo abrir Google Maps'),
+    );
+  }
+}
+
+export default function ResponseCard({ businessName, avgRating, initialMessage, distanceKm, vendorLatitude, vendorLongitude, onOpenChat }: ResponseCardProps) {
   const hasDistance = typeof distanceKm === 'number' && isFinite(distanceKm);
+  const hasCoords = typeof vendorLatitude === 'number' && typeof vendorLongitude === 'number';
+  const canNavigate = hasDistance && hasCoords;
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -37,10 +62,17 @@ export default function ResponseCard({ businessName, avgRating, initialMessage, 
               </View>
             ) : null}
             {hasDistance ? (
-              <View style={styles.distanceRow}>
-                <Ionicons name="location-outline" size={12} color={Colors.textSecondary} />
-                <Text style={styles.distance}>{formatDistance(distanceKm as number)}</Text>
-              </View>
+              canNavigate ? (
+                <Pressable style={styles.distanceRow} onPress={() => openGoogleMaps(vendorLatitude!, vendorLongitude!)}>
+                  <Ionicons name="navigate-outline" size={12} color={LINK_COLOR} />
+                  <Text style={styles.distanceLink}>{formatDistance(distanceKm as number)}</Text>
+                </Pressable>
+              ) : (
+                <View style={styles.distanceRow}>
+                  <Ionicons name="location-outline" size={12} color={Colors.textSecondary} />
+                  <Text style={styles.distance}>{formatDistance(distanceKm as number)}</Text>
+                </View>
+              )
             ) : null}
           </View>
         </View>
@@ -79,6 +111,7 @@ const styles = StyleSheet.create({
   rating: { fontSize: 12, color: Colors.textSecondary },
   distanceRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   distance: { fontSize: 12, color: Colors.textSecondary },
+  distanceLink: { fontSize: 12, color: '#34ff07', textDecorationLine: 'underline', fontWeight: '600' },
   message: { fontSize: 13, color: Colors.textSubtitle, marginBottom: Spacing.sm, lineHeight: 18 },
   chatBtn: { alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: Spacing.md },
 });
