@@ -29,6 +29,13 @@ export class UploadService {
     return { id: file.id, cloud_storage_path: file.cloudStoragePath, url };
   }
 
+  /** Complete upload without saving to DB (for registration uploads before user exists) */
+  async completeRegistrationUpload(cloud_storage_path: string, fileName: string, contentType: string) {
+    const isPublic = cloud_storage_path.includes('/public/');
+    const url = await getFileUrl(cloud_storage_path, isPublic);
+    return { cloud_storage_path, url };
+  }
+
   async getFileUrlById(fileId: string, mode: string) {
     const file = await this.prisma.file.findUnique({ where: { id: fileId } });
     if (!file) throw new NotFoundException('File not found');

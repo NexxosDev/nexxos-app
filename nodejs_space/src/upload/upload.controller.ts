@@ -48,6 +48,6 @@ export class RegistrationUploadController {
   @Post('complete')
   @ApiOperation({ summary: 'Confirm registration file upload (no auth)' })
   complete(@Body() dto: CompleteUploadDto) {
-    return this.uploadService.completeUpload('registration', dto.cloud_storage_path, dto.fileName, dto.contentType);
+    return this.uploadService.completeRegistrationUpload(dto.cloud_storage_path, dto.fileName, dto.contentType);
   }
 }
