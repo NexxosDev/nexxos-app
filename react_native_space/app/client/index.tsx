@@ -50,7 +50,7 @@ export default function ClientHome() {
         <Text style={styles.sectionTitle}>Mis Solicitudes Recientes</Text>
         {(requests?.length ?? 0) > 0 ? (
           <Pressable onPress={() => router.push('/client/requests')}>
-            <Text style={styles.seeAll}>Ver todas \u2192</Text>
+            <Text style={styles.seeAll}>Ver todas ➡️</Text>
           </Pressable>
         ) : null}
       </View>
