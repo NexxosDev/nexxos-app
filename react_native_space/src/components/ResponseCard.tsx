@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../theme/colors';
 import Button from './Button';
 
-const LINK_COLOR = '#34ff07';
+const LINK_COLOR = '#07a0ff';
 
 interface ResponseCardProps {
   businessName: string;
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   rating: { fontSize: 12, color: Colors.textSecondary },
   distanceRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   distance: { fontSize: 12, color: Colors.textSecondary },
-  distanceLink: { fontSize: 12, color: '#34ff07', textDecorationLine: 'underline', fontWeight: '600' },
+  distanceLink: { fontSize: 12, color: '#07a0ff', textDecorationLine: 'underline', fontWeight: '600' },
   message: { fontSize: 13, color: Colors.textSubtitle, marginBottom: Spacing.sm, lineHeight: 18 },
   chatBtn: { alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: Spacing.md },
 });
