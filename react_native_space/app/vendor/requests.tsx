@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getVendorRequests } from '../../src/services/vendor';
+import { useReactiveList } from '../../src/hooks/useReactiveList';
 import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
 import RequestCard from '../../src/components/RequestCard';
 import EmptyState from '../../src/components/EmptyState';
@@ -17,9 +18,10 @@ export default function VendorRequests() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<VFilter>('all');
+  const [focused, setFocused] = useState(false);
 
   const fetchData = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
+    if (isRefresh) setRefreshing(true); else if (!items?.length) setLoading(true);
     try {
       const params: Record<string, unknown> = {};
       if (filter !== 'all') params.status = filter;
@@ -29,7 +31,19 @@ export default function VendorRequests() {
     if (isRefresh) setRefreshing(false); else setLoading(false);
   }, [filter]);
 
-  useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    fetchData();
+    return () => setFocused(false);
+  }, [fetchData]));
+
+  // Polling cada 30s + refresh inmediato cuando llega push de nueva solicitud
+  useReactiveList({
+    onRefresh: () => fetchData(false),
+    pollingInterval: 30000,
+    notificationTypes: ['NEW_REQUEST', 'REQUEST_CLOSED'],
+    enabled: focused,
+  });
 
   const filters: { key: VFilter; label: string }[] = [
     { key: 'all', label: 'Todas' },
