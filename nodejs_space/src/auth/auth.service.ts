@@ -79,6 +79,10 @@ export class AuthService {
           fullAddress: v.fullAddress || null,
           logoUrl: v.logoPath || null,
           documentImageUrl: v.documentImagePath || null,
+          personalDocUrl: v.personalDocPath || null,
+          selfieUrl: v.selfiePath || null,
+          identityVerified: !!v.identityVerified,
+          identityVerifiedAt: v.identityVerified ? new Date() : null,
           vendorVehicleModels: {
             create: v.vehicleModelIds.map((id) => ({ vehicleModelId: id })),
           },

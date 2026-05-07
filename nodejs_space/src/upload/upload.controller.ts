@@ -32,3 +32,22 @@ export class UploadController {
     return this.uploadService.getFileUrlById(id, mode || 'view');
   }
 }
+
+/** Public upload endpoints for registration (no auth) */
+@ApiTags('Upload')
+@Controller('api/upload/registration')
+export class RegistrationUploadController {
+  constructor(private readonly uploadService: UploadService) {}
+
+  @Post('presigned')
+  @ApiOperation({ summary: 'Get presigned URL for registration uploads (no auth)' })
+  getPresigned(@Body() dto: PresignedDto) {
+    return this.uploadService.getPresignedUrl('registration', dto.fileName, dto.contentType, dto.isPublic ?? true);
+  }
+
+  @Post('complete')
+  @ApiOperation({ summary: 'Confirm registration file upload (no auth)' })
+  complete(@Body() dto: CompleteUploadDto) {
+    return this.uploadService.completeUpload('registration', dto.cloud_storage_path, dto.fileName, dto.contentType);
+  }
+}

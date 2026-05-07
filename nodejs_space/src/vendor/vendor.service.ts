@@ -107,6 +107,8 @@ export class VendorService {
     if (dto.rif !== undefined) data.rif = dto.rif;
     if (dto.logoPath !== undefined) data.logoUrl = dto.logoPath;
     if (dto.documentImagePath !== undefined) data.documentImageUrl = dto.documentImagePath;
+    if (dto.personalDocPath !== undefined) data.personalDocUrl = dto.personalDocPath;
+    if (dto.selfiePath !== undefined) data.selfieUrl = dto.selfiePath;
     if (dto.country !== undefined) data.country = dto.country;
     if (dto.city !== undefined) data.city = dto.city;
     if (dto.state !== undefined) data.state = dto.state;

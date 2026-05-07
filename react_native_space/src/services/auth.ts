@@ -33,6 +33,9 @@ export async function signupApi(data: {
     partSubcategoryIds: string[];
     documentImagePath?: string;
     logoPath?: string;
+    personalDocPath?: string;
+    selfiePath?: string;
+    identityVerified?: boolean;
   };
 }): Promise<AuthResponse> {
   const res = await api.post('/signup', data);

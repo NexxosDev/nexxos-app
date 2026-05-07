@@ -6,6 +6,8 @@ export class UpdateVendorDto {
   @ApiPropertyOptional() @IsOptional() @IsString() rif?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() logoPath?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() documentImagePath?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() personalDocPath?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() selfiePath?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() country?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() city?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() state?: string;

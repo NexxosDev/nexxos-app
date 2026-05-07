@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Alert, Image, Modal, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useCatalog } from '../../src/contexts/CatalogContext';
 import { getErrorMessage } from '../../src/services/api';
 import { uploadFile } from '../../src/services/upload';
 import { updateVendorProfile } from '../../src/services/vendor';
+import { uploadRegistrationFile, verifyIdentity } from '../../src/services/identity';
 import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
 import Input from '../../src/components/Input';
 import PhoneInput from '../../src/components/PhoneInput';
@@ -16,6 +17,7 @@ import Button from '../../src/components/Button';
 import StepIndicator from '../../src/components/StepIndicator';
 import SelectInput from '../../src/components/SelectInput';
 import MapLocationPicker from '../../src/components/MapLocationPicker';
+import LivenessSelfieCapture from '../../src/components/LivenessSelfieCapture';
 import type { CatalogItem } from '../../src/types';
 
 const TOTAL_STEPS = 6;
@@ -51,6 +53,18 @@ export default function RegisterVendorScreen() {
   const [modelsMap, setModelsMap] = useState<Record<string, CatalogItem[]>>({});
   const [subcategoriesMap, setSubcategoriesMap] = useState<Record<string, CatalogItem[]>>({});
 
+  // Identity verification state
+  const [personalDocUri, setPersonalDocUri] = useState('');
+  const [personalDocUrl, setPersonalDocUrl] = useState('');
+  const [personalDocPath, setPersonalDocPath] = useState('');
+  const [selfies, setSelfies] = useState<{ neutral?: string; smile?: string; turn?: string }>({});
+  const [selfieUrls, setSelfieUrls] = useState<{ neutral?: string; smile?: string; turn?: string }>({});
+  const [selfiePath, setSelfiePath] = useState('');
+  const [identityVerified, setIdentityVerified] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState('');
+  const [showLiveness, setShowLiveness] = useState(false);
+
   useEffect(() => {
     if (user) {
       router.replace('/role-selection');
@@ -73,7 +87,7 @@ export default function RegisterVendorScreen() {
     }
   }, [subcategoriesMap, catalog]);
 
-  const pickImageFromLibrary = async (type: 'doc' | 'logo') => {
+  const pickImageFromLibrary = async (type: 'doc' | 'logo' | 'personalDoc') => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ 
         mediaTypes: ['images'], 
@@ -82,13 +96,14 @@ export default function RegisterVendorScreen() {
         aspect: type === 'logo' ? [1, 1] : [4, 3],
       });
       if (!result?.canceled && result?.assets?.[0]?.uri) {
-        if (type === 'doc') setBusiness((p) => ({ ...(p ?? {}), docImageUri: result.assets[0].uri }));
+        if (type === 'personalDoc') { setPersonalDocUri(result.assets[0].uri); setIdentityVerified(false); setVerifyError(''); }
+        else if (type === 'doc') setBusiness((p) => ({ ...(p ?? {}), docImageUri: result.assets[0].uri }));
         else setBusiness((p) => ({ ...(p ?? {}), logoUri: result.assets[0].uri }));
       }
     } catch { }
   };
 
-  const takePhoto = async (type: 'doc' | 'logo') => {
+  const takePhoto = async (type: 'doc' | 'logo' | 'personalDoc') => {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (permission?.status !== 'granted') {
@@ -101,15 +116,17 @@ export default function RegisterVendorScreen() {
         aspect: type === 'logo' ? [1, 1] : [4, 3],
       });
       if (!result?.canceled && result?.assets?.[0]?.uri) {
-        if (type === 'doc') setBusiness((p) => ({ ...(p ?? {}), docImageUri: result.assets[0].uri }));
+        if (type === 'personalDoc') { setPersonalDocUri(result.assets[0].uri); setIdentityVerified(false); setVerifyError(''); }
+        else if (type === 'doc') setBusiness((p) => ({ ...(p ?? {}), docImageUri: result.assets[0].uri }));
         else setBusiness((p) => ({ ...(p ?? {}), logoUri: result.assets[0].uri }));
       }
     } catch { }
   };
 
-  const showImageOptions = (type: 'doc' | 'logo') => {
+  const showImageOptions = (type: 'doc' | 'logo' | 'personalDoc') => {
+    const titles: Record<string, string> = { personalDoc: 'Documento de Identidad', doc: 'Documento de la Empresa', logo: 'Logo del Negocio' };
     Alert.alert(
-      type === 'doc' ? 'Documento de Identidad' : 'Logo del Negocio',
+      titles[type] ?? 'Imagen',
       'Selecciona una opción',
       [
         { text: 'Tomar Foto', onPress: () => takePhoto(type) },
@@ -118,6 +135,55 @@ export default function RegisterVendorScreen() {
       ],
       { cancelable: true }
     );
+  };
+
+  const handleLivenessComplete = (result: { neutral: string; smile: string; turn: string }) => {
+    setSelfies(result);
+    setShowLiveness(false);
+    setIdentityVerified(false);
+    setVerifyError('');
+  };
+
+  const handleVerifyIdentity = async () => {
+    if (!personalDocUri) { setVerifyError('Sube tu documento de identidad primero'); return; }
+    if (!selfies?.neutral || !selfies?.smile || !selfies?.turn) { setVerifyError('Completa la captura de selfie primero'); return; }
+    setVerifying(true);
+    setVerifyError('');
+    try {
+      // Upload personal doc
+      const docResult = await uploadRegistrationFile(personalDocUri, `personal_doc_${Date.now()}.jpg`, 'image/jpeg');
+      setPersonalDocUrl(docResult?.url ?? '');
+      setPersonalDocPath(docResult?.storagePath ?? '');
+
+      // Upload selfies
+      const neutralRes = await uploadRegistrationFile(selfies.neutral, `selfie_neutral_${Date.now()}.jpg`, 'image/jpeg');
+      const smileRes = await uploadRegistrationFile(selfies.smile, `selfie_smile_${Date.now()}.jpg`, 'image/jpeg');
+      const turnRes = await uploadRegistrationFile(selfies.turn, `selfie_turn_${Date.now()}.jpg`, 'image/jpeg');
+      setSelfieUrls({ neutral: neutralRes?.url, smile: smileRes?.url, turn: turnRes?.url });
+      setSelfiePath(neutralRes?.storagePath ?? '');
+
+      // Verify identity via LLM
+      const verifyResult = await verifyIdentity({
+        documentImageUrl: docResult?.url ?? '',
+        selfieNeutralUrl: neutralRes?.url ?? '',
+        selfieSmileUrl: smileRes?.url ?? '',
+        selfieTurnUrl: turnRes?.url ?? '',
+      });
+
+      if (verifyResult?.match && verifyResult?.liveness) {
+        setIdentityVerified(true);
+        setVerifyError('');
+      } else {
+        setIdentityVerified(false);
+        const reason = verifyResult?.reason ?? 'No se pudo verificar la identidad';
+        setVerifyError(`Verificación fallida: ${reason}. Intenta nuevamente con mejores fotos.`);
+      }
+    } catch (err) {
+      setIdentityVerified(false);
+      setVerifyError(`Error al verificar: ${getErrorMessage(err)}`);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const toggleBrand = (brandId: string) => {
@@ -161,7 +227,8 @@ export default function RegisterVendorScreen() {
   const canNext = (): boolean => {
     if (step === 1) {
       const emailValid = personal?.email?.trim?.() && /\S+@\S+\.\S+/.test(personal.email);
-      return !!(personal?.firstName?.trim?.() && personal?.lastName?.trim?.() && personal?.phone?.trim?.() && personal?.documentId?.trim?.() && emailValid && personal?.password && personal?.password === personal?.confirmPassword && (personal?.password?.length ?? 0) >= 6);
+      const personalValid = !!(personal?.firstName?.trim?.() && personal?.lastName?.trim?.() && personal?.phone?.trim?.() && personal?.documentId?.trim?.() && emailValid && personal?.password && personal?.password === personal?.confirmPassword && (personal?.password?.length ?? 0) >= 6);
+      return personalValid && identityVerified;
     }
     if (step === 2) {
       // Requiere: businessName, rif, docImageUri (obligatorio) y logoUri (obligatorio)
@@ -192,6 +259,9 @@ export default function RegisterVendorScreen() {
         vendor: {
           businessName: business?.businessName?.trim?.() ?? '',
           rif: business?.rif?.trim?.() ?? '',
+          personalDocPath: personalDocPath || undefined,
+          selfiePath: selfiePath || undefined,
+          identityVerified: identityVerified,
           country: location?.country ?? '',
           city: location?.city ?? '',
           state: location?.state ?? '',
@@ -250,6 +320,110 @@ export default function RegisterVendorScreen() {
             <Input label="Email" value={personal.email} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), email: v }))} keyboardType="email-address" autoCapitalize="none" />
             <Input label="Contraseña" value={personal.password} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), password: v }))} secureTextEntry />
             <Input label="Confirmar Contraseña" value={personal.confirmPassword} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), confirmPassword: v }))} secureTextEntry />
+
+            {/* --- Verificación de Identidad --- */}
+            <View style={styles.identitySection}>
+              <Text style={styles.identitySectionTitle}>Verificación de Identidad</Text>
+              <Text style={styles.identitySectionDesc}>Necesitamos verificar tu identidad antes de continuar. Sube una foto de tu cédula y toma selfies de verificación.</Text>
+
+              {/* Documento de Identidad Personal */}
+              <Text style={styles.fieldLabel}>
+                Foto de Cédula <Text style={styles.requiredStar}>*</Text>
+              </Text>
+              {personalDocUri ? (
+                <View style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: personalDocUri }} style={styles.imagePreviewFull} />
+                  <Pressable style={styles.changeImageButton} onPress={() => showImageOptions('personalDoc')}>
+                    <Ionicons name="camera-outline" size={20} color={Colors.white} />
+                    <Text style={styles.changeImageText}>Cambiar</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable style={styles.imagePicker} onPress={() => showImageOptions('personalDoc')}>
+                  <Ionicons name="id-card-outline" size={40} color={Colors.textSecondary} />
+                  <Text style={styles.imagePickerTitle}>Cargar Cédula de Identidad</Text>
+                  <Text style={styles.imagePickerSubtitle}>Tomar foto o seleccionar del dispositivo</Text>
+                </Pressable>
+              )}
+
+              {/* Selfie de verificación */}
+              <Text style={styles.fieldLabel}>
+                Selfie de Verificación <Text style={styles.requiredStar}>*</Text>
+              </Text>
+              {selfies?.neutral ? (
+                <View style={styles.selfiePreviewRow}>
+                  <View style={styles.selfieThumb}>
+                    <Image source={{ uri: selfies.neutral }} style={styles.selfieThumbImg} />
+                    <Text style={styles.selfieThumbLabel}>Neutra</Text>
+                  </View>
+                  {selfies?.smile ? (
+                    <View style={styles.selfieThumb}>
+                      <Image source={{ uri: selfies.smile }} style={styles.selfieThumbImg} />
+                      <Text style={styles.selfieThumbLabel}>Sonrisa</Text>
+                    </View>
+                  ) : null}
+                  {selfies?.turn ? (
+                    <View style={styles.selfieThumb}>
+                      <Image source={{ uri: selfies.turn }} style={styles.selfieThumbImg} />
+                      <Text style={styles.selfieThumbLabel}>Girada</Text>
+                    </View>
+                  ) : null}
+                  <Pressable style={styles.retakeSelfieBtn} onPress={() => { setSelfies({}); setIdentityVerified(false); setShowLiveness(true); }}>
+                    <Ionicons name="refresh-outline" size={20} color={Colors.primary} />
+                    <Text style={styles.retakeSelfieText}>Repetir</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable style={styles.imagePicker} onPress={() => setShowLiveness(true)}>
+                  <Ionicons name="person-circle-outline" size={40} color={Colors.textSecondary} />
+                  <Text style={styles.imagePickerTitle}>Capturar Selfie de Verificación</Text>
+                  <Text style={styles.imagePickerSubtitle}>Se tomarán 3 fotos: neutra, sonrisa y giro de cabeza</Text>
+                </Pressable>
+              )}
+
+              {/* Verify button */}
+              {personalDocUri && selfies?.neutral && selfies?.smile && selfies?.turn && !identityVerified ? (
+                <Pressable
+                  style={[styles.verifyButton, verifying && styles.verifyButtonDisabled]}
+                  onPress={handleVerifyIdentity}
+                  disabled={verifying}
+                >
+                  {verifying ? (
+                    <View style={styles.verifyButtonContent}>
+                      <ActivityIndicator size="small" color={Colors.white} />
+                      <Text style={styles.verifyButtonText}>Verificando identidad...</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.verifyButtonContent}>
+                      <Ionicons name="shield-checkmark-outline" size={20} color={Colors.white} />
+                      <Text style={styles.verifyButtonText}>Verificar Identidad</Text>
+                    </View>
+                  )}
+                </Pressable>
+              ) : null}
+
+              {/* Status indicators */}
+              {verifyError ? (
+                <View style={styles.verifyStatus}>
+                  <Ionicons name="close-circle" size={20} color={Colors.error} />
+                  <Text style={styles.verifyErrorText}>{verifyError}</Text>
+                </View>
+              ) : null}
+              {identityVerified ? (
+                <View style={styles.verifyStatus}>
+                  <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                  <Text style={styles.verifySuccessText}>Identidad verificada correctamente</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Liveness Capture Modal */}
+            <Modal visible={showLiveness} animationType="slide" presentationStyle="fullScreen">
+              <LivenessSelfieCapture
+                onComplete={handleLivenessComplete}
+                onCancel={() => setShowLiveness(false)}
+              />
+            </Modal>
           </View>
         );
       case 2:
@@ -260,7 +434,7 @@ export default function RegisterVendorScreen() {
             <Input label="RIF" value={business.rif} onChangeText={(v) => setBusiness((p) => ({ ...(p ?? {}), rif: v }))} />
             
             <Text style={styles.fieldLabel}>
-              Documento de Identidad <Text style={styles.requiredStar}>*</Text>
+              Documento de la Empresa (RIF/Acta Constitutiva) <Text style={styles.requiredStar}>*</Text>
             </Text>
             {business?.docImageUri ? (
               <View style={styles.imagePreviewContainer}>
@@ -272,9 +446,9 @@ export default function RegisterVendorScreen() {
               </View>
             ) : (
               <Pressable style={styles.imagePicker} onPress={() => showImageOptions('doc')}>
-                <Ionicons name="camera-outline" size={40} color={Colors.textSecondary} />
-                <Text style={styles.imagePickerTitle}>Cargar Documento de Identidad</Text>
-                <Text style={styles.imagePickerSubtitle}>Tomar foto o seleccionar del dispositivo</Text>
+                <Ionicons name="document-text-outline" size={40} color={Colors.textSecondary} />
+                <Text style={styles.imagePickerTitle}>Cargar Documento de la Empresa</Text>
+                <Text style={styles.imagePickerSubtitle}>RIF o Acta Constitutiva</Text>
               </Pressable>
             )}
             
@@ -380,6 +554,10 @@ export default function RegisterVendorScreen() {
               <Text style={styles.summaryValue}>{business?.businessName ?? ''} - {business?.rif ?? ''}</Text>
               <Text style={styles.summaryLabel}>Email</Text>
               <Text style={styles.summaryValue}>{personal?.email ?? ''}</Text>
+              <Text style={styles.summaryLabel}>Identidad verificada</Text>
+              <Text style={[styles.summaryValue, { color: identityVerified ? '#22C55E' : Colors.error }]}>
+                {identityVerified ? '✅ Sí' : '❌ No'}
+              </Text>
               <Text style={styles.summaryLabel}>Modelos seleccionados</Text>
               <Text style={styles.summaryValue}>{selectedModels?.length ?? 0} modelos</Text>
               <Text style={styles.summaryLabel}>Categorías seleccionadas</Text>
@@ -500,5 +678,101 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     marginTop: 4,
+  },
+  identitySection: {
+    marginTop: Spacing.lg,
+    paddingTop: Spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  identitySectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  identitySectionDesc: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
+    lineHeight: 18,
+  },
+  selfiePreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: Spacing.md,
+    flexWrap: 'wrap',
+  },
+  selfieThumb: {
+    alignItems: 'center',
+  },
+  selfieThumbImg: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.backgroundSection,
+  },
+  selfieThumbLabel: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  retakeSelfieBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  retakeSelfieText: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  verifyButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  verifyButtonDisabled: {
+    opacity: 0.6,
+  },
+  verifyButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  verifyButtonText: {
+    color: Colors.white,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  verifyStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.backgroundSection,
+    marginBottom: Spacing.sm,
+  },
+  verifyErrorText: {
+    fontSize: 13,
+    color: Colors.error,
+    flex: 1,
+    lineHeight: 18,
+  },
+  verifySuccessText: {
+    fontSize: 13,
+    color: '#22C55E',
+    flex: 1,
+    fontWeight: '600',
   },
 });

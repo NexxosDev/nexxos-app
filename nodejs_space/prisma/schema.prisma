@@ -90,9 +90,13 @@ model Vendor {
   longitude               Float?
   referencePoint          String?  @map("reference_point")
   fullAddress             String?  @map("full_address")
-  isAvailable             Boolean  @default(true) @map("is_available")
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
+  isAvailable             Boolean   @default(true) @map("is_available")
+  personalDocUrl          String?   @map("personal_doc_url")
+  selfieUrl               String?   @map("selfie_url")
+  identityVerified        Boolean   @default(false) @map("identity_verified")
+  identityVerifiedAt      DateTime? @map("identity_verified_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
 
   user                    User                    @relation(fields: [userId], references: [id])
   vendorVehicleModels     VendorVehicleModel[]

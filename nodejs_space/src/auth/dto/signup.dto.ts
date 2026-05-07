@@ -23,6 +23,9 @@ export class VendorSignupDto {
   @ApiProperty({ type: [String] }) @IsArray() @IsUUID('4', { each: true }) partSubcategoryIds: string[];
   @ApiPropertyOptional() @IsOptional() @IsString() documentImagePath?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() logoPath?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() personalDocPath?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() selfiePath?: string;
+  @ApiPropertyOptional() @IsOptional() identityVerified?: boolean;
 }
 
 export class SignupDto {
