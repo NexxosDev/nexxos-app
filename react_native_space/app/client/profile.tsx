@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
 import Button from '../../src/components/Button';
+import ProfileAvatar from '../../src/components/ProfileAvatar';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
 
 export default function ClientProfile() {
@@ -36,9 +37,12 @@ export default function ClientProfile() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />}>
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.initials}>{initials}</Text>
-          </View>
+          <ProfileAvatar
+            imageUrl={user?.profileImageUrl}
+            initials={initials}
+            size={90}
+            onImageUpdated={() => refreshUser?.()}
+          />
           <Text style={styles.name}>{user?.firstName ?? ''} {user?.lastName ?? ''}</Text>
           <Text style={styles.email}>{user?.email ?? ''}</Text>
         </View>
@@ -74,12 +78,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing.lg },
   avatarContainer: { alignItems: 'center', marginBottom: Spacing.lg },
-  avatar: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.primary,
-    justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.sm,
-  },
-  initials: { fontSize: 28, fontWeight: '700', color: Colors.accent },
-  name: { fontSize: 20, fontWeight: '600', color: Colors.textPrimary },
+  name: { fontSize: 20, fontWeight: '600', color: Colors.textPrimary, marginTop: Spacing.sm },
   email: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
   infoCard: {
     backgroundColor: Colors.cardBg, borderRadius: BorderRadius.md, padding: Spacing.md,

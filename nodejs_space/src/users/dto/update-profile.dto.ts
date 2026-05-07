@@ -5,4 +5,5 @@ export class UpdateProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsString() firstName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() lastName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
+  @ApiPropertyOptional({ description: 'S3 cloud storage path for profile image' }) @IsOptional() @IsString() profileImagePath?: string;
 }

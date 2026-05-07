@@ -7,6 +7,7 @@ export interface User {
   phone?: string;
   documentId?: string;
   emailVerified?: boolean;
+  profileImageUrl?: string | null;
   roles: string[];
   hasVendorProfile?: boolean;
 }

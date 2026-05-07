@@ -7,13 +7,14 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { getVendorProfile } from '../../src/services/vendor';
 import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
 import Button from '../../src/components/Button';
+import ProfileAvatar from '../../src/components/ProfileAvatar';
 import StarRating from '../../src/components/StarRating';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
 import type { VendorProfile as VPType } from '../../src/types';
 
 export default function VendorProfileScreen() {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [profile, setProfile] = useState<VPType | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,13 +57,12 @@ export default function VendorProfileScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchProfile(true)} tintColor={Colors.primary} />}>
         <View style={styles.header}>
-          {profile?.logoUrl ? (
-            <Image source={{ uri: profile.logoUrl }} style={styles.logo} />
-          ) : (
-            <View style={styles.logoPlaceholder}>
-              <Ionicons name="storefront" size={32} color={Colors.primary} />
-            </View>
-          )}
+          <ProfileAvatar
+            imageUrl={user?.profileImageUrl}
+            initials={`${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`.toUpperCase()}
+            size={90}
+            onImageUpdated={() => refreshUser?.()}
+          />
           <Text style={styles.businessName}>{profile?.businessName ?? ''}</Text>
           <Text style={styles.rif}>RIF: {profile?.rif ?? ''}</Text>
           {typeof profile?.metrics?.avgRating === 'number' ? (
@@ -131,12 +131,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing.lg },
   header: { alignItems: 'center', marginBottom: Spacing.lg },
-  logo: { width: 72, height: 72, borderRadius: 36, marginBottom: Spacing.sm },
-  logoPlaceholder: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: `${Colors.primary}15`,
-    justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.sm,
-  },
-  businessName: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
+  businessName: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary, marginTop: Spacing.sm },
   rif: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.sm },
   ratingText: { fontSize: 13, color: Colors.textSecondary },

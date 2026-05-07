@@ -18,6 +18,7 @@ model User {
   name         String
   phone        String
   documentId   String   @map("document_id")
+  profileImageUrl String?  @map("profile_image_url")
   isActive     Boolean  @default(true) @map("is_active")
   emailVerified Boolean @default(false) @map("email_verified")
   createdAt    DateTime @default(now()) @map("created_at")

@@ -159,6 +159,14 @@ export class AuthService {
       include: { userRoles: { include: { role: true } }, vendor: true },
     });
     if (!user) throw new UnauthorizedException();
+    let profileImageUrl: string | null = null;
+    if (user.profileImageUrl) {
+      try {
+        const { getFileUrl } = await import('../lib/s3.js');
+        const isPublic = user.profileImageUrl.includes('/public/');
+        profileImageUrl = await getFileUrl(user.profileImageUrl, isPublic);
+      } catch { }
+    }
     return {
       user: {
         id: user.id,
@@ -169,6 +177,7 @@ export class AuthService {
         phone: user.phone,
         documentId: user.documentId,
         emailVerified: user.emailVerified,
+        profileImageUrl,
         roles: user.userRoles.map((ur: any) => ur.role.name),
         hasVendorProfile: !!user.vendor,
       },
