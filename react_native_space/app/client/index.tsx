@@ -41,12 +41,12 @@ export default function ClientHome() {
           <Ionicons name="swap-horizontal-outline" size={24} color={colors.textPrimary} />
         </Pressable>
       </View>
-      <Text style={styles.greeting}>\u00a1Hola, {user?.firstName ?? 'Usuario'}!</Text>
-      <Text style={styles.subtitle}>\u00bfQu\u00e9 necesitas hoy?</Text>
+      <Text style={styles.greeting}>¡Hola, {user?.firstName ?? 'Usuario'}!</Text>
+      <Text style={styles.subtitle}>¿Qué necesitas hoy?</Text>
       <View style={styles.banner}>
         <Ionicons name="megaphone-outline" size={28} color={colors.accent} />
         <View style={styles.bannerContent}>
-          <Text style={styles.bannerTitle}>Encuentra repuestos r\u00e1pido</Text>
+          <Text style={styles.bannerTitle}>Encuentra repuestos rápido</Text>
           <Text style={styles.bannerText}>Crea una solicitud y recibe ofertas de vendedores cercanos</Text>
         </View>
       </View>
@@ -54,7 +54,7 @@ export default function ClientHome() {
         <Text style={styles.sectionTitle}>Mis Solicitudes Recientes</Text>
         {(requests?.length ?? 0) > 0 ? (
           <Pressable onPress={() => router.push('/client/requests')}>
-            <Text style={styles.seeAll}>Ver todas \u27a1\ufe0f</Text>
+            <Text style={styles.seeAll}>Ver todas ➡️</Text>
           </Pressable>
         ) : null}
       </View>
@@ -83,7 +83,7 @@ export default function ClientHome() {
         ListEmptyComponent={
           <EmptyState
             icon="document-text-outline"
-            title="A\u00fan no tienes solicitudes"
+            title="Aún no tienes solicitudes"
             message="Crea tu primera solicitud para encontrar repuestos"
             actionLabel="Crear Solicitud"
             onAction={() => router.push('/create-request')}

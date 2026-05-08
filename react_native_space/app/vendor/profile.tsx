@@ -35,9 +35,9 @@ export default function VendorProfileScreen() {
   useFocusEffect(useCallback(() => { fetchProfile(); }, [fetchProfile]));
 
   const handleLogout = () => {
-    Alert.alert('Cerrar Sesi\u00f3n', '\u00bfEst\u00e1s seguro?', [
+    Alert.alert('Cerrar Sesión', '¿Estás seguro?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Cerrar Sesi\u00f3n', style: 'destructive', onPress: async () => { await logout(); router.replace('/auth/login'); } },
+      { text: 'Cerrar Sesión', style: 'destructive', onPress: async () => { await logout(); router.replace('/auth/login'); } },
     ]);
   };
 
@@ -85,7 +85,7 @@ export default function VendorProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ubicaci\u00f3n</Text>
+          <Text style={styles.sectionTitle}>Ubicación</Text>
           {profile?.fullAddress ? (
             <Text style={styles.sectionValue}>{profile.fullAddress}</Text>
           ) : (
@@ -107,7 +107,7 @@ export default function VendorProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Veh\u00edculos</Text>
+          <Text style={styles.sectionTitle}>Vehículos</Text>
           {Object.entries(brandsGrouped).map(([brand, models]) => (
             <View key={brand} style={styles.chipGroup}>
               <Text style={styles.chipGroupTitle}>{brand}</Text>
@@ -119,7 +119,7 @@ export default function VendorProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categor\u00edas</Text>
+          <Text style={styles.sectionTitle}>Categorías</Text>
           {Object.entries(catsGrouped).map(([cat, subs]) => (
             <View key={cat} style={styles.chipGroup}>
               <Text style={styles.chipGroupTitle}>{cat}</Text>
@@ -132,7 +132,7 @@ export default function VendorProfileScreen() {
 
         <Button title="Editar Perfil" variant="secondary" onPress={() => router.push('/vendor-edit-profile')} style={styles.btn} />
         <Button title="Cambiar Modo" variant="ghost" onPress={() => router.replace('/role-selection')} icon={<Ionicons name="swap-horizontal-outline" size={18} color={colors.textSecondary} />} />
-        <Button title="Cerrar Sesi\u00f3n" variant="destructive" onPress={handleLogout} style={styles.btn} />
+        <Button title="Cerrar Sesión" variant="destructive" onPress={handleLogout} style={styles.btn} />
       </ScrollView>
     </SafeAreaView>
   );

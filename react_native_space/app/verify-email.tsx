@@ -34,7 +34,7 @@ export default function VerifyEmailScreen() {
     try {
       await verifyEmailApi(verificationToken);
       setVerifiedSuccess(true);
-      Alert.alert('\u00a1\u00c9xito!', 'Tu correo ha sido verificado exitosamente', [
+      Alert.alert('¡Éxito!', 'Tu correo ha sido verificado exitosamente', [
         { text: 'Continuar', onPress: async () => { await refreshUser(); router.replace('/role-selection'); } },
       ]);
     } catch (error: any) {
@@ -43,11 +43,11 @@ export default function VerifyEmailScreen() {
   };
 
   const handleResend = async () => {
-    if (!user?.email) { Alert.alert('Error', 'No se encontr\u00f3 el email del usuario'); return; }
+    if (!user?.email) { Alert.alert('Error', 'No se encontró el email del usuario'); return; }
     setLoading(true);
     try {
       await resendVerificationEmailApi(user.email);
-      Alert.alert('\u00a1Listo!', 'Se ha reenviado el correo de verificaci\u00f3n. Por favor revisa tu bandeja de entrada.');
+      Alert.alert('¡Listo!', 'Se ha reenviado el correo de verificación. Por favor revisa tu bandeja de entrada.');
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'No se pudo reenviar el correo');
     } finally { setLoading(false); }
@@ -72,7 +72,7 @@ export default function VerifyEmailScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.content}>
           <Ionicons name="checkmark-circle" size={80} color={colors.success} />
-          <Text style={styles.title}>\u00a1Verificado!</Text>
+          <Text style={styles.title}>¡Verificado!</Text>
           <Text style={styles.description}>Tu correo ha sido verificado exitosamente.</Text>
         </View>
       </SafeAreaView>
@@ -83,12 +83,12 @@ export default function VerifyEmailScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Ionicons name="mail-unread-outline" size={80} color={colors.primary} />
-        <Text style={styles.title}>Verifica tu Correo Electr\u00f3nico</Text>
+        <Text style={styles.title}>Verifica tu Correo Electrónico</Text>
         <Text style={styles.description}>
-          Hemos enviado un correo de verificaci\u00f3n a <Text style={styles.email}>{user?.email}</Text>
+          Hemos enviado un correo de verificación a <Text style={styles.email}>{user?.email}</Text>
         </Text>
         <Text style={styles.description}>
-          Por favor revisa tu bandeja de entrada y haz clic en el enlace de verificaci\u00f3n.
+          Por favor revisa tu bandeja de entrada y haz clic en el enlace de verificación.
         </Text>
         <View style={styles.warningBox}>
           <Ionicons name="information-circle-outline" size={20} color={colors.warning} />
@@ -96,9 +96,9 @@ export default function VerifyEmailScreen() {
             Algunas funcionalidades pueden estar limitadas hasta que verifiques tu correo.
           </Text>
         </View>
-        <Button title="Reenviar Correo de Verificaci\u00f3n" onPress={handleResend} loading={loading} style={styles.button} />
+        <Button title="Reenviar Correo de Verificación" onPress={handleResend} loading={loading} style={styles.button} />
         <Button title="Continuar sin Verificar" onPress={handleSkipForNow} variant="outline" style={styles.skipButton} />
-        <Text style={styles.helpText}>\u00bfNo recibiste el correo? Revisa tu carpeta de spam o correo no deseado.</Text>
+        <Text style={styles.helpText}>¿No recibiste el correo? Revisa tu carpeta de spam o correo no deseado.</Text>
       </View>
     </SafeAreaView>
   );

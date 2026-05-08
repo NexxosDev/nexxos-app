@@ -46,7 +46,7 @@ export default function VendorRequestDetailScreen() {
   const handleRespondClick = () => {
     const skipEmailVerification = process.env.EXPO_PUBLIC_SKIP_EMAIL_VERIFICATION === 'true';
     if (!skipEmailVerification && !user?.emailVerified) {
-      Alert.alert('Email No Verificado', 'Debes verificar tu correo electr\u00f3nico antes de responder a solicitudes. \u00bfQuieres ir a la pantalla de verificaci\u00f3n?', [
+      Alert.alert('Email No Verificado', 'Debes verificar tu correo electrónico antes de responder a solicitudes. ¿Quieres ir a la pantalla de verificación?', [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Verificar Email', onPress: () => router.push('/verify-email') },
       ]);
@@ -66,7 +66,7 @@ export default function VendorRequestDetailScreen() {
   };
 
   const handleDecline = () => {
-    Alert.alert('Declinar Solicitud', '\u00bfEst\u00e1s seguro de declinar esta solicitud?', [
+    Alert.alert('Declinar Solicitud', '¿Estás seguro de declinar esta solicitud?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Declinar', style: 'destructive', onPress: async () => {
@@ -108,12 +108,12 @@ export default function VendorRequestDetailScreen() {
           <View style={iStyles.row}>
             <BrandLogo brandName={req?.vehicleBrand ?? ''} size={20} />
             <View style={iStyles.col}>
-              <Text style={iStyles.label}>Veh\u00edculo</Text>
+              <Text style={iStyles.label}>Vehículo</Text>
               <Text style={iStyles.value}>{`${req?.vehicleBrand ?? ''} ${req?.vehicleModel ?? ''}`}</Text>
             </View>
           </View>
           <InfoRow icon="construct-outline" label="Repuesto" value={`${req?.partCategory ?? ''}${req?.partSubcategory ? ` - ${req.partSubcategory}` : ''}`} c={colors} />
-          <InfoRow icon="document-text-outline" label="Descripci\u00f3n" value={req?.freeDescription ?? ''} c={colors} />
+          <InfoRow icon="document-text-outline" label="Descripción" value={req?.freeDescription ?? ''} c={colors} />
           <InfoRow icon="location-outline" label="Radio" value={`${req?.searchRadiusKm ?? 0} km`} c={colors} />
           <InfoRow icon="calendar-outline" label="Fecha" value={formatDate(req?.createdAt ?? '')} c={colors} />
         </View>

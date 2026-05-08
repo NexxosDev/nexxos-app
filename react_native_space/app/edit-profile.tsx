@@ -49,16 +49,16 @@ export default function EditProfileScreen() {
         </View>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          {success ? <Text style={styles.success}>Perfil actualizado \u2713</Text> : null}
+          {success ? <Text style={styles.success}>Perfil actualizado ✓</Text> : null}
           <Input label="Nombre" value={firstName} onChangeText={setFirstName} />
           <Input label="Apellido" value={lastName} onChangeText={setLastName} />
-          <Input label="Tel\u00e9fono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          <Input label="Teléfono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
           <View style={styles.readonlyField}>
             <Text style={styles.readonlyLabel}>Email</Text>
             <Text style={styles.readonlyValue}>{user?.email ?? ''}</Text>
           </View>
           <View style={styles.readonlyField}>
-            <Text style={styles.readonlyLabel}>C\u00e9dula</Text>
+            <Text style={styles.readonlyLabel}>Cédula</Text>
             <Text style={styles.readonlyValue}>{user?.documentId ?? ''}</Text>
           </View>
           <Button title="Guardar Cambios" onPress={handleSave} loading={loading} style={styles.saveBtn} />

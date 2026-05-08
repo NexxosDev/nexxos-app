@@ -16,12 +16,12 @@ const BRAND_KEY_MAP: Record<string, string> = {
   ram: 'ram', isuzu: 'isuzu', iveco: 'iveco',
 };
 
-const CDN_BASE = 'https://i.pinimg.com/originals/0f/a9/3f/0fa93fe78ccb8c8d2ae755676d983760.png';
+const CDN_BASE = 'https://vl.imgix.net/img/';
 
 function getBrandLogoUrl(brandName: string): string | null {
   const key = BRAND_KEY_MAP[brandName?.toLowerCase?.()?.trim?.() ?? ''];
   if (!key) return null;
-  return CDN_BASE + key + '-logo.png?w=120&h=90&fit=fill&fill=solid&fill-color=00000000';
+  return `${CDN_BASE}${key}-logo.png?w=120&h=90&fit=fill&fill=solid&fill-color=00000000&auto=format`;
 }
 
 interface BrandLogoProps { brandName: string; size?: number; }
@@ -48,6 +48,13 @@ export default function BrandLogo({ brandName, size = 28 }: BrandLogoProps) {
 }
 
 const createStyles = (c: ThemeColors, isDark: boolean) => StyleSheet.create({
-  container: { backgroundColor: isDark ? '#2A2A2A' : '#FFFFFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isDark ? '#444' : '#E8E8E8' },
+  container: {
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#E8E8E8',
+    // Always white bg so logos with dark text/elements remain visible in both modes
+  },
   fallback: { backgroundColor: c.backgroundSection, justifyContent: 'center', alignItems: 'center' },
 });

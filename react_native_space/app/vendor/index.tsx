@@ -47,30 +47,30 @@ export default function VendorHome() {
       case 'PENDING': {
         if (!delivered) return { label: 'Pendiente', color: '#F57C00' };
         const elapsed = now - delivered;
-        return { label: `\u23f3 Sin responder \u00b7 ${formatDuration(elapsed)}`, color: '#F57C00' };
+        return { label: `⏳ Sin responder · ${formatDuration(elapsed)}`, color: '#F57C00' };
       }
       case 'RESPONDED': {
         const responded = item?.respondedAt ? new Date(item.respondedAt).getTime() : 0;
-        if (!delivered || !responded) return { label: '\u2705 Respondida', color: colors.success };
+        if (!delivered || !responded) return { label: '✅ Respondida', color: colors.success };
         const delta = responded - delivered;
-        return { label: `\u2705 Respondida en ${formatDuration(delta)}`, color: colors.success };
+        return { label: `✅ Respondida en ${formatDuration(delta)}`, color: colors.success };
       }
       case 'DECLINED': {
         const declined = item?.declinedAt ? new Date(item.declinedAt).getTime() : 0;
-        if (!delivered || !declined) return { label: '\u2716 Declinada', color: colors.error };
+        if (!delivered || !declined) return { label: '✖ Declinada', color: colors.error };
         const delta = declined - delivered;
-        return { label: `\u2716 Declinada en ${formatDuration(delta)}`, color: colors.error };
+        return { label: `✖ Declinada en ${formatDuration(delta)}`, color: colors.error };
       }
       case 'CERRADA': {
         if (item?.responded && item?.respondedAt && delivered) {
           const delta = new Date(item.respondedAt).getTime() - delivered;
-          return { label: `\ud83d\udd12 Cerrada \u00b7 Respondida en ${formatDuration(delta)}`, color: colors.textSecondary };
+          return { label: `🔒 Cerrada · Respondida en ${formatDuration(delta)}`, color: colors.textSecondary };
         }
         if (item?.declined && item?.declinedAt && delivered) {
           const delta = new Date(item.declinedAt).getTime() - delivered;
-          return { label: `\ud83d\udd12 Cerrada \u00b7 Declinada en ${formatDuration(delta)}`, color: colors.textSecondary };
+          return { label: `🔒 Cerrada · Declinada en ${formatDuration(delta)}`, color: colors.textSecondary };
         }
-        return { label: '\ud83d\udd12 Cerrada \u00b7 No respondida', color: colors.textSecondary };
+        return { label: '🔒 Cerrada · No respondida', color: colors.textSecondary };
       }
       default:
         return { label: '', color: colors.textSecondary };
@@ -119,14 +119,14 @@ export default function VendorHome() {
         <Pressable style={styles.verifyBanner} onPress={() => router.push('/verify-email')}>
           <Ionicons name="warning-outline" size={20} color={colors.warningBoxText} />
           <View style={{ flex: 1, marginLeft: Spacing.sm }}>
-            <Text style={styles.verifyBannerTitle}>Verifica tu correo electr\u00f3nico</Text>
-            <Text style={styles.verifyBannerText}>No podr\u00e1s responder solicitudes hasta que verifiques tu correo.</Text>
+            <Text style={styles.verifyBannerTitle}>Verifica tu correo electrónico</Text>
+            <Text style={styles.verifyBannerText}>No podrás responder solicitudes hasta que verifiques tu correo.</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.warningBoxText} />
         </Pressable>
       )}
 
-      <Text style={styles.greeting}>\u00a1Hola, {dashboard?.businessName ?? 'Vendedor'}!</Text>
+      <Text style={styles.greeting}>¡Hola, {dashboard?.businessName ?? 'Vendedor'}!</Text>
 
       <View style={styles.availRow}>
         <View style={{ flex: 1 }}>
@@ -162,18 +162,18 @@ export default function VendorHome() {
           </View>
           <View style={styles.rmGrid}>
             <View style={styles.rmItem}>
-              <Text style={styles.rmValue}>{responseMetrics?.avgResponseTimeMs != null ? formatDuration(responseMetrics.avgResponseTimeMs) : '\u2014'}</Text>
+              <Text style={styles.rmValue}>{responseMetrics?.avgResponseTimeMs != null ? formatDuration(responseMetrics.avgResponseTimeMs) : '—'}</Text>
               <Text style={styles.rmLabel}>Promedio</Text>
             </View>
             <View style={styles.rmDivider} />
             <View style={styles.rmItem}>
-              <Text style={styles.rmValue}>{responseMetrics?.medianResponseTimeMs != null ? formatDuration(responseMetrics.medianResponseTimeMs) : '\u2014'}</Text>
+              <Text style={styles.rmValue}>{responseMetrics?.medianResponseTimeMs != null ? formatDuration(responseMetrics.medianResponseTimeMs) : '—'}</Text>
               <Text style={styles.rmLabel}>Mediana</Text>
             </View>
             <View style={styles.rmDivider} />
             <View style={styles.rmItem}>
-              <Text style={styles.rmValue}>{responseMetrics?.fastestResponseTimeMs != null ? formatDuration(responseMetrics.fastestResponseTimeMs) : '\u2014'}</Text>
-              <Text style={styles.rmLabel}>M\u00e1s r\u00e1pida</Text>
+              <Text style={styles.rmValue}>{responseMetrics?.fastestResponseTimeMs != null ? formatDuration(responseMetrics.fastestResponseTimeMs) : '—'}</Text>
+              <Text style={styles.rmLabel}>Más rápida</Text>
             </View>
           </View>
           <View style={styles.rmFooter}>
@@ -215,7 +215,7 @@ export default function VendorHome() {
           );
         }}
         ListHeaderComponent={renderHeader}
-        ListEmptyComponent={<EmptyState icon="mail-outline" title="Sin solicitudes" message="A\u00fan no has recibido solicitudes" />}
+        ListEmptyComponent={<EmptyState icon="mail-outline" title="Sin solicitudes" message="Aún no has recibido solicitudes" />}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={colors.primary} />}
       />

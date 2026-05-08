@@ -49,8 +49,8 @@ export default function RequestDetailScreen() {
 
   const handleClose = async () => {
     setCloseError('');
-    if (resolved && !selectedVendorId) { setCloseError('Selecciona el vendedor que te ayud\u00f3'); return; }
-    if (resolved && rating < 1) { setCloseError('Debes seleccionar una calificaci\u00f3n'); return; }
+    if (resolved && !selectedVendorId) { setCloseError('Selecciona el vendedor que te ayudó'); return; }
+    if (resolved && rating < 1) { setCloseError('Debes seleccionar una calificación'); return; }
     setClosing(true);
     try {
       const body: Parameters<typeof closeRequest>[1] = { resolved };
@@ -85,17 +85,17 @@ export default function RequestDetailScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={colors.primary} />}>
         <View style={styles.infoCard}>
-          <InfoRow icon="location-outline" label="Ubicaci\u00f3n" value={[detail?.municipality?.name, detail?.state?.name].filter(Boolean).join(', ') || 'No especificada'} c={colors} />
-          <InfoRow icon="navigate-outline" label="Distancia de B\u00fasqueda" value={`${detail?.searchRadiusKm ?? 0} km`} c={colors} />
+          <InfoRow icon="location-outline" label="Ubicación" value={[detail?.municipality?.name, detail?.state?.name].filter(Boolean).join(', ') || 'No especificada'} c={colors} />
+          <InfoRow icon="navigate-outline" label="Distancia de Búsqueda" value={`${detail?.searchRadiusKm ?? 0} km`} c={colors} />
           <View style={iStyles.row}>
             <BrandLogo brandName={detail?.vehicleBrand?.name ?? ''} size={20} />
             <View style={iStyles.col}>
-              <Text style={iStyles.label}>Veh\u00edculo</Text>
+              <Text style={iStyles.label}>Vehículo</Text>
               <Text style={iStyles.value}>{`${detail?.vehicleBrand?.name ?? ''} ${detail?.vehicleModel?.name ?? ''}`}</Text>
             </View>
           </View>
           <InfoRow icon="construct-outline" label="Repuesto" value={`${detail?.partCategory?.name ?? ''}${detail?.partSubcategory?.name ? ` - ${detail.partSubcategory.name}` : ''}`} c={colors} />
-          <InfoRow icon="document-text-outline" label="Descripci\u00f3n" value={detail?.freeDescription ?? ''} c={colors} />
+          <InfoRow icon="document-text-outline" label="Descripción" value={detail?.freeDescription ?? ''} c={colors} />
           <InfoRow icon="calendar-outline" label="Fecha" value={formatDate(detail?.createdAt ?? '')} c={colors} />
         </View>
 
@@ -114,7 +114,7 @@ export default function RequestDetailScreen() {
             />
           ))
         ) : (
-          <Text style={styles.noResponses}>A\u00fan no hay respuestas. Los vendedores est\u00e1n revisando tu solicitud.</Text>
+          <Text style={styles.noResponses}>Aún no hay respuestas. Los vendedores están revisando tu solicitud.</Text>
         )}
 
         {detail?.status !== 'CERRADA' ? (
@@ -127,10 +127,10 @@ export default function RequestDetailScreen() {
         <View style={styles.bottomSheet}>
           <Text style={styles.sheetTitle}>Cerrar Solicitud</Text>
           {closeError ? <Text style={styles.error}>{closeError}</Text> : null}
-          <Text style={styles.sheetLabel}>\u00bfSe resolvi\u00f3 tu solicitud?</Text>
+          <Text style={styles.sheetLabel}>¿Se resolvió tu solicitud?</Text>
           <View style={styles.radioRow}>
             <Pressable style={[styles.radio, resolved && styles.radioActive]} onPress={() => setResolved(true)}>
-              <Text style={[styles.radioText, resolved && styles.radioTextActive]}>S\u00ed</Text>
+              <Text style={[styles.radioText, resolved && styles.radioTextActive]}>Sí</Text>
             </Pressable>
             <Pressable style={[styles.radio, !resolved && styles.radioActive]} onPress={() => setResolved(false)}>
               <Text style={[styles.radioText, !resolved && styles.radioTextActive]}>No</Text>
@@ -138,14 +138,14 @@ export default function RequestDetailScreen() {
           </View>
           {resolved ? (
             <View>
-              <Text style={styles.sheetLabel}>\u00bfQui\u00e9n te ayud\u00f3?</Text>
+              <Text style={styles.sheetLabel}>¿Quién te ayudó?</Text>
               {(responses ?? []).map((resp) => (
                 <Pressable key={resp?.id} style={[styles.vendorOption, selectedVendorId === resp?.vendor?.id && styles.vendorOptionActive]} onPress={() => setSelectedVendorId(resp?.vendor?.id ?? '')}>
                   <Text style={styles.vendorName}>{resp?.vendor?.businessName ?? ''}</Text>
                   {selectedVendorId === resp?.vendor?.id ? <Ionicons name="checkmark-circle" size={20} color={colors.primary} /> : null}
                 </Pressable>
               ))}
-              <Text style={styles.sheetLabel}>Calificaci\u00f3n</Text>
+              <Text style={styles.sheetLabel}>Calificación</Text>
               <StarRating rating={rating} onChange={setRating} />
               <TextInput
                 style={styles.commentInput}

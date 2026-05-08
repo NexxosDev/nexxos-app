@@ -103,11 +103,11 @@ export default function ChatScreen() {
       let result: ImagePicker.ImagePickerResult;
       if (source === 'camera') {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
-        if (!perm?.granted) { Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a la c\u00e1mara.'); return; }
+        if (!perm?.granted) { Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a la cámara.'); return; }
         result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7, allowsEditing: true });
       } else {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm?.granted) { Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a la galer\u00eda.'); return; }
+        if (!perm?.granted) { Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a la galería.'); return; }
         result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, allowsEditing: true });
       }
       if (result?.canceled || !result?.assets?.[0]) return;
@@ -120,7 +120,7 @@ export default function ChatScreen() {
       const uploadRes = await uploadFileWithUrl(uri, fileName, contentType);
       const imageUrl = uploadRes?.url ?? '';
       if (imageUrl) {
-        const newMsg = await sendChatMessage(chatId, '\ud83d\udcf7 Imagen', 'image', imageUrl, replyingTo?.id);
+        const newMsg = await sendChatMessage(chatId, '📷 Imagen', 'image', imageUrl, replyingTo?.id);
         if (newMsg) { setMessages((prev) => [newMsg, ...(prev ?? [])]); }
         setReplyingTo(null);
       }
@@ -167,7 +167,7 @@ export default function ChatScreen() {
   if (loading) return <LoadingSpinner />;
 
   const replyPreviewText = replyingTo
-    ? ((replyingTo?.messageType ?? 'text') === 'image' ? '\ud83d\udcf7 Imagen' : (replyingTo?.messageText ?? ''))
+    ? ((replyingTo?.messageType ?? 'text') === 'image' ? '📷 Imagen' : (replyingTo?.messageText ?? ''))
     : '';
   const replyPreviewSnippet = replyPreviewText.length > 50 ? replyPreviewText.substring(0, 47) + '...' : replyPreviewText;
 
@@ -191,7 +191,7 @@ export default function ChatScreen() {
           renderItem={renderMessage}
           inverted
           contentContainerStyle={styles.messageList}
-          ListEmptyComponent={<Text style={styles.emptyChat}>No hay mensajes a\u00fan. \u00a1Inicia la conversaci\u00f3n!</Text>}
+          ListEmptyComponent={<Text style={styles.emptyChat}>No hay mensajes aún. ¡Inicia la conversación!</Text>}
           onScrollToIndexFailed={(info) => {
             flatListRef.current?.scrollToOffset?.({ offset: info.averageItemLength * info.index, animated: true });
           }}
@@ -208,11 +208,11 @@ export default function ChatScreen() {
           <View style={styles.attachMenu}>
             <Pressable style={styles.attachOption} onPress={() => pickAndSendImage('gallery')}>
               <Ionicons name="images" size={24} color={colors.primary} />
-              <Text style={styles.attachOptionText}>Galer\u00eda</Text>
+              <Text style={styles.attachOptionText}>Galería</Text>
             </Pressable>
             <Pressable style={styles.attachOption} onPress={() => pickAndSendImage('camera')}>
               <Ionicons name="camera" size={24} color={colors.primary} />
-              <Text style={styles.attachOptionText}>C\u00e1mara</Text>
+              <Text style={styles.attachOptionText}>Cámara</Text>
             </Pressable>
           </View>
         ) : null}

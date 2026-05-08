@@ -28,15 +28,15 @@ export default function ResetPasswordScreen() {
     if (tokenParam) {
       setToken(tokenParam);
     } else {
-      Alert.alert('Error', 'Token de recuperaci\u00f3n no encontrado');
+      Alert.alert('Error', 'Token de recuperación no encontrado');
     }
   }, [params]);
 
   const handleReset = async () => {
     setError('');
-    if (!newPassword?.trim?.()) { setError('Ingresa una contrase\u00f1a'); return; }
-    if ((newPassword?.length ?? 0) < 6) { setError('La contrase\u00f1a debe tener al menos 6 caracteres'); return; }
-    if (newPassword !== confirmPassword) { setError('Las contrase\u00f1as no coinciden'); return; }
+    if (!newPassword?.trim?.()) { setError('Ingresa una contraseña'); return; }
+    if ((newPassword?.length ?? 0) < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (newPassword !== confirmPassword) { setError('Las contraseñas no coinciden'); return; }
 
     setLoading(true);
     try {
@@ -57,20 +57,20 @@ export default function ResetPasswordScreen() {
           <Pressable onPress={() => router.back()} style={styles.back}>
             <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </Pressable>
-          <Text style={styles.title}>Nueva Contrase\u00f1a</Text>
-          <Text style={styles.desc}>Ingresa tu nueva contrase\u00f1a a continuaci\u00f3n.</Text>
+          <Text style={styles.title}>Nueva Contraseña</Text>
+          <Text style={styles.desc}>Ingresa tu nueva contraseña a continuación.</Text>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {success ? (
             <View style={styles.successBox}>
               <Ionicons name="checkmark-circle" size={32} color={colors.success} />
-              <Text style={styles.successText}>Contrase\u00f1a restablecida exitosamente. Redirigiendo al login...</Text>
+              <Text style={styles.successText}>Contraseña restablecida exitosamente. Redirigiendo al login...</Text>
             </View>
           ) : (
             <>
-              <Input label="Nueva Contrase\u00f1a" value={newPassword} onChangeText={setNewPassword} secureTextEntry />
-              <Input label="Confirmar Contrase\u00f1a" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
-              <Button title="Restablecer Contrase\u00f1a" onPress={handleReset} loading={loading} />
+              <Input label="Nueva Contraseña" value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+              <Input label="Confirmar Contraseña" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+              <Button title="Restablecer Contraseña" onPress={handleReset} loading={loading} />
             </>
           )}
         </ScrollView>

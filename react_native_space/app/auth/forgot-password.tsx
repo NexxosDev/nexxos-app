@@ -41,14 +41,14 @@ export default function ForgotPasswordScreen() {
           <Pressable onPress={() => router.back()} style={styles.back}>
             <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </Pressable>
-          <Text style={styles.title}>Recuperar Contrase\u00f1a</Text>
-          <Text style={styles.desc}>Ingresa tu email y te enviaremos instrucciones para recuperar tu contrase\u00f1a.</Text>
+          <Text style={styles.title}>Recuperar Contraseña</Text>
+          <Text style={styles.desc}>Ingresa tu email y te enviaremos instrucciones para recuperar tu contraseña.</Text>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {sent ? (
             <View style={styles.successBox}>
               <Ionicons name="checkmark-circle" size={32} color={colors.success} />
-              <Text style={styles.successText}>Si el email existe, recibir\u00e1s instrucciones para restablecer tu contrase\u00f1a.</Text>
+              <Text style={styles.successText}>Si el email existe, recibirás instrucciones para restablecer tu contraseña.</Text>
             </View>
           ) : (
             <>

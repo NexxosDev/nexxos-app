@@ -29,7 +29,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     setError('');
     if (!email?.trim?.()) { setError('Ingresa tu email'); return; }
-    if (!password) { setError('Ingresa tu contrase\u00f1a'); return; }
+    if (!password) { setError('Ingresa tu contraseña'); return; }
     setLoading(true);
     try {
       await login(email?.trim?.() ?? '', password);
@@ -46,24 +46,24 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Text style={styles.logo}>NEXXOS</Text>
-            <Text style={styles.title}>Iniciar Sesi\u00f3n</Text>
+            <Text style={styles.title}>Iniciar Sesión</Text>
           </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Input label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
-          <Input label="Contrase\u00f1a" value={password} onChangeText={setPassword} secureTextEntry />
+          <Input label="Contraseña" value={password} onChangeText={setPassword} secureTextEntry />
 
-          <Button title="Iniciar Sesi\u00f3n" onPress={handleLogin} loading={loading} />
+          <Button title="Iniciar Sesión" onPress={handleLogin} loading={loading} />
 
           <Pressable onPress={() => router.push('/auth/forgot-password')} style={styles.link}>
-            <Text style={styles.linkText}>\u00bfOlvidaste tu contrase\u00f1a?</Text>
+            <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
           </Pressable>
 
           <View style={styles.divider} />
 
           <Pressable onPress={() => router.push('/auth/register-type')} style={styles.link}>
-            <Text style={styles.registerText}>\u00bfNo tienes cuenta? <Text style={styles.registerBold}>Reg\u00edstrate</Text></Text>
+            <Text style={styles.registerText}>¿No tienes cuenta? <Text style={styles.registerBold}>Regístrate</Text></Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

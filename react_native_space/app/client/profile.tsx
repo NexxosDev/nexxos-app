@@ -21,9 +21,9 @@ export default function ClientProfile() {
   useFocusEffect(useCallback(() => { refreshUser?.(); }, []));
 
   const handleLogout = () => {
-    Alert.alert('Cerrar Sesi\u00f3n', '\u00bfEst\u00e1s seguro?', [
+    Alert.alert('Cerrar Sesión', '¿Estás seguro?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Cerrar Sesi\u00f3n', style: 'destructive', onPress: async () => { await logout(); router.replace('/auth/login'); } },
+      { text: 'Cerrar Sesión', style: 'destructive', onPress: async () => { await logout(); router.replace('/auth/login'); } },
     ]);
   };
 
@@ -60,14 +60,14 @@ export default function ClientProfile() {
 
         <View style={styles.infoCard}>
           <InfoRow icon="person-outline" label="Nombre" value={`${user?.firstName ?? ''} ${user?.lastName ?? ''}`} c={colors} />
-          <InfoRow icon="card-outline" label="C\u00e9dula" value={user?.documentId ?? '-'} c={colors} />
-          <InfoRow icon="call-outline" label="Tel\u00e9fono" value={user?.phone ?? '-'} c={colors} />
+          <InfoRow icon="card-outline" label="Cédula" value={user?.documentId ?? '-'} c={colors} />
+          <InfoRow icon="call-outline" label="Teléfono" value={user?.phone ?? '-'} c={colors} />
           <InfoRow icon="mail-outline" label="Email" value={user?.email ?? '-'} c={colors} />
         </View>
 
         <Button title="Editar Perfil" variant="secondary" onPress={() => router.push('/edit-profile')} style={styles.editBtn} />
         <Button title="Cambiar Modo" variant="ghost" onPress={() => router.replace('/role-selection')} icon={<Ionicons name="swap-horizontal-outline" size={18} color={colors.textSecondary} />} />
-        <Button title="Cerrar Sesi\u00f3n" variant="destructive" onPress={handleLogout} style={styles.logoutBtn} />
+        <Button title="Cerrar Sesión" variant="destructive" onPress={handleLogout} style={styles.logoutBtn} />
       </ScrollView>
     </SafeAreaView>
   );
