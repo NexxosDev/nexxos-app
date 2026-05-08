@@ -1,16 +1,21 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../src/theme/colors';
 
 export default function ClientLayout() {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets?.bottom ?? 0, Platform.OS === 'android' ? 12 : 8);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Colors.tabActive,
         tabBarInactiveTintColor: Colors.tabInactive,
-        tabBarStyle: { backgroundColor: Colors.white, borderTopColor: Colors.border, borderTopWidth: 1, height: 60, paddingBottom: 8, paddingTop: 4 },
+        tabBarStyle: { backgroundColor: Colors.white, borderTopColor: Colors.border, borderTopWidth: 1, height: 56 + bottomPad, paddingBottom: bottomPad, paddingTop: 4 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
       }}
     >
