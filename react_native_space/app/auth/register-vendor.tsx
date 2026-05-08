@@ -11,6 +11,7 @@ import { uploadFile } from '../../src/services/upload';
 import { updateVendorProfile } from '../../src/services/vendor';
 import { uploadRegistrationFile, verifyIdentity } from '../../src/services/identity';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { formatCedula, validateCedula } from '../../src/utils/cedula';
 import type { ThemeColors } from '../../src/theme/colors';
 import { Spacing, BorderRadius } from '../../src/theme/colors';
 import Input from '../../src/components/Input';
@@ -229,7 +230,8 @@ export default function RegisterVendorScreen() {
   const canNext = (): boolean => {
     if (step === 1) {
       const emailValid = personal?.email?.trim?.() && /\S+@\S+\.\S+/.test(personal.email);
-      const personalValid = !!(personal?.firstName?.trim?.() && personal?.lastName?.trim?.() && personal?.phone?.trim?.() && personal?.documentId?.trim?.() && emailValid && personal?.password && personal?.password === personal?.confirmPassword && (personal?.password?.length ?? 0) >= 6);
+      const cedulaOk = !validateCedula(personal?.documentId ?? '');
+      const personalValid = !!(personal?.firstName?.trim?.() && personal?.lastName?.trim?.() && personal?.phone?.trim?.() && cedulaOk && emailValid && personal?.password && personal?.password === personal?.confirmPassword && (personal?.password?.length ?? 0) >= 6);
       return personalValid && identityVerified;
     }
     if (step === 2) {
@@ -311,7 +313,7 @@ export default function RegisterVendorScreen() {
             <Text style={styles.stepTitle}>Datos Personales</Text>
             <Input label="Nombre" value={personal.firstName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), firstName: v }))} />
             <Input label="Apellido" value={personal.lastName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), lastName: v }))} />
-            <Input label="Cédula" value={personal.documentId} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), documentId: v }))} keyboardType="numeric" />
+            <Input label="Cédula" value={personal.documentId} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), documentId: formatCedula(v) }))} placeholder="V-12345678" />
             <PhoneInput label="Teléfono" value={personal.phone} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), phone: v }))} />
             <Input label="Email" value={personal.email} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), email: v }))} keyboardType="email-address" autoCapitalize="none" />
             <Input label="Contraseña" value={personal.password} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), password: v }))} secureTextEntry />

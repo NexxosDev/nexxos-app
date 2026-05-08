@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { formatCedula, validateCedula } from '../../src/utils/cedula';
 import { getErrorMessage } from '../../src/services/api';
 import { Spacing } from '../../src/theme/colors';
 import type { ThemeColors } from '../../src/theme/colors';
@@ -37,7 +38,8 @@ export default function RegisterClientScreen() {
     const errs: Record<string, string> = {};
     if (!form?.firstName?.trim?.()) errs.firstName = 'Requerido';
     if (!form?.lastName?.trim?.()) errs.lastName = 'Requerido';
-    if (!form?.documentId?.trim?.()) errs.documentId = 'Requerido';
+    const cedulaErr = validateCedula(form?.documentId ?? '');
+    if (cedulaErr) errs.documentId = cedulaErr;
     if (!form?.phone?.trim?.()) errs.phone = 'Requerido';
     if (!form?.email?.trim?.()) errs.email = 'Requerido';
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Email inválido';
@@ -83,7 +85,7 @@ export default function RegisterClientScreen() {
 
           <Input label="Nombre" value={form.firstName} onChangeText={(v) => update('firstName', v)} error={fieldErrors?.firstName} />
           <Input label="Apellido" value={form.lastName} onChangeText={(v) => update('lastName', v)} error={fieldErrors?.lastName} />
-          <Input label="Cédula" value={form.documentId} onChangeText={(v) => update('documentId', v)} keyboardType="numeric" error={fieldErrors?.documentId} />
+          <Input label="Cédula" value={form.documentId} onChangeText={(v) => update('documentId', formatCedula(v))} placeholder="V-12345678" error={fieldErrors?.documentId} />
           <PhoneInput label="Teléfono" value={form.phone} onChangeText={(v) => update('phone', v)} error={fieldErrors?.phone} />
           <Input label="Email" value={form.email} onChangeText={(v) => update('email', v)} keyboardType="email-address" autoCapitalize="none" error={fieldErrors?.email} />
           <Input label="Contraseña" value={form.password} onChangeText={(v) => update('password', v)} secureTextEntry error={fieldErrors?.password} />
