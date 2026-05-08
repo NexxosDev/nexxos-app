@@ -4,7 +4,12 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 
+/**
+ * Maps brand name (lowercased) → CDN key for vl.imgix.net logos.
+ * Brands without a CDN logo show a car icon fallback.
+ */
 const BRAND_KEY_MAP: Record<string, string> = {
+  // Top Venezuela brands
   hyundai: 'hyundai',
   chevrolet: 'chevrolet',
   toyota: 'toyota',
@@ -15,29 +20,36 @@ const BRAND_KEY_MAP: Record<string, string> = {
   kia: 'kia',
   mazda: 'mazda',
   renault: 'renault',
+  suzuki: 'suzuki',
   fiat: 'fiat',
   jeep: 'jeep',
-  suzuki: 'suzuki',
   mitsubishi: 'mitsubishi',
+  dodge: 'dodge',
+  // Premium
   bmw: 'bmw',
   'mercedes-benz': 'mercedes-benz',
   'mercedes benz': 'mercedes-benz',
   mercedes: 'mercedes-benz',
-  dodge: 'dodge',
+  audi: 'audi',
   peugeot: 'peugeot',
   subaru: 'subaru',
   volvo: 'volvo',
-  audi: 'audi',
   lexus: 'lexus',
   porsche: 'porsche',
   'land rover': 'land-rover',
   jaguar: 'jaguar',
   tesla: 'tesla',
+  // Chinese brands
   chery: 'chery',
   changan: 'changan',
   geely: 'geely',
   haval: 'haval',
   mg: 'mg',
+  'great wall': 'great-wall',
+  // Other
+  ram: 'ram',
+  isuzu: 'isuzu',
+  iveco: 'iveco',
 };
 
 const CDN_BASE = 'https://vl.imgix.net/img/';
