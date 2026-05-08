@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import { Spacing } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import { uploadFile } from '../services/upload';
 import api from '../services/api';
 
@@ -15,37 +17,23 @@ interface ProfileAvatarProps {
 }
 
 export default function ProfileAvatar({ imageUrl, initials, size = 90, onImageUpdated }: ProfileAvatarProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [uploading, setUploading] = useState(false);
 
   const pickFromLibrary = async () => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.8,
-        allowsEditing: true,
-        aspect: [1, 1],
-      });
-      if (!result?.canceled && result?.assets?.[0]?.uri) {
-        await handleUpload(result.assets[0].uri);
-      }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: true, aspect: [1, 1] });
+      if (!result?.canceled && result?.assets?.[0]?.uri) await handleUpload(result.assets[0].uri);
     } catch { }
   };
 
   const takePhoto = async () => {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (permission?.status !== 'granted') {
-        Alert.alert('Permiso Denegado', 'Necesitamos acceso a la cámara.');
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        quality: 0.8,
-        allowsEditing: true,
-        aspect: [1, 1],
-      });
-      if (!result?.canceled && result?.assets?.[0]?.uri) {
-        await handleUpload(result.assets[0].uri);
-      }
+      if (permission?.status !== 'granted') { Alert.alert('Permiso Denegado', 'Necesitamos acceso a la cámara.'); return; }
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true, aspect: [1, 1] });
+      if (!result?.canceled && result?.assets?.[0]?.uri) await handleUpload(result.assets[0].uri);
     } catch { }
   };
 
@@ -55,31 +43,23 @@ export default function ProfileAvatar({ imageUrl, initials, size = 90, onImageUp
       const storagePath = await uploadFile(uri, `profile_${Date.now()}.jpg`, 'image/jpeg', true);
       await api.patch('/users/profile', { profileImagePath: storagePath });
       onImageUpdated?.();
-    } catch (err) {
-      Alert.alert('Error', 'No se pudo actualizar la imagen de perfil.');
-    } finally {
-      setUploading(false);
-    }
+    } catch { Alert.alert('Error', 'No se pudo actualizar la imagen de perfil.'); }
+    finally { setUploading(false); }
   };
 
   const showOptions = () => {
-    Alert.alert(
-      'Cambiar Foto de Perfil',
-      'Selecciona una opción',
-      [
-        { text: 'Tomar Foto', onPress: takePhoto },
-        { text: 'Seleccionar del Dispositivo', onPress: pickFromLibrary },
-        { text: 'Cancelar', style: 'cancel' },
-      ],
-      { cancelable: true },
-    );
+    Alert.alert('Cambiar Foto de Perfil', 'Selecciona una opción', [
+      { text: 'Tomar Foto', onPress: takePhoto },
+      { text: 'Seleccionar del Dispositivo', onPress: pickFromLibrary },
+      { text: 'Cancelar', style: 'cancel' },
+    ], { cancelable: true });
   };
 
   const halfSize = size / 2;
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
-      <Pressable onPress={showOptions} style={[styles.avatarWrapper, { width: size, height: size, borderRadius: halfSize }]}> 
+      <Pressable onPress={showOptions} style={[styles.avatarWrapper, { width: size, height: size, borderRadius: halfSize }]}>
         {imageUrl ? (
           <Image source={{ uri: imageUrl }} style={[styles.image, { width: size, height: size, borderRadius: halfSize }]} contentFit="cover" />
         ) : (
@@ -89,11 +69,11 @@ export default function ProfileAvatar({ imageUrl, initials, size = 90, onImageUp
         )}
         {uploading ? (
           <View style={[styles.overlay, { borderRadius: halfSize }]}>
-            <ActivityIndicator size="small" color={Colors.white} />
+            <ActivityIndicator size="small" color={colors.white} />
           </View>
         ) : (
           <View style={styles.editBadge}>
-            <Ionicons name="camera" size={14} color={Colors.white} />
+            <Ionicons name="camera" size={14} color={colors.white} />
           </View>
         )}
       </Pressable>
@@ -101,33 +81,12 @@ export default function ProfileAvatar({ imageUrl, initials, size = 90, onImageUp
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: { alignSelf: 'center' },
   avatarWrapper: { position: 'relative', overflow: 'hidden' },
-  image: { backgroundColor: Colors.backgroundSection },
-  initialsCircle: {
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  initials: { fontWeight: '700', color: Colors.accent },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.white,
-  },
+  image: { backgroundColor: c.backgroundSection },
+  initialsCircle: { backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center' },
+  initials: { fontWeight: '700', color: c.accent },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
+  editBadge: { position: 'absolute', bottom: 2, right: 2, width: 28, height: 28, borderRadius: 14, backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: c.surface },
 });

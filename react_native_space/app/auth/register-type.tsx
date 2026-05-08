@@ -1,32 +1,36 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
+import { useTheme } from '../../src/contexts/ThemeContext';
+import { Spacing, BorderRadius } from '../../src/theme/colors';
+import type { ThemeColors } from '../../src/theme/colors';
 
 export default function RegisterTypeScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <SafeAreaView style={styles.safe}>
       <Pressable onPress={() => router.back()} style={styles.back}>
-        <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+        <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
       </Pressable>
-      <Text style={styles.title}>¿Cómo deseas registrarte?</Text>
+      <Text style={styles.title}>\u00bfC\u00f3mo deseas registrarte?</Text>
 
       <View style={styles.cards}>
         <Pressable style={styles.card} onPress={() => router.push('/auth/register-client')}>
           <View style={styles.iconBg}>
-            <Ionicons name="person-outline" size={40} color={Colors.primary} />
+            <Ionicons name="person-outline" size={40} color={colors.primary} />
           </View>
           <Text style={styles.cardTitle}>Cliente</Text>
-          <Text style={styles.cardSub}>Busca repuestos fácilmente</Text>
+          <Text style={styles.cardSub}>Busca repuestos f\u00e1cilmente</Text>
         </Pressable>
 
         <Pressable style={styles.card} onPress={() => router.push('/auth/register-vendor')}>
           <View style={styles.iconBg}>
-            <Ionicons name="storefront-outline" size={40} color={Colors.primary} />
+            <Ionicons name="storefront-outline" size={40} color={colors.primary} />
           </View>
           <Text style={styles.cardTitle}>Vendedor</Text>
           <Text style={styles.cardSub}>Ofrece tus productos</Text>
@@ -34,28 +38,28 @@ export default function RegisterTypeScreen() {
       </View>
 
       <Pressable onPress={() => router.push('/auth/login')} style={styles.loginLink}>
-        <Text style={styles.loginText}>¿Ya tienes cuenta? <Text style={styles.loginBold}>Inicia Sesión</Text></Text>
+        <Text style={styles.loginText}>\u00bfYa tienes cuenta? <Text style={styles.loginBold}>Inicia Sesi\u00f3n</Text></Text>
       </Pressable>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background, padding: Spacing.lg },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.background, padding: Spacing.lg },
   back: { width: 44, height: 44, justifyContent: 'center', marginBottom: Spacing.md },
-  title: { fontSize: 24, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.xl },
+  title: { fontSize: 24, fontWeight: '700', color: c.textPrimary, marginBottom: Spacing.xl },
   cards: { gap: Spacing.md },
   card: {
-    backgroundColor: Colors.cardBg, borderRadius: BorderRadius.lg, padding: Spacing.lg,
-    alignItems: 'center', borderWidth: 2, borderColor: Colors.border,
+    backgroundColor: c.cardBg, borderRadius: BorderRadius.lg, padding: Spacing.lg,
+    alignItems: 'center', borderWidth: 2, borderColor: c.border,
   },
   iconBg: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: `${Colors.primary}15`,
+    width: 72, height: 72, borderRadius: 36, backgroundColor: `${c.primary}15`,
     justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.md,
   },
-  cardTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
-  cardSub: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+  cardTitle: { fontSize: 20, fontWeight: '700', color: c.textPrimary, marginBottom: 4 },
+  cardSub: { fontSize: 14, color: c.textSecondary, textAlign: 'center' },
   loginLink: { alignItems: 'center', marginTop: Spacing.xl },
-  loginText: { fontSize: 15, color: Colors.textSecondary },
-  loginBold: { color: Colors.primary, fontWeight: '600' },
+  loginText: { fontSize: 15, color: c.textSecondary },
+  loginBold: { color: c.primary, fontWeight: '600' },
 });

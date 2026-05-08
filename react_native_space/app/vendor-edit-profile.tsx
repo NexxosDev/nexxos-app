@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,7 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { getVendorProfile, updateVendorProfile } from '../src/services/vendor';
 import { getErrorMessage } from '../src/services/api';
 import { useCatalog } from '../src/contexts/CatalogContext';
-import { Colors, Spacing, BorderRadius } from '../src/theme/colors';
+import { useTheme } from '../src/contexts/ThemeContext';
+import type { ThemeColors } from '../src/theme/colors';
+import { Spacing, BorderRadius } from '../src/theme/colors';
 import Button from '../src/components/Button';
 import LoadingSpinner from '../src/components/LoadingSpinner';
 import BrandsByOrigin from '../src/components/BrandsByOrigin';
@@ -15,13 +17,14 @@ import type { VendorProfile, CatalogItem } from '../src/types';
 export default function VendorEditProfileScreen() {
   const router = useRouter();
   const catalog = useCatalog();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [profile, setProfile] = useState<VendorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  // Editable selections
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -30,38 +33,28 @@ export default function VendorEditProfileScreen() {
   const [modelsMap, setModelsMap] = useState<Record<string, CatalogItem[]>>({});
   const [subcategoriesMap, setSubcategoriesMap] = useState<Record<string, CatalogItem[]>>({});
 
-  // Load catalogs on mount
   useEffect(() => {
     catalog?.loadBrands?.();
     catalog?.loadCategories?.();
   }, []);
 
-  // Load profile and pre-populate selections
   useEffect(() => {
     (async () => {
       try {
         const p = await getVendorProfile();
         setProfile(p ?? null);
-
-        // Pre-populate vehicle selections
         const models = p?.vehicleModels ?? [];
         const brandIds = [...new Set(models.map((m) => m?.brand?.id).filter(Boolean))] as string[];
         setSelectedBrands(brandIds);
         setSelectedModels(models.map((m) => m?.id).filter(Boolean) as string[]);
-
-        // Load models for each pre-selected brand
         for (const brandId of brandIds) {
           const items = await catalog?.loadModels?.(brandId) ?? [];
           setModelsMap((prev) => ({ ...(prev ?? {}), [brandId]: items }));
         }
-
-        // Pre-populate category selections
         const subs = p?.partSubcategories ?? [];
         const catIds = [...new Set(subs.map((s) => s?.category?.id).filter(Boolean))] as string[];
         setSelectedCategories(catIds);
         setSelectedSubcategories(subs.map((s) => s?.id).filter(Boolean) as string[]);
-
-        // Load subcategories for each pre-selected category
         for (const catId of catIds) {
           const items = await catalog?.loadSubcategories?.(catId) ?? [];
           setSubcategoriesMap((prev) => ({ ...(prev ?? {}), [catId]: items }));
@@ -152,7 +145,7 @@ export default function VendorEditProfileScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.topBar}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </Pressable>
           <Text style={styles.topTitle}>Editar Negocio</Text>
           <View style={{ width: 44 }} />
@@ -162,7 +155,6 @@ export default function VendorEditProfileScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {success ? <Text style={styles.success}>Perfil actualizado \u2713</Text> : null}
 
-          {/* ── Read-only info ── */}
           <View style={styles.readOnlySection}>
             <View style={styles.readOnlyRow}>
               <Text style={styles.readOnlyLabel}>Razón Social</Text>
@@ -177,13 +169,12 @@ export default function VendorEditProfileScreen() {
             <View style={styles.readOnlyRow}>
               <Text style={styles.readOnlyLabel}>Ubicación</Text>
               <View style={styles.addressRow}>
-                <Ionicons name="location" size={14} color={Colors.primary} />
+                <Ionicons name="location" size={14} color={colors.primary} />
                 <Text style={styles.readOnlyValueSmall}>{addressText}</Text>
               </View>
             </View>
           </View>
 
-          {/* ── Editable: Vehicles ── */}
           <Text style={styles.sectionLabel}>¿Qué vehículos manejas?</Text>
           <Text style={styles.sectionDesc}>Selecciona marcas y luego modelos</Text>
           <BrandsByOrigin
@@ -198,7 +189,7 @@ export default function VendorEditProfileScreen() {
               <View key={brandId} style={styles.modelSection}>
                 <Text style={styles.modelBrand}>{brand?.name ?? ''}</Text>
                 {(models?.length ?? 0) === 0 ? (
-                  <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 4 }} />
+                  <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 4 }} />
                 ) : (
                   <View style={styles.chipContainer}>
                     {(models ?? []).map((m) => (
@@ -218,7 +209,6 @@ export default function VendorEditProfileScreen() {
             );
           })}
 
-          {/* ── Editable: Categories ── */}
           <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>¿Qué repuestos ofreces?</Text>
           <Text style={styles.sectionDesc}>Selecciona categorías y subcategorías</Text>
           {(catalog?.categories ?? []).map((cat) => {
@@ -236,7 +226,7 @@ export default function VendorEditProfileScreen() {
                   <Ionicons
                     name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
                     size={22}
-                    color={isSelected ? Colors.primary : Colors.border}
+                    color={isSelected ? colors.primary : colors.border}
                   />
                 </Pressable>
                 {isSelected && (subs?.length ?? 0) > 0 ? (
@@ -265,44 +255,35 @@ export default function VendorEditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.background },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   backBtn: { width: 44, height: 44, justifyContent: 'center' },
-  topTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
+  topTitle: { fontSize: 17, fontWeight: '600', color: c.textPrimary },
   scroll: { padding: Spacing.lg, paddingBottom: 60 },
-  error: { backgroundColor: '#FEE2E2', color: Colors.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
-  success: { backgroundColor: '#E8F5E9', color: Colors.success, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md, textAlign: 'center' },
-
-  // Read-only section
-  readOnlySection: { backgroundColor: Colors.cardBg, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginBottom: Spacing.lg },
+  error: { backgroundColor: c.errorBg, color: c.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
+  success: { backgroundColor: c.successBg, color: c.success, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md, textAlign: 'center' },
+  readOnlySection: { backgroundColor: c.cardBg, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: c.border, padding: Spacing.md, marginBottom: Spacing.lg },
   readOnlyRow: { paddingVertical: 8 },
-  readOnlyLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500', marginBottom: 2 },
-  readOnlyValue: { fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
-  readOnlyValueSmall: { fontSize: 13, color: Colors.textSubtitle, lineHeight: 18, flex: 1 },
+  readOnlyLabel: { fontSize: 12, color: c.textSecondary, fontWeight: '500', marginBottom: 2 },
+  readOnlyValue: { fontSize: 15, color: c.textPrimary, fontWeight: '600' },
+  readOnlyValueSmall: { fontSize: 13, color: c.textSubtitle, lineHeight: 18, flex: 1 },
   addressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 2 },
-  divider: { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
-
-  // Sections
-  sectionLabel: { fontSize: 16, fontWeight: '600', color: Colors.textPrimary, marginBottom: 4 },
-  sectionDesc: { fontSize: 13, color: Colors.textSecondary, marginBottom: Spacing.sm },
-
-  // Chips
+  divider: { height: 1, backgroundColor: c.border, marginVertical: 4 },
+  sectionLabel: { fontSize: 16, fontWeight: '600', color: c.textPrimary, marginBottom: 4 },
+  sectionDesc: { fontSize: 13, color: c.textSecondary, marginBottom: Spacing.sm },
   chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Spacing.md },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, backgroundColor: Colors.chipBg },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, backgroundColor: c.chipBg },
   chipSmall: { paddingHorizontal: 10, paddingVertical: 6 },
-  chipSelected: { backgroundColor: Colors.chipSelectedBg },
-  chipText: { fontSize: 14, color: Colors.textSubtitle },
-  chipTextSmall: { fontSize: 12, color: Colors.textSubtitle },
-  chipTextSelected: { color: Colors.accent, fontWeight: '600' },
-
-  // Models / Categories
+  chipSelected: { backgroundColor: c.chipSelectedBg },
+  chipText: { fontSize: 14, color: c.textSubtitle },
+  chipTextSmall: { fontSize: 12, color: c.textSubtitle },
+  chipTextSelected: { color: c.accent, fontWeight: '600' },
   modelSection: { marginBottom: Spacing.md, paddingLeft: Spacing.sm },
-  modelBrand: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 6 },
+  modelBrand: { fontSize: 14, fontWeight: '600', color: c.textPrimary, marginBottom: 6 },
   categoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: Spacing.sm, borderRadius: BorderRadius.sm, marginBottom: 4 },
-  categoryRowSelected: { backgroundColor: `${Colors.primary}15` },
-  categoryText: { fontSize: 15, color: Colors.textPrimary },
-  categoryTextSelected: { fontWeight: '600', color: Colors.primary },
-
+  categoryRowSelected: { backgroundColor: `${c.primary}15` },
+  categoryText: { fontSize: 15, color: c.textPrimary },
+  categoryTextSelected: { fontWeight: '600', color: c.primary },
   saveBtn: { marginTop: Spacing.lg },
 });

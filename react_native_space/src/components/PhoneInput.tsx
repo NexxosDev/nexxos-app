@@ -1,7 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated, ViewStyle } from 'react-native';
 import MaskInput from 'react-native-mask-input';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import { Spacing, BorderRadius } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 
 interface PhoneInputProps {
   label: string;
@@ -11,10 +13,11 @@ interface PhoneInputProps {
   containerStyle?: ViewStyle;
 }
 
-// Máscara para +58-999-999-99-99
 const PHONE_MASK = ['+', '5', '8', '-', /\d/, /\d/, /\d/, '-', /\d/, /\d/, /\d/, '-', /\d/, /\d/, '-', /\d/, /\d/];
 
 export default function PhoneInput({ label, value, onChangeText, error, containerStyle }: PhoneInputProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [focused, setFocused] = useState(false);
   const labelAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
 
@@ -25,9 +28,7 @@ export default function PhoneInput({ label, value, onChangeText, error, containe
 
   const handleBlur = () => {
     setFocused(false);
-    if (!value) {
-      Animated.timing(labelAnim, { toValue: 0, duration: 150, useNativeDriver: false }).start();
-    }
+    if (!value) Animated.timing(labelAnim, { toValue: 0, duration: 150, useNativeDriver: false }).start();
   };
 
   const labelTop = labelAnim.interpolate({ inputRange: [0, 1], outputRange: [16, -10] });
@@ -36,17 +37,8 @@ export default function PhoneInput({ label, value, onChangeText, error, containe
 
   return (
     <View style={[styles.container, containerStyle]}>
-      <View style={[
-        styles.inputContainer,
-        focused && styles.focused,
-        error ? styles.errorBorder : null,
-      ]}>
-        <Animated.Text style={[
-          styles.label,
-          { top: labelTop, fontSize: labelSize },
-          (focused || hasValue) && styles.labelFocused,
-          error ? styles.labelError : null,
-        ]}>
+      <View style={[styles.inputContainer, focused && styles.focused, error ? styles.errorBorder : null]}>
+        <Animated.Text style={[styles.label, { top: labelTop, fontSize: labelSize, backgroundColor: colors.inputBg }, (focused || hasValue) && styles.labelFocused, error ? styles.labelError : null]}>
           {label ?? ''}
         </Animated.Text>
         <MaskInput
@@ -57,7 +49,7 @@ export default function PhoneInput({ label, value, onChangeText, error, containe
           onBlur={handleBlur}
           mask={PHONE_MASK}
           keyboardType="phone-pad"
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
         />
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -65,30 +57,14 @@ export default function PhoneInput({ label, value, onChangeText, error, containe
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: { marginBottom: Spacing.md },
-  inputContainer: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.white,
-    paddingHorizontal: Spacing.md,
-    paddingTop: 18,
-    paddingBottom: 8,
-    position: 'relative',
-  },
-  focused: { borderColor: Colors.primary, borderWidth: 2 },
-  errorBorder: { borderColor: Colors.error },
-  label: {
-    position: 'absolute',
-    left: Spacing.md,
-    color: Colors.textSecondary,
-    backgroundColor: Colors.white,
-    paddingHorizontal: 4,
-    zIndex: 1,
-  },
-  labelFocused: { color: Colors.primary },
-  labelError: { color: Colors.error },
-  input: { fontSize: 16, color: Colors.textPrimary, paddingVertical: 0 },
-  errorText: { color: Colors.error, fontSize: 12, marginTop: 4, marginLeft: 4 },
+  inputContainer: { borderWidth: 1, borderColor: c.border, borderRadius: BorderRadius.md, backgroundColor: c.inputBg, paddingHorizontal: Spacing.md, paddingTop: 18, paddingBottom: 8, position: 'relative' },
+  focused: { borderColor: c.primary, borderWidth: 2 },
+  errorBorder: { borderColor: c.error },
+  label: { position: 'absolute', left: Spacing.md, color: c.textSecondary, paddingHorizontal: 4, zIndex: 1 },
+  labelFocused: { color: c.primary },
+  labelError: { color: c.error },
+  input: { fontSize: 16, color: c.textPrimary, paddingVertical: 0 },
+  errorText: { color: c.error, fontSize: 12, marginTop: 4, marginLeft: 4 },
 });

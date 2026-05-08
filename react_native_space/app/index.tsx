@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
-import { Colors } from '../src/theme/colors';
+import { useTheme } from '../src/contexts/ThemeContext';
+import type { ThemeColors } from '../src/theme/colors';
 
 export default function Index() {
   const { user, isLoading } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [splashDone, setSplashDone] = useState(false);
   const opacity = React.useRef(new Animated.Value(0)).current;
 
@@ -33,17 +36,17 @@ export default function Index() {
   return <Redirect href="/auth/login" />;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   splash: {
-    flex: 1, backgroundColor: Colors.accent,
+    flex: 1, backgroundColor: c.accent,
     justifyContent: 'center', alignItems: 'center',
   },
   logo: {
-    fontSize: 48, fontWeight: '800', color: Colors.primary,
+    fontSize: 48, fontWeight: '800', color: c.primary,
     letterSpacing: 4, textAlign: 'center',
   },
   tagline: {
-    fontSize: 14, color: Colors.white, marginTop: 8,
+    fontSize: 14, color: c.white, marginTop: 8,
     textAlign: 'center', opacity: 0.8,
   },
 });

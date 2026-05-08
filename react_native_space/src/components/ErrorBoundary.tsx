@@ -1,15 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Colors, Spacing } from '../theme/colors';
+import { LightColors, Spacing } from '../theme/colors';
 
-interface Props {
-  children: React.ReactNode;
-}
+// ErrorBoundary is a class component — cannot use hooks.
+// We use LightColors as static fallback. Since this only renders on errors,
+// a light-themed error screen is acceptable as a safe fallback.
 
-interface State {
-  hasError: boolean;
-  error: Error | null;
-}
+interface Props { children: React.ReactNode; }
+interface State { hasError: boolean; error: Error | null; }
 
 export class ErrorBoundary extends React.Component<Props, State> {
   state: State = { hasError: false, error: null };
@@ -22,9 +20,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     console.error('ErrorBoundary caught:', error, info?.componentStack);
   }
 
-  handleRetry = () => {
-    this.setState({ hasError: false, error: null });
-  };
+  handleRetry = () => { this.setState({ hasError: false, error: null }); };
 
   render() {
     if (this.state.hasError) {
@@ -43,11 +39,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 }
 
+const c = LightColors;
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.lg, backgroundColor: Colors.background },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.lg, backgroundColor: c.background },
   emoji: { fontSize: 48, marginBottom: Spacing.md },
-  title: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.sm },
-  message: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.lg },
-  button: { backgroundColor: Colors.primary, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: 12 },
-  buttonText: { fontSize: 16, fontWeight: '600', color: Colors.accent },
+  title: { fontSize: 20, fontWeight: '700', color: c.textPrimary, marginBottom: Spacing.sm },
+  message: { fontSize: 14, color: c.textSecondary, textAlign: 'center', marginBottom: Spacing.lg },
+  button: { backgroundColor: c.primary, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: 12 },
+  buttonText: { fontSize: 16, fontWeight: '600', color: c.accent },
 });

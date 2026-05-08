@@ -1,7 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { View, TextInput, Text, StyleSheet, Pressable, Animated, TextInputProps, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import { Spacing, BorderRadius } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   label: string;
@@ -11,6 +13,8 @@ interface InputProps extends Omit<TextInputProps, 'style'> {
 }
 
 export default function Input({ label, error, containerStyle, secureTextEntry, value, onFocus, onBlur, ...rest }: InputProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [focused, setFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const labelAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
@@ -42,7 +46,7 @@ export default function Input({ label, error, containerStyle, secureTextEntry, v
       ]}>
         <Animated.Text style={[
           styles.label,
-          { top: labelTop, fontSize: labelSize },
+          { top: labelTop, fontSize: labelSize, backgroundColor: colors.inputBg },
           (focused || hasValue) && styles.labelFocused,
           error ? styles.labelError : null,
         ]}>
@@ -54,12 +58,12 @@ export default function Input({ label, error, containerStyle, secureTextEntry, v
           onFocus={handleFocus}
           onBlur={handleBlur}
           secureTextEntry={secureTextEntry && !showPassword}
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           {...rest}
         />
         {secureTextEntry && (
           <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn} hitSlop={8}>
-            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={Colors.textSecondary} />
+            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textSecondary} />
           </Pressable>
         )}
       </View>
@@ -68,13 +72,13 @@ export default function Input({ label, error, containerStyle, secureTextEntry, v
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: { marginBottom: Spacing.md },
   inputContainer: {
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: c.border,
     borderRadius: BorderRadius.md,
-    backgroundColor: Colors.white,
+    backgroundColor: c.inputBg,
     paddingHorizontal: Spacing.md,
     paddingTop: 18,
     paddingBottom: 8,
@@ -82,19 +86,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  focused: { borderColor: Colors.primary, borderWidth: 2 },
-  errorBorder: { borderColor: Colors.error },
+  focused: { borderColor: c.primary, borderWidth: 2 },
+  errorBorder: { borderColor: c.error },
   label: {
     position: 'absolute',
     left: Spacing.md,
-    color: Colors.textSecondary,
-    backgroundColor: Colors.white,
+    color: c.textSecondary,
     paddingHorizontal: 4,
     zIndex: 1,
   },
-  labelFocused: { color: Colors.primary },
-  labelError: { color: Colors.error },
-  input: { flex: 1, fontSize: 16, color: Colors.textPrimary, paddingVertical: 0 },
+  labelFocused: { color: c.primary },
+  labelError: { color: c.error },
+  input: { flex: 1, fontSize: 16, color: c.textPrimary, paddingVertical: 0 },
   eyeBtn: { marginLeft: Spacing.sm },
-  errorText: { color: Colors.error, fontSize: 12, marginTop: 4, marginLeft: 4 },
+  errorText: { color: c.error, fontSize: 12, marginTop: 4, marginLeft: 4 },
 });

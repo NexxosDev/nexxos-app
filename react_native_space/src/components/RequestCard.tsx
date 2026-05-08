@@ -1,7 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import { Spacing, BorderRadius } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import Badge from './Badge';
 import BrandLogo from './BrandLogo';
 
@@ -14,9 +16,7 @@ interface RequestCardProps {
   municipality?: string;
   state?: string;
   createdAt: string;
-  /** Time label to show (e.g. "⏱ 2h 15min") */
   timeLabel?: string;
-  /** Color for the time label */
   timeLabelColor?: string;
   onPress?: () => void;
 }
@@ -25,6 +25,8 @@ export default function RequestCard({
   vehicleBrand, vehicleModel, partCategory, status,
   responseCount, municipality, state, createdAt, timeLabel, timeLabelColor, onPress,
 }: RequestCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const scale = useRef(new Animated.Value(1)).current;
 
   const formatDate = (d: string) => {
@@ -52,7 +54,7 @@ export default function RequestCard({
             <Text style={styles.subtitle} numberOfLines={1}>{partCategory ?? ''}</Text>
             {(municipality || state) ? (
               <Text style={styles.location} numberOfLines={1}>
-                <Ionicons name="location-outline" size={12} color={Colors.textSecondary} />
+                <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
                 {' '}{municipality ?? ''}{state ? `, ${state}` : ''}
               </Text>
             ) : null}
@@ -67,8 +69,8 @@ export default function RequestCard({
         </View>
         {timeLabel ? (
           <View style={styles.timeRow}>
-            <Ionicons name="time-outline" size={13} color={timeLabelColor ?? Colors.textSecondary} />
-            <Text style={[styles.timeText, { color: timeLabelColor ?? Colors.textSecondary }]} numberOfLines={1}>
+            <Ionicons name="time-outline" size={13} color={timeLabelColor ?? colors.textSecondary} />
+            <Text style={[styles.timeText, { color: timeLabelColor ?? colors.textSecondary }]} numberOfLines={1}>
               {timeLabel}
             </Text>
           </View>
@@ -78,14 +80,14 @@ export default function RequestCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
-    backgroundColor: Colors.cardBg,
+    backgroundColor: c.cardBg,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: c.border,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4 },
       android: { elevation: 2 },
@@ -93,21 +95,14 @@ const styles = StyleSheet.create({
     }),
   },
   row: { flexDirection: 'row', alignItems: 'center' },
-  iconContainer: {
-    width: 40, height: 40,
-    justifyContent: 'center', alignItems: 'center',
-    marginRight: Spacing.sm,
-  },
+  iconContainer: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.sm },
   content: { flex: 1 },
-  title: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary },
-  subtitle: { fontSize: 13, color: Colors.textSubtitle, marginTop: 2 },
-  location: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  title: { fontSize: 15, fontWeight: '600', color: c.textPrimary },
+  subtitle: { fontSize: 13, color: c.textSubtitle, marginTop: 2 },
+  location: { fontSize: 12, color: c.textSecondary, marginTop: 2 },
   right: { alignItems: 'flex-end', gap: 4 },
-  responses: { fontSize: 11, color: Colors.textSecondary },
-  date: { fontSize: 11, color: Colors.textSecondary },
-  timeRow: {
-    flexDirection: 'row', alignItems: 'center', marginTop: 8,
-    paddingTop: 8, borderTopWidth: 1, borderTopColor: Colors.border,
-  },
+  responses: { fontSize: 11, color: c.textSecondary },
+  date: { fontSize: 11, color: c.textSecondary },
+  timeRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.border },
   timeText: { fontSize: 12, marginLeft: 4, flex: 1 },
 });

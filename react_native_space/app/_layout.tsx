@@ -8,6 +8,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { CatalogProvider } from '../src/contexts/CatalogContext';
+import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -26,23 +27,18 @@ function NotificationNavigator() {
       try {
         switch (data.type) {
           case 'NEW_REQUEST':
-            // Vendedor: ir al listado de solicitudes
             router.push('/vendor/requests');
             break;
           case 'NEW_RESPONSE':
-            // Cliente: ir al detalle de su solicitud
             if (data.requestId) router.push(`/request-detail?id=${data.requestId}`);
             break;
           case 'NEW_MESSAGE':
-            // Abrir chat
             if (data.chatId) router.push(`/chat?chatId=${data.chatId}`);
             break;
           case 'REQUEST_CLOSED':
-            // Vendedor: ir al listado
             router.push('/vendor/requests');
             break;
           case 'RATING_RECEIVED':
-            // Vendedor: ir al dashboard
             router.push('/vendor');
             break;
         }
@@ -61,7 +57,14 @@ function NotificationNavigator() {
   return null;
 }
 
-export default function RootLayout() {
+function ThemedStatusBar() {
+  const { isDark } = useTheme();
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+}
+
+function InnerLayout() {
+  const { colors } = useTheme();
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       SplashScreen.hideAsync().catch(() => {});
@@ -70,29 +73,45 @@ export default function RootLayout() {
   }, []);
 
   return (
+    <>
+      <NotificationNavigator />
+      <ThemedStatusBar />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="role-selection" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="client" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="vendor" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="create-request" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="request-detail" />
+        <Stack.Screen name="vendor-request-detail" />
+        <Stack.Screen name="chat" />
+        <Stack.Screen name="edit-profile" />
+        <Stack.Screen name="vendor-edit-profile" />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ErrorBoundary>
-          <AuthProvider>
-            <CatalogProvider>
-              <NotificationNavigator />
-              <StatusBar style="dark" />
-              <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="auth" />
-                <Stack.Screen name="role-selection" options={{ gestureEnabled: false }} />
-                <Stack.Screen name="client" options={{ gestureEnabled: false }} />
-                <Stack.Screen name="vendor" options={{ gestureEnabled: false }} />
-                <Stack.Screen name="create-request" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-                <Stack.Screen name="request-detail" />
-                <Stack.Screen name="vendor-request-detail" />
-                <Stack.Screen name="chat" />
-                <Stack.Screen name="edit-profile" />
-                <Stack.Screen name="vendor-edit-profile" />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-            </CatalogProvider>
-          </AuthProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <CatalogProvider>
+                <InnerLayout />
+              </CatalogProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>

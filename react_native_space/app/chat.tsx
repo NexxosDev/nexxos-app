@@ -9,8 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useAuth } from '../src/contexts/AuthContext';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { getChatInfo, getChatMessages, sendChatMessage } from '../src/services/chat';
-import { Colors, Spacing, BorderRadius } from '../src/theme/colors';
+import { Spacing, BorderRadius } from '../src/theme/colors';
+import type { ThemeColors } from '../src/theme/colors';
 import ChatMessageComp from '../src/components/ChatMessage';
 import LoadingSpinner from '../src/components/LoadingSpinner';
 import type { ChatInfo, ChatMessageItem } from '../src/types';
@@ -19,6 +21,8 @@ export default function ChatScreen() {
   const router = useRouter();
   const { chatId = '' } = useLocalSearchParams<{ chatId: string }>();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [chatInfo, setChatInfo] = useState<ChatInfo | null>(null);
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +36,6 @@ export default function ChatScreen() {
   const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
   const inputRef = useRef<TextInput>(null);
 
-  // Build index map for scroll-to-message
   const messageIndexMap = useMemo(() => {
     const map = new Map<string, number>();
     (messages ?? []).forEach((m, i) => { if (m?.id) map.set(m.id, i); });
@@ -63,13 +66,10 @@ export default function ChatScreen() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [fetchMessages]);
 
-  /* ---- Reply helpers ---- */
   const activateReply = useCallback((msg: ChatMessageItem) => {
     setReplyingTo(msg);
-    // Close the swipeable that triggered this
     const ref = swipeableRefs.current.get(msg?.id ?? '');
     ref?.close?.();
-    // Focus the input
     setTimeout(() => inputRef.current?.focus?.(), 100);
   }, []);
 
@@ -82,7 +82,6 @@ export default function ChatScreen() {
     }
   }, [messageIndexMap]);
 
-  /* ---- Send ---- */
   const handleSend = async () => {
     const trimmed = text?.trim?.() ?? '';
     if (!trimmed || sending) return;
@@ -102,70 +101,44 @@ export default function ChatScreen() {
     setShowAttachMenu(false);
     try {
       let result: ImagePicker.ImagePickerResult;
-
       if (source === 'camera') {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
-        if (!perm?.granted) {
-          Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a la cámara.');
-          return;
-        }
-        result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-          allowsEditing: true,
-        });
+        if (!perm?.granted) { Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a la c\u00e1mara.'); return; }
+        result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7, allowsEditing: true });
       } else {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm?.granted) {
-          Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a la galería.');
-          return;
-        }
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-          allowsEditing: true,
-        });
+        if (!perm?.granted) { Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a la galer\u00eda.'); return; }
+        result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, allowsEditing: true });
       }
-
       if (result?.canceled || !result?.assets?.[0]) return;
-
       const asset = result.assets[0];
       const uri = asset?.uri ?? '';
       if (!uri) return;
-
       const fileName = uri.split('/').pop() ?? `image_${Date.now()}.jpg`;
       const contentType = asset?.mimeType ?? 'image/jpeg';
-
       setUploading(true);
       const uploadRes = await uploadFileWithUrl(uri, fileName, contentType);
       const imageUrl = uploadRes?.url ?? '';
-
       if (imageUrl) {
-        const newMsg = await sendChatMessage(chatId, '📷 Imagen', 'image', imageUrl, replyingTo?.id);
-        if (newMsg) {
-          setMessages((prev) => [newMsg, ...(prev ?? [])]);
-        }
+        const newMsg = await sendChatMessage(chatId, '\ud83d\udcf7 Imagen', 'image', imageUrl, replyingTo?.id);
+        if (newMsg) { setMessages((prev) => [newMsg, ...(prev ?? [])]); }
         setReplyingTo(null);
       }
-    } catch (err) {
-      Alert.alert('Error', 'No se pudo enviar la imagen. Intenta de nuevo.');
-    }
+    } catch { Alert.alert('Error', 'No se pudo enviar la imagen. Intenta de nuevo.'); }
     setUploading(false);
   };
 
-  /* ---- Swipe right action (reply arrow) ---- */
   const renderLeftActions = useCallback((_progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
     const scale = dragX.interpolate({ inputRange: [0, 60], outputRange: [0.4, 1], extrapolate: 'clamp' });
     return (
       <View style={styles.swipeReplyAction}>
         <Animated.View style={{ transform: [{ scale }] }}>
-          <Ionicons name="arrow-undo" size={22} color={Colors.primary} />
+          <Ionicons name="arrow-undo" size={22} color={colors.primary} />
         </Animated.View>
       </View>
     );
-  }, []);
+  }, [colors.primary, styles.swipeReplyAction]);
 
-  /* ---- Render message ---- */
   const renderMessage = useCallback(({ item }: { item: ChatMessageItem }) => {
     return (
       <Swipeable
@@ -194,7 +167,7 @@ export default function ChatScreen() {
   if (loading) return <LoadingSpinner />;
 
   const replyPreviewText = replyingTo
-    ? ((replyingTo?.messageType ?? 'text') === 'image' ? '📷 Imagen' : (replyingTo?.messageText ?? ''))
+    ? ((replyingTo?.messageType ?? 'text') === 'image' ? '\ud83d\udcf7 Imagen' : (replyingTo?.messageText ?? ''))
     : '';
   const replyPreviewSnippet = replyPreviewText.length > 50 ? replyPreviewText.substring(0, 47) + '...' : replyPreviewText;
 
@@ -202,7 +175,7 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </Pressable>
         <View style={styles.headerInfo}>
           <Text style={styles.headerName} numberOfLines={1}>{chatInfo?.otherUserName ?? 'Chat'}</Text>
@@ -218,36 +191,32 @@ export default function ChatScreen() {
           renderItem={renderMessage}
           inverted
           contentContainerStyle={styles.messageList}
-          ListEmptyComponent={<Text style={styles.emptyChat}>No hay mensajes aún. ¡Inicia la conversación!</Text>}
+          ListEmptyComponent={<Text style={styles.emptyChat}>No hay mensajes a\u00fan. \u00a1Inicia la conversaci\u00f3n!</Text>}
           onScrollToIndexFailed={(info) => {
-            // Scroll to approximate position then retry
             flatListRef.current?.scrollToOffset?.({ offset: info.averageItemLength * info.index, animated: true });
           }}
         />
 
-        {/* Uploading indicator */}
         {uploading ? (
           <View style={styles.uploadingBar}>
-            <ActivityIndicator size="small" color={Colors.primary} />
+            <ActivityIndicator size="small" color={colors.primary} />
             <Text style={styles.uploadingText}>Subiendo imagen...</Text>
           </View>
         ) : null}
 
-        {/* Attach menu popover */}
         {showAttachMenu ? (
           <View style={styles.attachMenu}>
             <Pressable style={styles.attachOption} onPress={() => pickAndSendImage('gallery')}>
-              <Ionicons name="images" size={24} color={Colors.primary} />
-              <Text style={styles.attachOptionText}>Galería</Text>
+              <Ionicons name="images" size={24} color={colors.primary} />
+              <Text style={styles.attachOptionText}>Galer\u00eda</Text>
             </Pressable>
             <Pressable style={styles.attachOption} onPress={() => pickAndSendImage('camera')}>
-              <Ionicons name="camera" size={24} color={Colors.primary} />
-              <Text style={styles.attachOptionText}>Cámara</Text>
+              <Ionicons name="camera" size={24} color={colors.primary} />
+              <Text style={styles.attachOptionText}>C\u00e1mara</Text>
             </Pressable>
           </View>
         ) : null}
 
-        {/* Reply preview bar */}
         {replyingTo ? (
           <View style={styles.replyBar}>
             <View style={styles.replyBarLeft}>
@@ -258,18 +227,14 @@ export default function ChatScreen() {
               </View>
             </View>
             <Pressable onPress={cancelReply} style={styles.replyBarClose} hitSlop={8}>
-              <Ionicons name="close" size={20} color={Colors.textSecondary} />
+              <Ionicons name="close" size={20} color={colors.textSecondary} />
             </Pressable>
           </View>
         ) : null}
 
         <View style={styles.inputBar}>
-          <Pressable
-            style={styles.attachBtn}
-            onPress={() => setShowAttachMenu((v) => !v)}
-            disabled={uploading}
-          >
-            <Ionicons name={showAttachMenu ? 'close' : 'attach'} size={24} color={uploading ? Colors.textSecondary : Colors.primary} />
+          <Pressable style={styles.attachBtn} onPress={() => setShowAttachMenu((v) => !v)} disabled={uploading}>
+            <Ionicons name={showAttachMenu ? 'close' : 'attach'} size={24} color={uploading ? colors.textSecondary : colors.primary} />
           </Pressable>
           <TextInput
             ref={inputRef}
@@ -277,7 +242,7 @@ export default function ChatScreen() {
             value={text}
             onChangeText={setText}
             placeholder="Escribe un mensaje..."
-            placeholderTextColor={Colors.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             multiline
             maxLength={1000}
             onFocus={() => setShowAttachMenu(false)}
@@ -287,7 +252,7 @@ export default function ChatScreen() {
             onPress={handleSend}
             disabled={!text?.trim?.() || sending}
           >
-            <Ionicons name="send" size={20} color={text?.trim?.() ? Colors.accent : Colors.textSecondary} />
+            <Ionicons name="send" size={20} color={text?.trim?.() ? colors.accent : colors.textSecondary} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -295,7 +260,6 @@ export default function ChatScreen() {
   );
 }
 
-// Helper that uploads and returns the public URL
 async function uploadFileWithUrl(
   uri: string, fileName: string, contentType: string,
 ): Promise<{ url: string; storagePath: string }> {
@@ -303,78 +267,65 @@ async function uploadFileWithUrl(
   const presigned = await getPresignedUrl(fileName, contentType, true);
   const uploadUrl = presigned?.uploadUrl ?? '';
   const storagePath = presigned?.cloud_storage_path ?? '';
-
   const fileResponse = await fetch(uri);
   const blob = await fileResponse.blob();
-
   const headers: Record<string, string> = { 'Content-Type': contentType };
   const signedHeaders = new URL(uploadUrl).searchParams?.get?.('X-Amz-SignedHeaders') ?? '';
-  if (signedHeaders?.includes?.('content-disposition')) {
-    headers['Content-Disposition'] = 'attachment';
-  }
-
+  if (signedHeaders?.includes?.('content-disposition')) { headers['Content-Disposition'] = 'attachment'; }
   await fetch(uploadUrl, { method: 'PUT', body: blob, headers });
   const result = await completeUpload(storagePath, fileName, contentType);
   return { url: result?.url ?? '', storagePath };
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.background },
   header: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: Colors.border, backgroundColor: Colors.white,
+    borderBottomWidth: 1, borderBottomColor: c.border, backgroundColor: c.surface,
   },
   backBtn: { width: 44, height: 44, justifyContent: 'center' },
   headerInfo: { flex: 1, marginLeft: 4 },
-  headerName: { fontSize: 16, fontWeight: '600', color: Colors.textPrimary },
-  headerSummary: { fontSize: 12, color: Colors.textSecondary },
+  headerName: { fontSize: 16, fontWeight: '600', color: c.textPrimary },
+  headerSummary: { fontSize: 12, color: c.textSecondary },
   messageList: { padding: Spacing.sm, paddingBottom: Spacing.md },
-  emptyChat: { textAlign: 'center', color: Colors.textSecondary, padding: Spacing.xl },
+  emptyChat: { textAlign: 'center', color: c.textSecondary, padding: Spacing.xl },
   uploadingBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 8, backgroundColor: Colors.backgroundSection,
+    paddingVertical: 8, backgroundColor: c.backgroundSection,
   },
-  uploadingText: { marginLeft: 8, fontSize: 13, color: Colors.textSecondary },
+  uploadingText: { marginLeft: 8, fontSize: 13, color: c.textSecondary },
   attachMenu: {
     flexDirection: 'row', justifyContent: 'space-evenly',
     paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.border,
+    backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.border,
   },
-  attachOption: {
-    alignItems: 'center', paddingVertical: 8, paddingHorizontal: 24,
-  },
-  attachOptionText: { fontSize: 12, color: Colors.textPrimary, marginTop: 4 },
-  /* Swipe reply action */
-  swipeReplyAction: {
-    width: 60, justifyContent: 'center', alignItems: 'center',
-  },
-  /* Reply preview bar */
+  attachOption: { alignItems: 'center', paddingVertical: 8, paddingHorizontal: 24 },
+  attachOptionText: { fontSize: 12, color: c.textPrimary, marginTop: 4 },
+  swipeReplyAction: { width: 60, justifyContent: 'center', alignItems: 'center' },
   replyBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.md, paddingVertical: 8,
-    backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.border,
+    backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.border,
   },
   replyBarLeft: { flexDirection: 'row', alignItems: 'stretch', flex: 1, marginRight: 8 },
-  replyBarAccent: { width: 3, backgroundColor: Colors.primary, borderRadius: 2, marginRight: 8 },
+  replyBarAccent: { width: 3, backgroundColor: c.primary, borderRadius: 2, marginRight: 8 },
   replyBarContent: { flex: 1, justifyContent: 'center' },
-  replyBarName: { fontSize: 12, fontWeight: '700', color: Colors.primary },
-  replyBarText: { fontSize: 13, color: Colors.textSecondary, marginTop: 1 },
+  replyBarName: { fontSize: 12, fontWeight: '700', color: c.primary },
+  replyBarText: { fontSize: 13, color: c.textSecondary, marginTop: 1 },
   replyBarClose: { padding: 4 },
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', padding: Spacing.sm,
-    borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.white,
+    borderTopWidth: 1, borderTopColor: c.border, backgroundColor: c.surface,
   },
-  attachBtn: {
-    width: 40, height: 44, justifyContent: 'center', alignItems: 'center',
-  },
+  attachBtn: { width: 40, height: 44, justifyContent: 'center', alignItems: 'center' },
   input: {
-    flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 20,
+    flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: 20,
     paddingHorizontal: Spacing.md, paddingVertical: 10, fontSize: 15,
-    color: Colors.textPrimary, maxHeight: 100, backgroundColor: Colors.backgroundSection,
+    color: c.textPrimary, maxHeight: 100, backgroundColor: c.inputBg,
   },
   sendBtn: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary,
+    width: 44, height: 44, borderRadius: 22, backgroundColor: c.primary,
     justifyContent: 'center', alignItems: 'center', marginLeft: Spacing.sm,
   },
-  sendBtnDisabled: { backgroundColor: Colors.border },
+  sendBtnDisabled: { backgroundColor: c.border },
 });

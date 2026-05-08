@@ -1,11 +1,13 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, RefreshControl, Image } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, RefreshControl, Pressable } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { getVendorProfile } from '../../src/services/vendor';
-import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
+import { Spacing, BorderRadius } from '../../src/theme/colors';
+import type { ThemeColors } from '../../src/theme/colors';
 import Button from '../../src/components/Button';
 import ProfileAvatar from '../../src/components/ProfileAvatar';
 import StarRating from '../../src/components/StarRating';
@@ -15,6 +17,8 @@ import type { VendorProfile as VPType } from '../../src/types';
 export default function VendorProfileScreen() {
   const router = useRouter();
   const { user, logout, refreshUser } = useAuth();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [profile, setProfile] = useState<VPType | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,9 +35,9 @@ export default function VendorProfileScreen() {
   useFocusEffect(useCallback(() => { fetchProfile(); }, [fetchProfile]));
 
   const handleLogout = () => {
-    Alert.alert('Cerrar Sesión', '¿Estás seguro?', [
+    Alert.alert('Cerrar Sesi\u00f3n', '\u00bfEst\u00e1s seguro?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Cerrar Sesión', style: 'destructive', onPress: async () => { await logout(); router.replace('/auth/login'); } },
+      { text: 'Cerrar Sesi\u00f3n', style: 'destructive', onPress: async () => { await logout(); router.replace('/auth/login'); } },
     ]);
   };
 
@@ -55,7 +59,14 @@ export default function VendorProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchProfile(true)} tintColor={Colors.primary} />}>
+      <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchProfile(true)} tintColor={colors.primary} />}>
+        {/* Dark mode toggle */}
+        <View style={styles.themeRow}>
+          <Pressable style={styles.themeBtn} onPress={toggleTheme} hitSlop={8}>
+            <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={22} color={colors.textPrimary} />
+          </Pressable>
+        </View>
+
         <View style={styles.header}>
           <ProfileAvatar
             imageUrl={user?.profileImageUrl}
@@ -74,7 +85,7 @@ export default function VendorProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ubicación</Text>
+          <Text style={styles.sectionTitle}>Ubicaci\u00f3n</Text>
           {profile?.fullAddress ? (
             <Text style={styles.sectionValue}>{profile.fullAddress}</Text>
           ) : (
@@ -96,7 +107,7 @@ export default function VendorProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Vehículos</Text>
+          <Text style={styles.sectionTitle}>Veh\u00edculos</Text>
           {Object.entries(brandsGrouped).map(([brand, models]) => (
             <View key={brand} style={styles.chipGroup}>
               <Text style={styles.chipGroupTitle}>{brand}</Text>
@@ -108,7 +119,7 @@ export default function VendorProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categorías</Text>
+          <Text style={styles.sectionTitle}>Categor\u00edas</Text>
           {Object.entries(catsGrouped).map(([cat, subs]) => (
             <View key={cat} style={styles.chipGroup}>
               <Text style={styles.chipGroupTitle}>{cat}</Text>
@@ -120,32 +131,37 @@ export default function VendorProfileScreen() {
         </View>
 
         <Button title="Editar Perfil" variant="secondary" onPress={() => router.push('/vendor-edit-profile')} style={styles.btn} />
-        <Button title="Cambiar Modo" variant="ghost" onPress={() => router.replace('/role-selection')} icon={<Ionicons name="swap-horizontal-outline" size={18} color={Colors.textSecondary} />} />
-        <Button title="Cerrar Sesión" variant="destructive" onPress={handleLogout} style={styles.btn} />
+        <Button title="Cambiar Modo" variant="ghost" onPress={() => router.replace('/role-selection')} icon={<Ionicons name="swap-horizontal-outline" size={18} color={colors.textSecondary} />} />
+        <Button title="Cerrar Sesi\u00f3n" variant="destructive" onPress={handleLogout} style={styles.btn} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.background },
   scroll: { padding: Spacing.lg },
-  header: { alignItems: 'center', marginBottom: Spacing.lg },
-  businessName: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary, marginTop: Spacing.sm },
-  rif: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.sm },
-  ratingText: { fontSize: 13, color: Colors.textSecondary },
-  section: {
-    backgroundColor: Colors.cardBg, borderRadius: BorderRadius.md, padding: Spacing.md,
-    borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.md,
+  themeRow: { alignItems: 'flex-end', marginBottom: Spacing.sm },
+  themeBtn: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: c.backgroundSection,
+    justifyContent: 'center', alignItems: 'center',
   },
-  sectionTitle: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary, marginBottom: Spacing.sm },
-  sectionValue: { fontSize: 14, color: Colors.textSubtitle, marginBottom: 4 },
-  sectionValueMuted: { fontSize: 13, color: Colors.textSecondary, marginBottom: 4, fontStyle: 'italic' },
+  header: { alignItems: 'center', marginBottom: Spacing.lg },
+  businessName: { fontSize: 22, fontWeight: '700', color: c.textPrimary, marginTop: Spacing.sm },
+  rif: { fontSize: 14, color: c.textSecondary, marginTop: 2 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.sm },
+  ratingText: { fontSize: 13, color: c.textSecondary },
+  section: {
+    backgroundColor: c.cardBg, borderRadius: BorderRadius.md, padding: Spacing.md,
+    borderWidth: 1, borderColor: c.border, marginBottom: Spacing.md,
+  },
+  sectionTitle: { fontSize: 15, fontWeight: '600', color: c.textPrimary, marginBottom: Spacing.sm },
+  sectionValue: { fontSize: 14, color: c.textSubtitle, marginBottom: 4 },
+  sectionValueMuted: { fontSize: 13, color: c.textSecondary, marginBottom: 4, fontStyle: 'italic' },
   chipGroup: { marginBottom: Spacing.sm },
-  chipGroupTitle: { fontSize: 13, fontWeight: '600', color: Colors.textSubtitle, marginBottom: 4 },
+  chipGroupTitle: { fontSize: 13, fontWeight: '600', color: c.textSubtitle, marginBottom: 4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full, backgroundColor: Colors.chipBg },
-  chipText: { fontSize: 12, color: Colors.textSubtitle },
+  chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full, backgroundColor: c.chipBg },
+  chipText: { fontSize: 12, color: c.textSubtitle },
   btn: { marginBottom: Spacing.sm },
 });

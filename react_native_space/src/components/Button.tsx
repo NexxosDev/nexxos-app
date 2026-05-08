@@ -1,6 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { Pressable, Text, StyleSheet, ActivityIndicator, Animated, ViewStyle, TextStyle, Platform } from 'react-native';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import { Spacing, BorderRadius } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import * as Haptics from 'expo-haptics';
 
 interface ButtonProps {
@@ -15,6 +17,8 @@ interface ButtonProps {
 }
 
 export default function Button({ title, onPress, variant = 'primary', loading, disabled, style, textStyle, icon }: ButtonProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -67,7 +71,7 @@ export default function Button({ title, onPress, variant = 'primary', loading, d
         accessibilityLabel={title}
       >
         {loading ? (
-          <ActivityIndicator size="small" color={variant === 'primary' ? Colors.accent : Colors.primary} />
+          <ActivityIndicator size="small" color={variant === 'primary' ? colors.accent : colors.primary} />
         ) : (
           <>
             {icon}
@@ -79,7 +83,7 @@ export default function Button({ title, onPress, variant = 'primary', loading, d
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -90,16 +94,16 @@ const styles = StyleSheet.create({
     minHeight: 48,
     gap: Spacing.sm,
   },
-  primary: { backgroundColor: Colors.primary },
-  secondary: { backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.primary },
-  outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: Colors.border },
-  destructive: { backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.error },
+  primary: { backgroundColor: c.primary },
+  secondary: { backgroundColor: c.surface, borderWidth: 1.5, borderColor: c.primary },
+  outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: c.border },
+  destructive: { backgroundColor: c.surface, borderWidth: 1.5, borderColor: c.error },
   ghost: { backgroundColor: 'transparent' },
   disabled: { opacity: 0.5 },
   text: { fontSize: 16, fontWeight: '600' },
-  primaryText: { color: Colors.accent },
-  secondaryText: { color: Colors.primary },
-  outlineText: { color: Colors.textPrimary },
-  destructiveText: { color: Colors.error },
-  ghostText: { color: Colors.textSecondary },
+  primaryText: { color: c.accent },
+  secondaryText: { color: c.primary },
+  outlineText: { color: c.textPrimary },
+  destructiveText: { color: c.error },
+  ghostText: { color: c.textSecondary },
 });

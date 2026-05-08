@@ -1,11 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, Switch, Pressable, RefreshControl, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getVendorDashboard, updateVendorAvailability, getVendorResponseMetrics } from '../../src/services/vendor';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
+import { useTheme } from '../../src/contexts/ThemeContext';
+import { Spacing, BorderRadius } from '../../src/theme/colors';
+import type { ThemeColors } from '../../src/theme/colors';
 import MetricCard from '../../src/components/MetricCard';
 import RequestCard from '../../src/components/RequestCard';
 import StarRating from '../../src/components/StarRating';
@@ -13,7 +15,6 @@ import EmptyState from '../../src/components/EmptyState';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
 import type { VendorDashboard, VendorResponseMetrics } from '../../src/types';
 
-/** Format milliseconds to human-readable time string */
 function formatDuration(ms: number): string {
   if (ms < 0) return '0s';
   const totalSec = Math.floor(ms / 1000);
@@ -28,53 +29,53 @@ function formatDuration(ms: number): string {
   return remH > 0 ? `${days}d ${remH}h` : `${days}d`;
 }
 
-/** Build the time label + color for a vendor match item */
-function getTimeInfo(item: VendorDashboard['recentRequests'][number]): { label: string; color: string } {
-  const delivered = item?.deliveredAt ? new Date(item.deliveredAt).getTime() : 0;
-  const now = Date.now();
-
-  switch (item?.status) {
-    case 'PENDING': {
-      if (!delivered) return { label: 'Pendiente', color: '#F57C00' };
-      const elapsed = now - delivered;
-      return { label: `⏳ Sin responder · ${formatDuration(elapsed)}`, color: '#F57C00' };
-    }
-    case 'RESPONDED': {
-      const responded = item?.respondedAt ? new Date(item.respondedAt).getTime() : 0;
-      if (!delivered || !responded) return { label: '✅ Respondida', color: Colors.success };
-      const delta = responded - delivered;
-      return { label: `✅ Respondida en ${formatDuration(delta)}`, color: Colors.success };
-    }
-    case 'DECLINED': {
-      const declined = item?.declinedAt ? new Date(item.declinedAt).getTime() : 0;
-      if (!delivered || !declined) return { label: '✖ Declinada', color: Colors.error };
-      const delta = declined - delivered;
-      return { label: `✖ Declinada en ${formatDuration(delta)}`, color: Colors.error };
-    }
-    case 'CERRADA': {
-      if (item?.responded && item?.respondedAt && delivered) {
-        const delta = new Date(item.respondedAt).getTime() - delivered;
-        return { label: `🔒 Cerrada · Respondida en ${formatDuration(delta)}`, color: Colors.textSecondary };
-      }
-      if (item?.declined && item?.declinedAt && delivered) {
-        const delta = new Date(item.declinedAt).getTime() - delivered;
-        return { label: `🔒 Cerrada · Declinada en ${formatDuration(delta)}`, color: Colors.textSecondary };
-      }
-      return { label: '🔒 Cerrada · No respondida', color: Colors.textSecondary };
-    }
-    default:
-      return { label: '', color: Colors.textSecondary };
-  }
-}
-
 export default function VendorHome() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [dashboard, setDashboard] = useState<VendorDashboard | null>(null);
   const [responseMetrics, setResponseMetrics] = useState<VendorResponseMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [toggling, setToggling] = useState(false);
+
+  const getTimeInfo = useCallback((item: VendorDashboard['recentRequests'][number]): { label: string; color: string } => {
+    const delivered = item?.deliveredAt ? new Date(item.deliveredAt).getTime() : 0;
+    const now = Date.now();
+    switch (item?.status) {
+      case 'PENDING': {
+        if (!delivered) return { label: 'Pendiente', color: '#F57C00' };
+        const elapsed = now - delivered;
+        return { label: `\u23f3 Sin responder \u00b7 ${formatDuration(elapsed)}`, color: '#F57C00' };
+      }
+      case 'RESPONDED': {
+        const responded = item?.respondedAt ? new Date(item.respondedAt).getTime() : 0;
+        if (!delivered || !responded) return { label: '\u2705 Respondida', color: colors.success };
+        const delta = responded - delivered;
+        return { label: `\u2705 Respondida en ${formatDuration(delta)}`, color: colors.success };
+      }
+      case 'DECLINED': {
+        const declined = item?.declinedAt ? new Date(item.declinedAt).getTime() : 0;
+        if (!delivered || !declined) return { label: '\u2716 Declinada', color: colors.error };
+        const delta = declined - delivered;
+        return { label: `\u2716 Declinada en ${formatDuration(delta)}`, color: colors.error };
+      }
+      case 'CERRADA': {
+        if (item?.responded && item?.respondedAt && delivered) {
+          const delta = new Date(item.respondedAt).getTime() - delivered;
+          return { label: `\ud83d\udd12 Cerrada \u00b7 Respondida en ${formatDuration(delta)}`, color: colors.textSecondary };
+        }
+        if (item?.declined && item?.declinedAt && delivered) {
+          const delta = new Date(item.declinedAt).getTime() - delivered;
+          return { label: `\ud83d\udd12 Cerrada \u00b7 Declinada en ${formatDuration(delta)}`, color: colors.textSecondary };
+        }
+        return { label: '\ud83d\udd12 Cerrada \u00b7 No respondida', color: colors.textSecondary };
+      }
+      default:
+        return { label: '', color: colors.textSecondary };
+    }
+  }, [colors]);
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -110,24 +111,22 @@ export default function VendorHome() {
       <View style={styles.topBar}>
         <Text style={styles.logo}>NEXXOS</Text>
         <Pressable onPress={() => router.replace('/role-selection')} hitSlop={8}>
-          <Ionicons name="swap-horizontal-outline" size={24} color={Colors.textPrimary} />
+          <Ionicons name="swap-horizontal-outline" size={24} color={colors.textPrimary} />
         </Pressable>
       </View>
 
       {!user?.emailVerified && (
         <Pressable style={styles.verifyBanner} onPress={() => router.push('/verify-email')}>
-          <Ionicons name="warning-outline" size={20} color="#856404" />
+          <Ionicons name="warning-outline" size={20} color={colors.warningBoxText} />
           <View style={{ flex: 1, marginLeft: Spacing.sm }}>
-            <Text style={styles.verifyBannerTitle}>Verifica tu correo electrónico</Text>
-            <Text style={styles.verifyBannerText}>
-              No podrás responder solicitudes hasta que verifiques tu correo.
-            </Text>
+            <Text style={styles.verifyBannerTitle}>Verifica tu correo electr\u00f3nico</Text>
+            <Text style={styles.verifyBannerText}>No podr\u00e1s responder solicitudes hasta que verifiques tu correo.</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#856404" />
+          <Ionicons name="chevron-forward" size={20} color={colors.warningBoxText} />
         </Pressable>
       )}
 
-      <Text style={styles.greeting}>¡Hola, {dashboard?.businessName ?? 'Vendedor'}!</Text>
+      <Text style={styles.greeting}>\u00a1Hola, {dashboard?.businessName ?? 'Vendedor'}!</Text>
 
       <View style={styles.availRow}>
         <View style={{ flex: 1 }}>
@@ -137,15 +136,15 @@ export default function VendorHome() {
           value={dashboard?.isAvailable ?? false}
           onValueChange={handleToggle}
           disabled={toggling}
-          trackColor={{ false: Colors.border, true: Colors.success }}
-          thumbColor={Colors.white}
+          trackColor={{ false: colors.border, true: colors.success }}
+          thumbColor={colors.white}
         />
       </View>
 
       <View style={styles.metricsRow}>
         <MetricCard label="Recibidas" value={metrics?.totalRequestsReceived ?? 0} icon="mail-outline" />
         <View style={{ width: Spacing.sm }} />
-        <MetricCard label="Respondidas" value={metrics?.totalRequestsAnswered ?? 0} icon="checkmark-circle-outline" color={Colors.success} />
+        <MetricCard label="Respondidas" value={metrics?.totalRequestsAnswered ?? 0} icon="checkmark-circle-outline" color={colors.success} />
       </View>
 
       {typeof metrics?.avgRating === 'number' ? (
@@ -155,51 +154,36 @@ export default function VendorHome() {
         </View>
       ) : null}
 
-      {/* Response Time Metrics */}
       {responseMetrics ? (
         <View style={styles.responseMetricsCard}>
           <View style={styles.rmHeader}>
-            <Ionicons name="speedometer-outline" size={18} color={Colors.primary} />
+            <Ionicons name="speedometer-outline" size={18} color={colors.primary} />
             <Text style={styles.rmTitle}>Tiempos de Respuesta</Text>
           </View>
           <View style={styles.rmGrid}>
             <View style={styles.rmItem}>
-              <Text style={styles.rmValue}>
-                {responseMetrics?.avgResponseTimeMs != null
-                  ? formatDuration(responseMetrics.avgResponseTimeMs)
-                  : '—'}
-              </Text>
+              <Text style={styles.rmValue}>{responseMetrics?.avgResponseTimeMs != null ? formatDuration(responseMetrics.avgResponseTimeMs) : '\u2014'}</Text>
               <Text style={styles.rmLabel}>Promedio</Text>
             </View>
             <View style={styles.rmDivider} />
             <View style={styles.rmItem}>
-              <Text style={styles.rmValue}>
-                {responseMetrics?.medianResponseTimeMs != null
-                  ? formatDuration(responseMetrics.medianResponseTimeMs)
-                  : '—'}
-              </Text>
+              <Text style={styles.rmValue}>{responseMetrics?.medianResponseTimeMs != null ? formatDuration(responseMetrics.medianResponseTimeMs) : '\u2014'}</Text>
               <Text style={styles.rmLabel}>Mediana</Text>
             </View>
             <View style={styles.rmDivider} />
             <View style={styles.rmItem}>
-              <Text style={styles.rmValue}>
-                {responseMetrics?.fastestResponseTimeMs != null
-                  ? formatDuration(responseMetrics.fastestResponseTimeMs)
-                  : '—'}
-              </Text>
-              <Text style={styles.rmLabel}>Más rápida</Text>
+              <Text style={styles.rmValue}>{responseMetrics?.fastestResponseTimeMs != null ? formatDuration(responseMetrics.fastestResponseTimeMs) : '\u2014'}</Text>
+              <Text style={styles.rmLabel}>M\u00e1s r\u00e1pida</Text>
             </View>
           </View>
           <View style={styles.rmFooter}>
             <View style={styles.rmFooterItem}>
-              <Ionicons name="trending-up-outline" size={14} color={Colors.success} />
+              <Ionicons name="trending-up-outline" size={14} color={colors.success} />
               <Text style={styles.rmFooterText}>
-                Tasa de respuesta: <Text style={{ fontWeight: '700', color: Colors.success }}>{responseMetrics?.responseRate ?? 0}%</Text>
+                Tasa de respuesta: <Text style={{ fontWeight: '700', color: colors.success }}>{responseMetrics?.responseRate ?? 0}%</Text>
               </Text>
             </View>
-            <Text style={styles.rmFooterSub}>
-              {responseMetrics?.totalResponded ?? 0} de {responseMetrics?.totalReceived ?? 0} solicitudes
-            </Text>
+            <Text style={styles.rmFooterSub}>{responseMetrics?.totalResponded ?? 0} de {responseMetrics?.totalReceived ?? 0} solicitudes</Text>
           </View>
         </View>
       ) : null}
@@ -231,121 +215,59 @@ export default function VendorHome() {
           );
         }}
         ListHeaderComponent={renderHeader}
-        ListEmptyComponent={<EmptyState icon="mail-outline" title="Sin solicitudes" message="Aún no has recibido solicitudes" />}
+        ListEmptyComponent={<EmptyState icon="mail-outline" title="Sin solicitudes" message="A\u00fan no has recibido solicitudes" />}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={colors.primary} />}
       />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.background },
   list: { padding: Spacing.md, paddingBottom: 100 },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
-  logo: { fontSize: 22, fontWeight: '800', color: Colors.primary, letterSpacing: 2 },
+  logo: { fontSize: 22, fontWeight: '800', color: c.primary, letterSpacing: 2 },
   verifyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3CD',
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.warning,
-    borderRadius: BorderRadius.sm,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: c.warningBg,
+    borderLeftWidth: 4, borderLeftColor: c.warning, borderRadius: BorderRadius.sm,
+    padding: Spacing.md, marginBottom: Spacing.md,
   },
-  verifyBannerTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#856404',
-    marginBottom: 2,
-  },
-  verifyBannerText: {
-    fontSize: 13,
-    color: '#856404',
-  },
-  greeting: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.md },
+  verifyBannerTitle: { fontSize: 14, fontWeight: '600', color: c.warningBoxText, marginBottom: 2 },
+  verifyBannerText: { fontSize: 13, color: c.warningBoxText },
+  greeting: { fontSize: 22, fontWeight: '700', color: c.textPrimary, marginBottom: Spacing.md },
   availRow: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.cardBg,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: c.cardBg,
     borderRadius: BorderRadius.md, padding: Spacing.md, marginBottom: Spacing.md,
-    borderWidth: 1, borderColor: Colors.border,
+    borderWidth: 1, borderColor: c.border,
   },
-  availLabel: { fontSize: 14, color: Colors.textPrimary, fontWeight: '500' },
+  availLabel: { fontSize: 14, color: c.textPrimary, fontWeight: '500' },
   metricsRow: { flexDirection: 'row', marginBottom: Spacing.md },
   ratingContainer: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.lg },
-  ratingText: { fontSize: 14, color: Colors.textSecondary },
-  sectionTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary, marginBottom: Spacing.md },
+  ratingText: { fontSize: 14, color: c.textSecondary },
+  sectionTitle: { fontSize: 17, fontWeight: '600', color: c.textPrimary, marginBottom: Spacing.md },
   responseMetricsCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.md,
-    overflow: 'hidden',
+    backgroundColor: c.cardBg, borderRadius: BorderRadius.md,
+    borderWidth: 1, borderColor: c.border, marginBottom: Spacing.md, overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
       android: { elevation: 1 },
       default: {},
     }),
   },
-  rmHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-  },
-  rmTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginLeft: Spacing.sm,
-  },
-  rmGrid: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.md,
-  },
-  rmItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  rmDivider: {
-    width: 1,
-    backgroundColor: Colors.border,
-    marginVertical: 2,
-  },
-  rmValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  rmLabel: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
+  rmHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
+  rmTitle: { fontSize: 14, fontWeight: '600', color: c.textPrimary, marginLeft: Spacing.sm },
+  rmGrid: { flexDirection: 'row', paddingHorizontal: Spacing.md, paddingBottom: Spacing.md },
+  rmItem: { flex: 1, alignItems: 'center' },
+  rmDivider: { width: 1, backgroundColor: c.border, marginVertical: 2 },
+  rmValue: { fontSize: 18, fontWeight: '700', color: c.textPrimary, marginBottom: 2 },
+  rmLabel: { fontSize: 11, color: c.textSecondary },
   rmFooter: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.backgroundSection,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    borderTopWidth: 1, borderTopColor: c.border, paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm, backgroundColor: c.backgroundSection,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  rmFooterItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rmFooterText: {
-    fontSize: 13,
-    color: Colors.textPrimary,
-    marginLeft: 4,
-  },
-  rmFooterSub: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
+  rmFooterItem: { flexDirection: 'row', alignItems: 'center' },
+  rmFooterText: { fontSize: 13, color: c.textPrimary, marginLeft: 4 },
+  rmFooterSub: { fontSize: 11, color: c.textSecondary },
 });

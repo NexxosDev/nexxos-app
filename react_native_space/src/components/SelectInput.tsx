@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, FlatList, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import { Spacing, BorderRadius } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import type { CatalogItem } from '../types';
 
 interface SelectInputProps {
@@ -15,6 +17,8 @@ interface SelectInputProps {
 }
 
 export default function SelectInput({ label, items, selectedId, onSelect, error, placeholder, searchable = false }: SelectInputProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const selected = (items ?? [])?.find?.((i) => i?.id === selectedId);
@@ -29,7 +33,7 @@ export default function SelectInput({ label, items, selectedId, onSelect, error,
         <Text style={selected ? styles.value : styles.placeholder} numberOfLines={1}>
           {selected?.name ?? placeholder ?? `Seleccionar ${label?.toLowerCase?.() ?? ''}...`}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={Colors.textSecondary} />
+        <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
       </Pressable>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -39,7 +43,7 @@ export default function SelectInput({ label, items, selectedId, onSelect, error,
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{label ?? ''}</Text>
             <Pressable onPress={() => { setOpen(false); setSearch(''); }} hitSlop={8}>
-              <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
           </View>
           {searchable ? (
@@ -48,7 +52,7 @@ export default function SelectInput({ label, items, selectedId, onSelect, error,
               placeholder="Buscar..."
               value={search}
               onChangeText={setSearch}
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
             />
           ) : null}
           <FlatList
@@ -62,7 +66,7 @@ export default function SelectInput({ label, items, selectedId, onSelect, error,
                 <Text style={[styles.itemText, item?.id === selectedId && styles.itemTextSelected]}>
                   {item?.name ?? ''}
                 </Text>
-                {item?.id === selectedId ? <Ionicons name="checkmark" size={18} color={Colors.primary} /> : null}
+                {item?.id === selectedId ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
               </Pressable>
             )}
             ListEmptyComponent={<Text style={styles.empty}>Sin opciones disponibles</Text>}
@@ -73,36 +77,26 @@ export default function SelectInput({ label, items, selectedId, onSelect, error,
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: { marginBottom: Spacing.md },
-  label: { fontSize: 13, fontWeight: '500', color: Colors.textSubtitle, marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: '500', color: c.textSubtitle, marginBottom: 6 },
   select: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md,
-    backgroundColor: Colors.white, paddingHorizontal: Spacing.md, paddingVertical: 14,
+    borderWidth: 1, borderColor: c.border, borderRadius: BorderRadius.md,
+    backgroundColor: c.inputBg, paddingHorizontal: Spacing.md, paddingVertical: 14,
   },
-  errorBorder: { borderColor: Colors.error },
-  value: { fontSize: 15, color: Colors.textPrimary, flex: 1 },
-  placeholder: { fontSize: 15, color: Colors.textSecondary, flex: 1 },
-  errorText: { color: Colors.error, fontSize: 12, marginTop: 4 },
-  overlay: { flex: 1, backgroundColor: Colors.overlay },
-  modal: {
-    backgroundColor: Colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    maxHeight: '60%', paddingBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border,
-  },
-  modalTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
-  searchInput: {
-    marginHorizontal: Spacing.md, marginVertical: Spacing.sm,
-    borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing.md, paddingVertical: 10, fontSize: 15, color: Colors.textPrimary,
-  },
-  item: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.border },
-  itemSelected: { backgroundColor: `${Colors.primary}15` },
-  itemText: { fontSize: 15, color: Colors.textPrimary },
-  itemTextSelected: { fontWeight: '600', color: Colors.primary },
-  empty: { padding: Spacing.lg, textAlign: 'center', color: Colors.textSecondary },
+  errorBorder: { borderColor: c.error },
+  value: { fontSize: 15, color: c.textPrimary, flex: 1 },
+  placeholder: { fontSize: 15, color: c.textSecondary, flex: 1 },
+  errorText: { color: c.error, fontSize: 12, marginTop: 4 },
+  overlay: { flex: 1, backgroundColor: c.overlay },
+  modal: { backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '60%', paddingBottom: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  modalTitle: { fontSize: 17, fontWeight: '600', color: c.textPrimary },
+  searchInput: { marginHorizontal: Spacing.md, marginVertical: Spacing.sm, borderWidth: 1, borderColor: c.border, borderRadius: BorderRadius.sm, paddingHorizontal: Spacing.md, paddingVertical: 10, fontSize: 15, color: c.textPrimary, backgroundColor: c.inputBg },
+  item: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
+  itemSelected: { backgroundColor: `${c.primary}15` },
+  itemText: { fontSize: 15, color: c.textPrimary },
+  itemTextSelected: { fontWeight: '600', color: c.primary },
+  empty: { padding: Spacing.lg, textAlign: 'center', color: c.textSecondary },
 });

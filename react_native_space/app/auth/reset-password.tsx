@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { resetPasswordApi } from '../../src/services/auth';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { getErrorMessage } from '../../src/services/api';
-import { Colors, Spacing } from '../../src/theme/colors';
+import { Spacing } from '../../src/theme/colors';
+import type { ThemeColors } from '../../src/theme/colors';
 import Input from '../../src/components/Input';
 import Button from '../../src/components/Button';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [token, setToken] = useState<string>('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,35 +28,21 @@ export default function ResetPasswordScreen() {
     if (tokenParam) {
       setToken(tokenParam);
     } else {
-      Alert.alert('Error', 'Token de recuperación no encontrado');
+      Alert.alert('Error', 'Token de recuperaci\u00f3n no encontrado');
     }
   }, [params]);
 
   const handleReset = async () => {
     setError('');
-    
-    if (!newPassword?.trim?.()) {
-      setError('Ingresa una contraseña');
-      return;
-    }
-    
-    if ((newPassword?.length ?? 0) < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
+    if (!newPassword?.trim?.()) { setError('Ingresa una contrase\u00f1a'); return; }
+    if ((newPassword?.length ?? 0) < 6) { setError('La contrase\u00f1a debe tener al menos 6 caracteres'); return; }
+    if (newPassword !== confirmPassword) { setError('Las contrase\u00f1as no coinciden'); return; }
 
     setLoading(true);
     try {
       await resetPasswordApi(token, newPassword);
       setSuccess(true);
-      setTimeout(() => {
-        router.replace('/auth/login');
-      }, 2000);
+      setTimeout(() => { router.replace('/auth/login'); }, 2000);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -65,32 +55,22 @@ export default function ResetPasswordScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Pressable onPress={() => router.back()} style={styles.back}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </Pressable>
-          <Text style={styles.title}>Nueva Contraseña</Text>
-          <Text style={styles.desc}>Ingresa tu nueva contraseña a continuación.</Text>
+          <Text style={styles.title}>Nueva Contrase\u00f1a</Text>
+          <Text style={styles.desc}>Ingresa tu nueva contrase\u00f1a a continuaci\u00f3n.</Text>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {success ? (
             <View style={styles.successBox}>
-              <Ionicons name="checkmark-circle" size={32} color={Colors.success} />
-              <Text style={styles.successText}>Contraseña restablecida exitosamente. Redirigiendo al login...</Text>
+              <Ionicons name="checkmark-circle" size={32} color={colors.success} />
+              <Text style={styles.successText}>Contrase\u00f1a restablecida exitosamente. Redirigiendo al login...</Text>
             </View>
           ) : (
             <>
-              <Input 
-                label="Nueva Contraseña" 
-                value={newPassword} 
-                onChangeText={setNewPassword} 
-                secureTextEntry 
-              />
-              <Input 
-                label="Confirmar Contraseña" 
-                value={confirmPassword} 
-                onChangeText={setConfirmPassword} 
-                secureTextEntry 
-              />
-              <Button title="Restablecer Contraseña" onPress={handleReset} loading={loading} />
+              <Input label="Nueva Contrase\u00f1a" value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+              <Input label="Confirmar Contrase\u00f1a" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+              <Button title="Restablecer Contrase\u00f1a" onPress={handleReset} loading={loading} />
             </>
           )}
         </ScrollView>
@@ -99,13 +79,13 @@ export default function ResetPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.background },
   scroll: { padding: Spacing.lg, paddingTop: Spacing.md },
   back: { marginBottom: Spacing.md, width: 44, height: 44, justifyContent: 'center' },
-  title: { fontSize: 24, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.sm },
-  desc: { fontSize: 15, color: Colors.textSecondary, marginBottom: Spacing.lg, lineHeight: 22 },
-  error: { backgroundColor: '#FEE2E2', color: Colors.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
-  successBox: { backgroundColor: '#E8F5E9', padding: Spacing.lg, borderRadius: 12, alignItems: 'center', gap: 12 },
-  successText: { fontSize: 15, color: Colors.textPrimary, textAlign: 'center', lineHeight: 22 },
+  title: { fontSize: 24, fontWeight: '700', color: c.textPrimary, marginBottom: Spacing.sm },
+  desc: { fontSize: 15, color: c.textSecondary, marginBottom: Spacing.lg, lineHeight: 22 },
+  error: { backgroundColor: c.errorBg, color: c.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
+  successBox: { backgroundColor: c.successBg, padding: Spacing.lg, borderRadius: 12, alignItems: 'center', gap: 12 },
+  successText: { fontSize: 15, color: c.textPrimary, textAlign: 'center', lineHeight: 22 },
 });

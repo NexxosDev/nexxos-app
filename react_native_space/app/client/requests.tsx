@@ -1,9 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, ScrollView } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { getRequests } from '../../src/services/requests';
-import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
+import { Spacing, BorderRadius } from '../../src/theme/colors';
+import type { ThemeColors } from '../../src/theme/colors';
 import RequestCard from '../../src/components/RequestCard';
 import EmptyState from '../../src/components/EmptyState';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
@@ -13,6 +15,8 @@ type FilterType = 'all' | 'no_response' | 'has_response' | 'closed';
 
 export default function ClientRequests() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [requests, setRequests] = useState<RequestListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,21 +73,21 @@ export default function ClientRequests() {
           )}
           ListEmptyComponent={<EmptyState icon="mail-outline" title="Sin solicitudes" message="No se encontraron solicitudes con este filtro" />}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={Colors.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={colors.primary} />}
         />
       )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
-  title: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary, paddingHorizontal: Spacing.md, paddingTop: Spacing.md },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.background },
+  title: { fontSize: 22, fontWeight: '700', color: c.textPrimary, paddingHorizontal: Spacing.md, paddingTop: Spacing.md },
   filterContainer: { flexShrink: 0 },
   filterRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, backgroundColor: Colors.chipBg, marginRight: 8 },
-  filterChipActive: { backgroundColor: Colors.primary },
-  filterText: { fontSize: 13, color: Colors.textSubtitle },
-  filterTextActive: { color: Colors.accent, fontWeight: '600' },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, backgroundColor: c.chipBg, marginRight: 8 },
+  filterChipActive: { backgroundColor: c.primary },
+  filterText: { fontSize: 13, color: c.textSubtitle },
+  filterTextActive: { color: c.accent, fontWeight: '600' },
   list: { padding: Spacing.md, paddingBottom: 100 },
 });

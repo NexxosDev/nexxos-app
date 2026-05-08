@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import { Spacing, BorderRadius } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 
 interface MetricCardProps {
   label: string;
@@ -10,11 +12,15 @@ interface MetricCardProps {
   color?: string;
 }
 
-export default function MetricCard({ label, value, icon, color = Colors.primary }: MetricCardProps) {
+export default function MetricCard({ label, value, icon, color }: MetricCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const c = color ?? colors.primary;
+
   return (
     <View style={styles.card}>
-      <View style={[styles.iconBg, { backgroundColor: `${color}20` }]}>
-        <Ionicons name={icon} size={24} color={color} />
+      <View style={[styles.iconBg, { backgroundColor: `${c}20` }]}>
+        <Ionicons name={icon} size={24} color={c} />
       </View>
       <Text style={styles.value}>{value ?? 0}</Text>
       <Text style={styles.label} numberOfLines={2}>{label ?? ''}</Text>
@@ -22,15 +28,15 @@ export default function MetricCard({ label, value, icon, color = Colors.primary 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: Colors.cardBg,
+    backgroundColor: c.cardBg,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: c.border,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
       android: { elevation: 1 },
@@ -38,6 +44,6 @@ const styles = StyleSheet.create({
     }),
   },
   iconBg: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.sm },
-  value: { fontSize: 24, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2 },
-  label: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
+  value: { fontSize: 24, fontWeight: '700', color: c.textPrimary, marginBottom: 2 },
+  label: { fontSize: 12, color: c.textSecondary, textAlign: 'center' },
 });

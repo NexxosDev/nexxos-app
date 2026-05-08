@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { getErrorMessage } from '../../src/services/api';
-import { Colors, Spacing } from '../../src/theme/colors';
+import { Spacing } from '../../src/theme/colors';
+import type { ThemeColors } from '../../src/theme/colors';
 import Input from '../../src/components/Input';
 import PhoneInput from '../../src/components/PhoneInput';
 import Button from '../../src/components/Button';
@@ -13,6 +15,8 @@ import Button from '../../src/components/Button';
 export default function RegisterClientScreen() {
   const router = useRouter();
   const { signup, user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [form, setForm] = useState({ firstName: '', lastName: '', documentId: '', phone: '', email: '', password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,10 +40,10 @@ export default function RegisterClientScreen() {
     if (!form?.documentId?.trim?.()) errs.documentId = 'Requerido';
     if (!form?.phone?.trim?.()) errs.phone = 'Requerido';
     if (!form?.email?.trim?.()) errs.email = 'Requerido';
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Email inválido';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Email inv\u00e1lido';
     if (!form?.password) errs.password = 'Requerido';
-    else if ((form?.password?.length ?? 0) < 6) errs.password = 'Mínimo 6 caracteres';
-    if (form?.password !== form?.confirmPassword) errs.confirmPassword = 'Las contraseñas no coinciden';
+    else if ((form?.password?.length ?? 0) < 6) errs.password = 'M\u00ednimo 6 caracteres';
+    if (form?.password !== form?.confirmPassword) errs.confirmPassword = 'Las contrase\u00f1as no coinciden';
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -71,7 +75,7 @@ export default function RegisterClientScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Pressable onPress={() => router.back()} style={styles.back}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </Pressable>
           <Text style={styles.title}>Registro de Cliente</Text>
 
@@ -79,16 +83,16 @@ export default function RegisterClientScreen() {
 
           <Input label="Nombre" value={form.firstName} onChangeText={(v) => update('firstName', v)} error={fieldErrors?.firstName} />
           <Input label="Apellido" value={form.lastName} onChangeText={(v) => update('lastName', v)} error={fieldErrors?.lastName} />
-          <Input label="Cédula" value={form.documentId} onChangeText={(v) => update('documentId', v)} keyboardType="numeric" error={fieldErrors?.documentId} />
-          <PhoneInput label="Teléfono" value={form.phone} onChangeText={(v) => update('phone', v)} error={fieldErrors?.phone} />
+          <Input label="C\u00e9dula" value={form.documentId} onChangeText={(v) => update('documentId', v)} keyboardType="numeric" error={fieldErrors?.documentId} />
+          <PhoneInput label="Tel\u00e9fono" value={form.phone} onChangeText={(v) => update('phone', v)} error={fieldErrors?.phone} />
           <Input label="Email" value={form.email} onChangeText={(v) => update('email', v)} keyboardType="email-address" autoCapitalize="none" error={fieldErrors?.email} />
-          <Input label="Contraseña" value={form.password} onChangeText={(v) => update('password', v)} secureTextEntry error={fieldErrors?.password} />
-          <Input label="Confirmar Contraseña" value={form.confirmPassword} onChangeText={(v) => update('confirmPassword', v)} secureTextEntry error={fieldErrors?.confirmPassword} />
+          <Input label="Contrase\u00f1a" value={form.password} onChangeText={(v) => update('password', v)} secureTextEntry error={fieldErrors?.password} />
+          <Input label="Confirmar Contrase\u00f1a" value={form.confirmPassword} onChangeText={(v) => update('confirmPassword', v)} secureTextEntry error={fieldErrors?.confirmPassword} />
 
           <Button title="Registrarme como Cliente" onPress={handleRegister} loading={loading} />
 
           <Pressable onPress={() => router.push('/auth/login')} style={styles.loginLink}>
-            <Text style={styles.loginText}>¿Ya tienes cuenta? <Text style={styles.loginBold}>Inicia Sesión</Text></Text>
+            <Text style={styles.loginText}>\u00bfYa tienes cuenta? <Text style={styles.loginBold}>Inicia Sesi\u00f3n</Text></Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -96,13 +100,13 @@ export default function RegisterClientScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.background },
   scroll: { padding: Spacing.lg },
   back: { width: 44, height: 44, justifyContent: 'center', marginBottom: Spacing.sm },
-  title: { fontSize: 24, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.lg },
-  error: { backgroundColor: '#FEE2E2', color: Colors.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
+  title: { fontSize: 24, fontWeight: '700', color: c.textPrimary, marginBottom: Spacing.lg },
+  error: { backgroundColor: c.errorBg, color: c.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
   loginLink: { alignItems: 'center', marginTop: Spacing.lg, marginBottom: Spacing.xl },
-  loginText: { fontSize: 15, color: Colors.textSecondary },
-  loginBold: { color: Colors.primary, fontWeight: '600' },
+  loginText: { fontSize: 15, color: c.textSecondary },
+  loginBold: { color: c.primary, fontWeight: '600' },
 });

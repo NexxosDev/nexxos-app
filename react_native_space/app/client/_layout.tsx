@@ -1,21 +1,31 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../../src/theme/colors';
+import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function ClientLayout() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const bottomPad = Math.max(insets?.bottom ?? 0, Platform.OS === 'android' ? 12 : 8);
+
+  const tabBarStyle = useMemo(() => ({
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    height: 56 + bottomPad,
+    paddingBottom: bottomPad,
+    paddingTop: 4,
+  }), [colors, bottomPad]);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.tabActive,
-        tabBarInactiveTintColor: Colors.tabInactive,
-        tabBarStyle: { backgroundColor: Colors.white, borderTopColor: Colors.border, borderTopWidth: 1, height: 56 + bottomPad, paddingBottom: bottomPad, paddingTop: 4 },
+        tabBarActiveTintColor: colors.tabActive,
+        tabBarInactiveTintColor: colors.tabInactive,
+        tabBarStyle,
         tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
       }}
     >

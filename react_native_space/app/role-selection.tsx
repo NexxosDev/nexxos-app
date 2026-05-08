@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter, Redirect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../src/contexts/AuthContext';
-import { Colors, Spacing, BorderRadius } from '../src/theme/colors';
+import { useTheme } from '../src/contexts/ThemeContext';
+import { Spacing, BorderRadius } from '../src/theme/colors';
+import type { ThemeColors } from '../src/theme/colors';
 
 export default function RoleSelectionScreen() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   if (isLoading) return null;
   if (!user) return <Redirect href="/auth/login" />;
@@ -24,13 +28,13 @@ export default function RoleSelectionScreen() {
 
         <Pressable style={styles.card} onPress={() => router.replace('/client')}>
           <View style={styles.cardIcon}>
-            <Ionicons name="search-outline" size={36} color={Colors.primary} />
+            <Ionicons name="search-outline" size={36} color={colors.primary} />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>Cliente</Text>
             <Text style={styles.cardDesc}>Solicita lo que necesites y obtén respuestas en minutos</Text>
           </View>
-          <Ionicons name="chevron-forward" size={24} color={Colors.textSecondary} />
+          <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
         </Pressable>
 
         <Pressable
@@ -41,7 +45,7 @@ export default function RoleSelectionScreen() {
           }}
         >
           <View style={styles.cardIcon}>
-            <Ionicons name={hasVendor ? 'storefront-outline' : 'lock-closed-outline'} size={36} color={hasVendor ? Colors.primary : Colors.textSecondary} />
+            <Ionicons name={hasVendor ? 'storefront-outline' : 'lock-closed-outline'} size={36} color={hasVendor ? colors.primary : colors.textSecondary} />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>Vendedor</Text>
@@ -49,29 +53,29 @@ export default function RoleSelectionScreen() {
               {hasVendor ? 'Permite que te encuentren sin necesidad de buscar' : 'Completa tu perfil de vendedor'}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={24} color={Colors.textSecondary} />
+          <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
         </Pressable>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.background },
   container: { flex: 1, padding: Spacing.lg, justifyContent: 'center' },
-  greeting: { fontSize: 16, color: Colors.textSecondary, marginBottom: 4 },
-  title: { fontSize: 26, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.xl },
+  greeting: { fontSize: 16, color: c.textSecondary, marginBottom: 4 },
+  title: { fontSize: 26, fontWeight: '700', color: c.textPrimary, marginBottom: Spacing.xl },
   card: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.cardBg,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: c.cardBg,
     borderRadius: BorderRadius.lg, padding: Spacing.lg, marginBottom: Spacing.md,
-    borderWidth: 2, borderColor: Colors.primary,
+    borderWidth: 2, borderColor: c.primary,
   },
-  cardLocked: { borderColor: Colors.border, opacity: 0.75 },
+  cardLocked: { borderColor: c.border, opacity: 0.75 },
   cardIcon: {
-    width: 64, height: 64, borderRadius: 32, backgroundColor: `${Colors.primary}15`,
+    width: 64, height: 64, borderRadius: 32, backgroundColor: `${c.primary}15`,
     justifyContent: 'center', alignItems: 'center', marginRight: Spacing.md,
   },
   cardContent: { flex: 1 },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
-  cardDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
+  cardTitle: { fontSize: 18, fontWeight: '700', color: c.textPrimary, marginBottom: 4 },
+  cardDesc: { fontSize: 13, color: c.textSecondary, lineHeight: 18 },
 });

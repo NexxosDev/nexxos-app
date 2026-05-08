@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import { Spacing } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 import Button from './Button';
 
 interface EmptyStateProps {
@@ -13,10 +15,13 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ icon = 'document-text-outline', title, message, actionLabel, onAction }: EmptyStateProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       <View style={styles.iconBg}>
-        <Ionicons name={icon} size={48} color={Colors.textSecondary} />
+        <Ionicons name={icon} size={48} color={colors.textSecondary} />
       </View>
       <Text style={styles.title}>{title ?? ''}</Text>
       {message ? <Text style={styles.message}>{message}</Text> : null}
@@ -27,10 +32,10 @@ export default function EmptyState({ icon = 'document-text-outline', title, mess
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: ThemeColors) => StyleSheet.create({
   container: { alignItems: 'center', paddingVertical: Spacing.xxl, paddingHorizontal: Spacing.lg },
-  iconBg: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.backgroundSection, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.md },
-  title: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary, textAlign: 'center', marginBottom: Spacing.xs },
-  message: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  iconBg: { width: 80, height: 80, borderRadius: 40, backgroundColor: c.backgroundSection, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.md },
+  title: { fontSize: 17, fontWeight: '600', color: c.textPrimary, textAlign: 'center', marginBottom: Spacing.xs },
+  message: { fontSize: 14, color: c.textSecondary, textAlign: 'center', lineHeight: 20 },
   btn: { marginTop: Spacing.md },
 });

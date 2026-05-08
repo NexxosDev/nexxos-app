@@ -1,23 +1,30 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, BorderRadius } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import { BorderRadius } from '../theme/colors';
+import type { ThemeColors } from '../theme/colors';
 
 interface BadgeProps {
   status: string;
   size?: 'small' | 'normal';
 }
 
-const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  ABIERTA: { bg: Colors.statusOpen, text: Colors.white, label: 'Abierta' },
-  EN_PROCESO: { bg: Colors.statusInProgress, text: Colors.accent, label: 'En Proceso' },
-  CERRADA: { bg: Colors.statusClosed, text: Colors.textSecondary, label: 'Cerrada' },
-  PENDING: { bg: Colors.statusPending, text: Colors.white, label: 'Pendiente' },
-  RESPONDED: { bg: Colors.statusResponded, text: Colors.white, label: 'Respondida' },
-  DECLINED: { bg: Colors.statusDeclined, text: Colors.white, label: 'Declinada' },
-};
+function getStatusConfig(c: ThemeColors): Record<string, { bg: string; text: string; label: string }> {
+  return {
+    ABIERTA: { bg: c.statusOpen, text: c.white, label: 'Abierta' },
+    EN_PROCESO: { bg: c.statusInProgress, text: c.accent, label: 'En Proceso' },
+    CERRADA: { bg: c.statusClosed, text: c.textSecondary, label: 'Cerrada' },
+    PENDING: { bg: c.statusPending, text: c.white, label: 'Pendiente' },
+    RESPONDED: { bg: c.statusResponded, text: c.white, label: 'Respondida' },
+    DECLINED: { bg: c.statusDeclined, text: c.white, label: 'Declinada' },
+  };
+}
 
 export default function Badge({ status, size = 'normal' }: BadgeProps) {
-  const config = STATUS_CONFIG?.[status] ?? { bg: Colors.border, text: Colors.textSecondary, label: status ?? '' };
+  const { colors } = useTheme();
+  const configMap = useMemo(() => getStatusConfig(colors), [colors]);
+  const config = configMap?.[status] ?? { bg: colors.border, text: colors.textSecondary, label: status ?? '' };
+
   return (
     <View style={[styles.badge, { backgroundColor: config.bg }, size === 'small' && styles.small]}>
       <Text style={[styles.text, { color: config.text }, size === 'small' && styles.smallText]}>

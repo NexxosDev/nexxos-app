@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Alert, Image, Modal, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +10,9 @@ import { getErrorMessage } from '../../src/services/api';
 import { uploadFile } from '../../src/services/upload';
 import { updateVendorProfile } from '../../src/services/vendor';
 import { uploadRegistrationFile, verifyIdentity } from '../../src/services/identity';
-import { Colors, Spacing, BorderRadius } from '../../src/theme/colors';
+import { useTheme } from '../../src/contexts/ThemeContext';
+import type { ThemeColors } from '../../src/theme/colors';
+import { Spacing, BorderRadius } from '../../src/theme/colors';
 import Input from '../../src/components/Input';
 import PhoneInput from '../../src/components/PhoneInput';
 import Button from '../../src/components/Button';
@@ -27,6 +29,8 @@ export default function RegisterVendorScreen() {
   const router = useRouter();
   const { signup, user } = useAuth();
   const catalog = useCatalog();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -90,8 +94,8 @@ export default function RegisterVendorScreen() {
 
   const pickImageFromLibrary = async (type: 'doc' | 'logo' | 'personalDoc') => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ 
-        mediaTypes: ['images'], 
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
         quality: 0.8,
         allowsEditing: true,
         aspect: type === 'logo' ? [1, 1] : [4, 3],
@@ -111,7 +115,7 @@ export default function RegisterVendorScreen() {
         Alert.alert('Permiso Denegado', 'Necesitamos acceso a la cámara para tomar fotos.');
         return;
       }
-      const result = await ImagePicker.launchCameraAsync({ 
+      const result = await ImagePicker.launchCameraAsync({
         quality: 0.8,
         allowsEditing: true,
         aspect: type === 'logo' ? [1, 1] : [4, 3],
@@ -151,19 +155,16 @@ export default function RegisterVendorScreen() {
     setVerifying(true);
     setVerifyError('');
     try {
-      // Upload personal doc
       const docResult = await uploadRegistrationFile(personalDocUri, `personal_doc_${Date.now()}.jpg`, 'image/jpeg');
       setPersonalDocUrl(docResult?.url ?? '');
       setPersonalDocPath(docResult?.storagePath ?? '');
 
-      // Upload selfies
       const neutralRes = await uploadRegistrationFile(selfies.neutral, `selfie_neutral_${Date.now()}.jpg`, 'image/jpeg');
       const smileRes = await uploadRegistrationFile(selfies.smile, `selfie_smile_${Date.now()}.jpg`, 'image/jpeg');
       const turnRes = await uploadRegistrationFile(selfies.turn, `selfie_turn_${Date.now()}.jpg`, 'image/jpeg');
       setSelfieUrls({ neutral: neutralRes?.url, smile: smileRes?.url, turn: turnRes?.url });
       setSelfiePath(neutralRes?.storagePath ?? '');
 
-      // Verify identity via LLM
       const verifyResult = await verifyIdentity({
         documentImageUrl: docResult?.url ?? '',
         selfieNeutralUrl: neutralRes?.url ?? '',
@@ -232,7 +233,6 @@ export default function RegisterVendorScreen() {
       return personalValid && identityVerified;
     }
     if (step === 2) {
-      // Requiere: businessName, rif, docImageUri (obligatorio) y logoUri (obligatorio)
       return !!(business?.businessName?.trim?.() && business?.rif?.trim?.() && business?.docImageUri && business?.logoUri);
     }
     if (step === 3) return !!(location?.latitude && location?.longitude && location?.fullAddress?.trim?.());
@@ -247,7 +247,6 @@ export default function RegisterVendorScreen() {
     try {
       const subcatIds = (selectedSubcategories?.length ?? 0) > 0 ? selectedSubcategories : [];
 
-      // Paso 1: Crear cuenta primero (sin imágenes, el usuario aún no tiene token)
       await signup({
         email: personal?.email?.trim?.() ?? '',
         password: personal?.password ?? '',
@@ -279,18 +278,15 @@ export default function RegisterVendorScreen() {
         },
       });
 
-      // Paso 2: Ahora el usuario tiene token, subir imágenes y actualizar perfil
       try {
         let docPath = '';
         let logoPathVal = '';
-
         if (business?.docImageUri) {
           docPath = await uploadFile(business.docImageUri, 'doc_id.jpg', 'image/jpeg', false);
         }
         if (business?.logoUri) {
           logoPathVal = await uploadFile(business.logoUri, 'logo.jpg', 'image/jpeg', true);
         }
-
         if (docPath || logoPathVal) {
           const updateData: Record<string, unknown> = {};
           if (docPath) updateData.documentImagePath = docPath;
@@ -298,7 +294,6 @@ export default function RegisterVendorScreen() {
           await updateVendorProfile(updateData);
         }
       } catch (imgErr) {
-        // No fallar el registro si las imágenes fallan, el usuario ya está registrado
         console.warn('Image upload failed after signup:', imgErr);
       }
     } catch (err) {
@@ -322,12 +317,10 @@ export default function RegisterVendorScreen() {
             <Input label="Contraseña" value={personal.password} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), password: v }))} secureTextEntry />
             <Input label="Confirmar Contraseña" value={personal.confirmPassword} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), confirmPassword: v }))} secureTextEntry />
 
-            {/* --- Verificación de Identidad --- */}
             <View style={styles.identitySection}>
               <Text style={styles.identitySectionTitle}>Verificación de Identidad</Text>
               <Text style={styles.identitySectionDesc}>Necesitamos verificar tu identidad antes de continuar. Sube una foto de tu cédula y toma selfies de verificación.</Text>
 
-              {/* Documento de Identidad Personal */}
               <Text style={styles.fieldLabel}>
                 Foto de Cédula <Text style={styles.requiredStar}>*</Text>
               </Text>
@@ -335,19 +328,18 @@ export default function RegisterVendorScreen() {
                 <View style={styles.imagePreviewContainer}>
                   <Image source={{ uri: personalDocUri }} style={styles.imagePreviewFull} />
                   <Pressable style={styles.changeImageButton} onPress={() => showImageOptions('personalDoc')}>
-                    <Ionicons name="camera-outline" size={20} color={Colors.white} />
+                    <Ionicons name="camera-outline" size={20} color={colors.white} />
                     <Text style={styles.changeImageText}>Cambiar</Text>
                   </Pressable>
                 </View>
               ) : (
                 <Pressable style={styles.imagePicker} onPress={() => showImageOptions('personalDoc')}>
-                  <Ionicons name="id-card-outline" size={40} color={Colors.textSecondary} />
+                  <Ionicons name="id-card-outline" size={40} color={colors.textSecondary} />
                   <Text style={styles.imagePickerTitle}>Cargar Cédula de Identidad</Text>
                   <Text style={styles.imagePickerSubtitle}>Tomar foto o seleccionar del dispositivo</Text>
                 </Pressable>
               )}
 
-              {/* Selfie de verificación */}
               <Text style={styles.fieldLabel}>
                 Selfie de Verificación <Text style={styles.requiredStar}>*</Text>
               </Text>
@@ -370,19 +362,18 @@ export default function RegisterVendorScreen() {
                     </View>
                   ) : null}
                   <Pressable style={styles.retakeSelfieBtn} onPress={() => { setSelfies({}); setIdentityVerified(false); setShowLiveness(true); }}>
-                    <Ionicons name="refresh-outline" size={20} color={Colors.primary} />
+                    <Ionicons name="refresh-outline" size={20} color={colors.primary} />
                     <Text style={styles.retakeSelfieText}>Repetir</Text>
                   </Pressable>
                 </View>
               ) : (
                 <Pressable style={styles.imagePicker} onPress={() => setShowLiveness(true)}>
-                  <Ionicons name="person-circle-outline" size={40} color={Colors.textSecondary} />
+                  <Ionicons name="person-circle-outline" size={40} color={colors.textSecondary} />
                   <Text style={styles.imagePickerTitle}>Capturar Selfie de Verificación</Text>
                   <Text style={styles.imagePickerSubtitle}>Se tomarán 3 fotos: neutra, sonrisa y giro de cabeza</Text>
                 </Pressable>
               )}
 
-              {/* Verify button */}
               {personalDocUri && selfies?.neutral && selfies?.smile && selfies?.turn && !identityVerified ? (
                 <Pressable
                   style={[styles.verifyButton, verifying && styles.verifyButtonDisabled]}
@@ -391,22 +382,21 @@ export default function RegisterVendorScreen() {
                 >
                   {verifying ? (
                     <View style={styles.verifyButtonContent}>
-                      <ActivityIndicator size="small" color={Colors.white} />
+                      <ActivityIndicator size="small" color={colors.white} />
                       <Text style={styles.verifyButtonText}>Verificando identidad...</Text>
                     </View>
                   ) : (
                     <View style={styles.verifyButtonContent}>
-                      <Ionicons name="shield-checkmark-outline" size={20} color={Colors.white} />
+                      <Ionicons name="shield-checkmark-outline" size={20} color={colors.white} />
                       <Text style={styles.verifyButtonText}>Verificar Identidad</Text>
                     </View>
                   )}
                 </Pressable>
               ) : null}
 
-              {/* Status indicators */}
               {verifyError ? (
                 <View style={styles.verifyStatus}>
-                  <Ionicons name="close-circle" size={20} color={Colors.error} />
+                  <Ionicons name="close-circle" size={20} color={colors.error} />
                   <Text style={styles.verifyErrorText}>{verifyError}</Text>
                 </View>
               ) : null}
@@ -418,7 +408,6 @@ export default function RegisterVendorScreen() {
               ) : null}
             </View>
 
-            {/* Liveness Capture Modal */}
             <Modal visible={showLiveness} animationType="slide" presentationStyle="fullScreen">
               <LivenessSelfieCapture
                 onComplete={handleLivenessComplete}
@@ -433,7 +422,7 @@ export default function RegisterVendorScreen() {
             <Text style={styles.stepTitle}>Datos del Negocio</Text>
             <Input label="Razón Social" value={business.businessName} onChangeText={(v) => setBusiness((p) => ({ ...(p ?? {}), businessName: v }))} />
             <Input label="RIF" value={business.rif} onChangeText={(v) => setBusiness((p) => ({ ...(p ?? {}), rif: v }))} />
-            
+
             <Text style={styles.fieldLabel}>
               Documento de la Empresa (RIF/Acta Constitutiva) <Text style={styles.requiredStar}>*</Text>
             </Text>
@@ -441,18 +430,18 @@ export default function RegisterVendorScreen() {
               <View style={styles.imagePreviewContainer}>
                 <Image source={{ uri: business.docImageUri }} style={styles.imagePreviewFull} />
                 <Pressable style={styles.changeImageButton} onPress={() => showImageOptions('doc')}>
-                  <Ionicons name="camera-outline" size={20} color={Colors.white} />
+                  <Ionicons name="camera-outline" size={20} color={colors.white} />
                   <Text style={styles.changeImageText}>Cambiar</Text>
                 </Pressable>
               </View>
             ) : (
               <Pressable style={styles.imagePicker} onPress={() => showImageOptions('doc')}>
-                <Ionicons name="document-text-outline" size={40} color={Colors.textSecondary} />
+                <Ionicons name="document-text-outline" size={40} color={colors.textSecondary} />
                 <Text style={styles.imagePickerTitle}>Cargar Documento de la Empresa</Text>
                 <Text style={styles.imagePickerSubtitle}>RIF o Acta Constitutiva</Text>
               </Pressable>
             )}
-            
+
             <Text style={styles.fieldLabel}>
               Logo del Negocio <Text style={styles.requiredStar}>*</Text>
             </Text>
@@ -460,13 +449,13 @@ export default function RegisterVendorScreen() {
               <View style={styles.imagePreviewContainer}>
                 <Image source={{ uri: business.logoUri }} style={styles.imagePreviewFull} />
                 <Pressable style={styles.changeImageButton} onPress={() => showImageOptions('logo')}>
-                  <Ionicons name="image-outline" size={20} color={Colors.white} />
+                  <Ionicons name="image-outline" size={20} color={colors.white} />
                   <Text style={styles.changeImageText}>Cambiar</Text>
                 </Pressable>
               </View>
             ) : (
               <Pressable style={styles.imagePicker} onPress={() => showImageOptions('logo')}>
-                <Ionicons name="image-outline" size={40} color={Colors.textSecondary} />
+                <Ionicons name="image-outline" size={40} color={colors.textSecondary} />
                 <Text style={styles.imagePickerTitle}>Cargar Logo del Negocio</Text>
                 <Text style={styles.imagePickerSubtitle}>Tomar foto o seleccionar del dispositivo</Text>
               </Pressable>
@@ -526,7 +515,7 @@ export default function RegisterVendorScreen() {
                 <View key={cat?.id}>
                   <Pressable style={[styles.categoryRow, isSelected && styles.categoryRowSelected]} onPress={() => toggleCategory(cat?.id ?? '')}>
                     <Text style={[styles.categoryText, isSelected && styles.categoryTextSelected]}>{cat?.name ?? ''}</Text>
-                    <Ionicons name={isSelected ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={isSelected ? Colors.primary : Colors.border} />
+                    <Ionicons name={isSelected ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={isSelected ? colors.primary : colors.border} />
                   </Pressable>
                   {isSelected && (subs?.length ?? 0) > 0 ? (
                     <View style={styles.chipContainer}>
@@ -554,7 +543,7 @@ export default function RegisterVendorScreen() {
               <Text style={styles.summaryLabel}>Email</Text>
               <Text style={styles.summaryValue}>{personal?.email ?? ''}</Text>
               <Text style={styles.summaryLabel}>Identidad verificada</Text>
-              <Text style={[styles.summaryValue, { color: identityVerified ? '#22C55E' : Colors.error }]}>
+              <Text style={[styles.summaryValue, { color: identityVerified ? '#22C55E' : colors.error }]}>
                 {identityVerified ? '✅ Sí' : '❌ No'}
               </Text>
               <Text style={styles.summaryLabel}>Modelos seleccionados</Text>
@@ -574,7 +563,7 @@ export default function RegisterVendorScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.topBar}>
           <Pressable onPress={() => step > 1 ? setStep((s) => s - 1) : router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </Pressable>
           <Text style={styles.topTitle}>Registro de Vendedor</Text>
           <View style={{ width: 44 }} />
@@ -598,44 +587,44 @@ export default function RegisterVendorScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (c: ThemeColors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: c.background },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   backBtn: { width: 44, height: 44, justifyContent: 'center' },
-  topTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
+  topTitle: { fontSize: 17, fontWeight: '600', color: c.textPrimary },
   scroll: { padding: Spacing.lg, paddingBottom: 100 },
-  footer: { padding: Spacing.lg, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.white },
-  error: { backgroundColor: '#FEE2E2', color: Colors.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
-  stepTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.md },
-  stepDesc: { fontSize: 14, color: Colors.textSecondary, marginBottom: Spacing.md },
-  fieldLabel: { fontSize: 13, fontWeight: '500', color: Colors.textSubtitle, marginBottom: 6, marginTop: Spacing.sm },
+  footer: { padding: Spacing.lg, borderTopWidth: 1, borderTopColor: c.border, backgroundColor: c.surface },
+  error: { backgroundColor: c.errorBg, color: c.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
+  stepTitle: { fontSize: 20, fontWeight: '700', color: c.textPrimary, marginBottom: Spacing.md },
+  stepDesc: { fontSize: 14, color: c.textSecondary, marginBottom: Spacing.md },
+  fieldLabel: { fontSize: 13, fontWeight: '500', color: c.textSubtitle, marginBottom: 6, marginTop: Spacing.sm },
   imagePicker: {
-    borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, borderStyle: 'dashed',
+    borderWidth: 1, borderColor: c.border, borderRadius: BorderRadius.md, borderStyle: 'dashed',
     padding: Spacing.lg, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md,
   },
   imagePreview: { width: 100, height: 100, borderRadius: 8, marginBottom: Spacing.sm },
-  imagePickerText: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
+  imagePickerText: { fontSize: 13, color: c.textSecondary, marginTop: 4 },
   chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Spacing.md },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, backgroundColor: Colors.chipBg },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, backgroundColor: c.chipBg },
   chipSmall: { paddingHorizontal: 10, paddingVertical: 6 },
-  chipSelected: { backgroundColor: Colors.chipSelectedBg },
-  chipText: { fontSize: 14, color: Colors.textSubtitle },
-  chipTextSmall: { fontSize: 12, color: Colors.textSubtitle },
-  chipTextSelected: { color: Colors.accent, fontWeight: '600' },
+  chipSelected: { backgroundColor: c.chipSelectedBg },
+  chipText: { fontSize: 14, color: c.textSubtitle },
+  chipTextSmall: { fontSize: 12, color: c.textSubtitle },
+  chipTextSelected: { color: c.accent, fontWeight: '600' },
   modelSection: { marginBottom: Spacing.md },
-  modelBrand: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary, marginBottom: 8 },
+  modelBrand: { fontSize: 15, fontWeight: '600', color: c.textPrimary, marginBottom: 8 },
   categoryRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 12, paddingHorizontal: Spacing.md, borderRadius: BorderRadius.sm,
-    marginBottom: 4, backgroundColor: Colors.backgroundSection,
+    marginBottom: 4, backgroundColor: c.backgroundSection,
   },
-  categoryRowSelected: { backgroundColor: `${Colors.primary}15` },
-  categoryText: { fontSize: 15, color: Colors.textPrimary },
-  categoryTextSelected: { fontWeight: '600', color: Colors.primary },
-  summaryCard: { backgroundColor: Colors.backgroundSection, borderRadius: BorderRadius.md, padding: Spacing.md },
-  summaryLabel: { fontSize: 12, color: Colors.textSecondary, marginTop: Spacing.sm },
-  summaryValue: { fontSize: 15, fontWeight: '500', color: Colors.textPrimary },
-  requiredStar: { color: Colors.error, fontSize: 13 },
+  categoryRowSelected: { backgroundColor: `${c.primary}15` },
+  categoryText: { fontSize: 15, color: c.textPrimary },
+  categoryTextSelected: { fontWeight: '600', color: c.primary },
+  summaryCard: { backgroundColor: c.backgroundSection, borderRadius: BorderRadius.md, padding: Spacing.md },
+  summaryLabel: { fontSize: 12, color: c.textSecondary, marginTop: Spacing.sm },
+  summaryValue: { fontSize: 15, fontWeight: '500', color: c.textPrimary },
+  requiredStar: { color: c.error, fontSize: 13 },
   imagePreviewContainer: {
     position: 'relative',
     width: '100%',
@@ -643,7 +632,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     borderRadius: BorderRadius.md,
     overflow: 'hidden',
-    backgroundColor: Colors.backgroundSection,
+    backgroundColor: c.backgroundSection,
   },
   imagePreviewFull: {
     width: '100%',
@@ -663,36 +652,36 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   changeImageText: {
-    color: Colors.white,
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
   },
   imagePickerTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     marginTop: Spacing.sm,
   },
   imagePickerSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: c.textSecondary,
     marginTop: 4,
   },
   identitySection: {
     marginTop: Spacing.lg,
     paddingTop: Spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: c.border,
   },
   identitySectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     marginBottom: 4,
   },
   identitySectionDesc: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: c.textSecondary,
     marginBottom: Spacing.md,
     lineHeight: 18,
   },
@@ -710,11 +699,11 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: Colors.backgroundSection,
+    backgroundColor: c.backgroundSection,
   },
   selfieThumbLabel: {
     fontSize: 11,
-    color: Colors.textSecondary,
+    color: c.textSecondary,
     marginTop: 4,
   },
   retakeSelfieBtn: {
@@ -725,15 +714,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: c.primary,
   },
   retakeSelfieText: {
     fontSize: 13,
-    color: Colors.primary,
+    color: c.primary,
     fontWeight: '600',
   },
   verifyButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     paddingVertical: 14,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
@@ -748,7 +737,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   verifyButtonText: {
-    color: Colors.white,
+    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -759,12 +748,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.backgroundSection,
+    backgroundColor: c.backgroundSection,
     marginBottom: Spacing.sm,
   },
   verifyErrorText: {
     fontSize: 13,
-    color: Colors.error,
+    color: c.error,
     flex: 1,
     lineHeight: 18,
   },

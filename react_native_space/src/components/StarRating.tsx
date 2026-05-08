@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import * as Haptics from 'expo-haptics';
 
 interface StarRatingProps {
@@ -12,6 +12,8 @@ interface StarRatingProps {
 }
 
 export default function StarRating({ rating = 0, onChange, size = 28, readonly = false }: StarRatingProps) {
+  const { colors } = useTheme();
+
   const handlePress = (star: number) => {
     if (readonly) return;
     if (Platform.OS !== 'web') {
@@ -27,7 +29,7 @@ export default function StarRating({ rating = 0, onChange, size = 28, readonly =
           <Ionicons
             name={(rating ?? 0) >= star ? 'star' : 'star-outline'}
             size={size}
-            color={(rating ?? 0) >= star ? Colors.primary : Colors.border}
+            color={(rating ?? 0) >= star ? colors.primary : colors.border}
           />
         </Pressable>
       ))}
