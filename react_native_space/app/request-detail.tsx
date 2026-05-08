@@ -89,7 +89,8 @@ export default function RequestDetailScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={Colors.primary} />}>
         <View style={styles.infoCard}>
-          <InfoRow icon="location-outline" label="Ubicación" value={`${detail?.municipality?.name ?? ''}, ${detail?.state?.name ?? ''} (${detail?.searchRadiusKm ?? 0}km)`} />
+          <InfoRow icon="location-outline" label="Ubicación" value={[detail?.municipality?.name, detail?.state?.name].filter(Boolean).join(', ') || 'No especificada'} />
+          <InfoRow icon="navigate-outline" label="Distancia de Búsqueda" value={`${detail?.searchRadiusKm ?? 0} km`} />
           <InfoRow icon="car-outline" label="Vehículo" value={`${detail?.vehicleBrand?.name ?? ''} ${detail?.vehicleModel?.name ?? ''}`} />
           <InfoRow icon="construct-outline" label="Repuesto" value={`${detail?.partCategory?.name ?? ''}${detail?.partSubcategory?.name ? ` - ${detail.partSubcategory.name}` : ''}`} />
           <InfoRow icon="document-text-outline" label="Descripción" value={detail?.freeDescription ?? ''} />
