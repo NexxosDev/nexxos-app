@@ -9,6 +9,7 @@ import { useCatalog } from '../src/contexts/CatalogContext';
 import { Colors, Spacing, BorderRadius } from '../src/theme/colors';
 import Button from '../src/components/Button';
 import LoadingSpinner from '../src/components/LoadingSpinner';
+import BrandsByOrigin from '../src/components/BrandsByOrigin';
 import type { VendorProfile, CatalogItem } from '../src/types';
 
 export default function VendorEditProfileScreen() {
@@ -185,19 +186,11 @@ export default function VendorEditProfileScreen() {
           {/* ── Editable: Vehicles ── */}
           <Text style={styles.sectionLabel}>¿Qué vehículos manejas?</Text>
           <Text style={styles.sectionDesc}>Selecciona marcas y luego modelos</Text>
-          <View style={styles.chipContainer}>
-            {(catalog?.brands ?? []).map((b) => (
-              <Pressable
-                key={b?.id}
-                style={[styles.chip, (selectedBrands ?? []).includes(b?.id ?? '') && styles.chipSelected]}
-                onPress={() => toggleBrand(b?.id ?? '')}
-              >
-                <Text style={[styles.chipText, (selectedBrands ?? []).includes(b?.id ?? '') && styles.chipTextSelected]}>
-                  {b?.name ?? ''}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <BrandsByOrigin
+            brands={catalog?.brands ?? []}
+            selectedBrands={selectedBrands ?? []}
+            onToggleBrand={toggleBrand}
+          />
           {(selectedBrands ?? []).map((brandId) => {
             const brand = (catalog?.brands ?? []).find((b) => b?.id === brandId);
             const models = modelsMap?.[brandId] ?? [];

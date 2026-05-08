@@ -18,6 +18,7 @@ import StepIndicator from '../../src/components/StepIndicator';
 import SelectInput from '../../src/components/SelectInput';
 import MapLocationPicker from '../../src/components/MapLocationPicker';
 import LivenessSelfieCapture from '../../src/components/LivenessSelfieCapture';
+import BrandsByOrigin from '../../src/components/BrandsByOrigin';
 import type { CatalogItem } from '../../src/types';
 
 const TOTAL_STEPS = 6;
@@ -490,13 +491,11 @@ export default function RegisterVendorScreen() {
           <View>
             <Text style={styles.stepTitle}>¿Qué vehículos manejas?</Text>
             <Text style={styles.stepDesc}>Selecciona marcas y luego modelos</Text>
-            <View style={styles.chipContainer}>
-              {(catalog?.brands ?? []).map((b) => (
-                <Pressable key={b?.id} style={[styles.chip, (selectedBrands ?? []).includes(b?.id ?? '') && styles.chipSelected]} onPress={() => toggleBrand(b?.id ?? '')}>
-                  <Text style={[styles.chipText, (selectedBrands ?? []).includes(b?.id ?? '') && styles.chipTextSelected]}>{b?.name ?? ''}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <BrandsByOrigin
+              brands={catalog?.brands ?? []}
+              selectedBrands={selectedBrands ?? []}
+              onToggleBrand={toggleBrand}
+            />
             {(selectedBrands ?? []).map((brandId) => {
               const brand = (catalog?.brands ?? []).find((b) => b?.id === brandId);
               const models = modelsMap?.[brandId] ?? [];
