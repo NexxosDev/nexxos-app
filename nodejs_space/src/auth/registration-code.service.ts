@@ -141,7 +141,7 @@ export class RegistrationCodeService {
             <h2>Código de Verificación</h2>
             <p>Tu código de verificación para registrarte en NEXXOS es:</p>
             <div style="text-align: center; margin: 30px 0;">
-              <span style="font-size: 36px; font-weight: 700; letter-spacing: 8px; background: #FFF8E1; padding: 16px 32px; border-radius: 8px; border: 2px solid #FFC107; color: #121212;">${code}</span>
+              <span style="display: inline-block; font-size: 32px; font-weight: 700; letter-spacing: 4px; white-space: nowrap; background: #F5F5F5; padding: 16px 28px; border-radius: 8px; border: 2px solid #FFC107; color: #121212;">${code}</span>
             </div>
             <div style="background: #FFF3CD; border-left: 4px solid #FFC107; padding: 12px; margin: 20px 0;">
               <strong>Importante:</strong> Este código expira en <strong>5 minutos</strong>.
