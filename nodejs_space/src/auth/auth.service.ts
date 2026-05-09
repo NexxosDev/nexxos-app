@@ -21,7 +21,7 @@ export class AuthService {
 
   async signup(dto: SignupDto) {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (existing) throw new ConflictException('Email already registered');
+    if (existing) throw new ConflictException('Este correo electrónico ya está registrado.');
 
     // Normalize and validate cédula
     const normalizedDocId = formatCedula(dto.documentId);
