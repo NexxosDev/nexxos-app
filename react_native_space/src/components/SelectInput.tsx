@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, FlatList, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, FlatList, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { Spacing, BorderRadius } from '../theme/colors';
@@ -38,40 +38,44 @@ export default function SelectInput({ label, items, selectedId, onSelect, error,
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <Modal visible={open} transparent animationType="slide">
-        <Pressable style={styles.overlay} onPress={() => { setOpen(false); setSearch(''); }} />
-        <View style={styles.modal}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{label ?? ''}</Text>
-            <Pressable onPress={() => { setOpen(false); setSearch(''); }} hitSlop={8}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
-            </Pressable>
-          </View>
-          {searchable ? (
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar..."
-              value={search}
-              onChangeText={setSearch}
-              placeholderTextColor={colors.textSecondary}
-            />
-          ) : null}
-          <FlatList
-            data={filtered ?? []}
-            keyExtractor={(item) => item?.id ?? ''}
-            renderItem={({ item }) => (
-              <Pressable
-                style={[styles.item, item?.id === selectedId && styles.itemSelected]}
-                onPress={() => { onSelect?.(item); setOpen(false); setSearch(''); }}
-              >
-                <Text style={[styles.itemText, item?.id === selectedId && styles.itemTextSelected]}>
-                  {item?.name ?? ''}
-                </Text>
-                {item?.id === selectedId ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+        <KeyboardAvoidingView style={styles.modalWrapper} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Pressable style={styles.overlay} onPress={() => { setOpen(false); setSearch(''); }} />
+          <View style={styles.modal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{label ?? ''}</Text>
+              <Pressable onPress={() => { setOpen(false); setSearch(''); }} hitSlop={8}>
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
               </Pressable>
-            )}
-            ListEmptyComponent={<Text style={styles.empty}>Sin opciones disponibles</Text>}
-          />
-        </View>
+            </View>
+            {searchable ? (
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar..."
+                value={search}
+                onChangeText={setSearch}
+                placeholderTextColor={colors.textSecondary}
+                autoCorrect={false}
+              />
+            ) : null}
+            <FlatList
+              data={filtered ?? []}
+              keyExtractor={(item) => item?.id ?? ''}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <Pressable
+                  style={[styles.item, item?.id === selectedId && styles.itemSelected]}
+                  onPress={() => { onSelect?.(item); setOpen(false); setSearch(''); }}
+                >
+                  <Text style={[styles.itemText, item?.id === selectedId && styles.itemTextSelected]}>
+                    {item?.name ?? ''}
+                  </Text>
+                  {item?.id === selectedId ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+                </Pressable>
+              )}
+              ListEmptyComponent={<Text style={styles.empty}>Sin opciones disponibles</Text>}
+            />
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -89,6 +93,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   value: { fontSize: 15, color: c.textPrimary, flex: 1 },
   placeholder: { fontSize: 15, color: c.textSecondary, flex: 1 },
   errorText: { color: c.error, fontSize: 12, marginTop: 4 },
+  modalWrapper: { flex: 1, justifyContent: 'flex-end' },
   overlay: { flex: 1, backgroundColor: c.overlay },
   modal: { backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '60%', paddingBottom: 20 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: c.border },
