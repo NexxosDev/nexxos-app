@@ -56,7 +56,7 @@ export class RegistrationCodeService {
     if (this.resend) {
       try {
         await this.resend.emails.send({
-          from: 'NEXXOS <onboarding@resend.dev>',
+          from: 'NEXXOS <verificacion@nexxos.app>',
           to: [normalizedEmail],
           subject: 'Tu código de verificación - NEXXOS',
           html: this.buildEmailHtml(code),
