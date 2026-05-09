@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailVerificationService } from './email-verification.service';
+import { formatCedula } from '../lib/cedula';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -21,6 +22,22 @@ export class AuthService {
   async signup(dto: SignupDto) {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existing) throw new ConflictException('Email already registered');
+
+    // Normalize and validate cédula
+    const normalizedDocId = formatCedula(dto.documentId);
+    if (!normalizedDocId || !/^V-\d{6,8}$/.test(normalizedDocId)) {
+      throw new BadRequestException('Formato de cédula inválido. Debe ser V-12345678');
+    }
+
+    // Check for duplicate cédula
+    const existingDoc = await this.prisma.user.findFirst({
+      where: { documentId: normalizedDocId },
+    });
+    if (existingDoc) {
+      throw new ConflictException(
+        'Esta cédula ya está registrada. Si ya tienes una cuenta, inicia sesión. Si olvidaste tus datos, usa "Recuperar contraseña".',
+      );
+    }
 
     if (dto.role === 'VENDEDOR' && !dto.vendor) {
       throw new BadRequestException('Vendor data is required for VENDEDOR role');
@@ -52,7 +69,7 @@ export class AuthService {
         lastName: dto.lastName,
         name: `${dto.firstName} ${dto.lastName}`,
         phone: dto.phone,
-        documentId: dto.documentId,
+        documentId: normalizedDocId,
         emailVerified,
         userRoles: { create: rolesToAssign },
       },

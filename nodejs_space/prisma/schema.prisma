@@ -17,7 +17,7 @@ model User {
   lastName     String   @map("last_name")
   name         String
   phone        String
-  documentId   String   @map("document_id")
+  documentId   String   @unique @map("document_id")
   profileImageUrl String?  @map("profile_image_url")
   isActive     Boolean  @default(true) @map("is_active")
   emailVerified Boolean @default(false) @map("email_verified")
