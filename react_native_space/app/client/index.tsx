@@ -107,8 +107,9 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   greeting: { fontSize: 22, fontWeight: '700', color: c.textPrimary },
   subtitle: { fontSize: 15, color: c.textSecondary, marginTop: 2, marginBottom: Spacing.md },
   banner: {
-    flexDirection: 'row', backgroundColor: `${c.primary}20`, borderRadius: BorderRadius.md,
+    flexDirection: 'row', backgroundColor: c.backgroundSection, borderRadius: BorderRadius.md,
     padding: Spacing.md, marginBottom: Spacing.lg, alignItems: 'center', gap: Spacing.md,
+    borderLeftWidth: 3, borderLeftColor: c.primary,
   },
   bannerContent: { flex: 1 },
   bannerTitle: { fontSize: 15, fontWeight: '600', color: c.textPrimary },
