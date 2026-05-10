@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, RefreshControl, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, RefreshControl, Pressable, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +12,34 @@ import Button from '../../src/components/Button';
 import ProfileAvatar from '../../src/components/ProfileAvatar';
 import StarRating from '../../src/components/StarRating';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
+import BrandLogo from '../../src/components/BrandLogo';
 import type { VendorProfile as VPType } from '../../src/types';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const CATEGORY_ICONS: Record<string, string> = {
+  'Motor': 'cog-outline',
+  'Transmisión': 'git-merge-outline',
+  'Suspensión': 'car-outline',
+  'Frenos': 'disc-outline',
+  'Eléctrico': 'flash-outline',
+  'Carrocería': 'car-sport-outline',
+  'Iluminación': 'bulb-outline',
+  'Interior': 'layers-outline',
+  'Neumáticos': 'ellipse-outline',
+  'Filtros': 'funnel-outline',
+  'Dirección': 'navigate-outline',
+  'Refrigeración y A/C': 'snow-outline',
+  'Escape': 'cloud-outline',
+  'Lubricantes y Fluidos': 'water-outline',
+  'Accesorios': 'construct-outline',
+};
+
+function getCategoryIcon(name: string): string {
+  return CATEGORY_ICONS[name] ?? 'pricetag-outline';
+}
 
 export default function VendorProfileScreen() {
   const router = useRouter();
@@ -22,6 +49,8 @@ export default function VendorProfileScreen() {
   const [profile, setProfile] = useState<VPType | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   const fetchProfile = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -41,6 +70,24 @@ export default function VendorProfileScreen() {
     ]);
   };
 
+  const toggleSection = useCallback((key: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const toggleItem = useCallback((key: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
   if (loading) return <LoadingSpinner />;
 
   const brandsGrouped = (profile?.vehicleModels ?? []).reduce<Record<string, string[]>>((acc, m) => {
@@ -56,6 +103,9 @@ export default function VendorProfileScreen() {
     acc[catName]?.push?.(s?.name ?? '');
     return acc;
   }, {});
+
+  const totalModels = profile?.vehicleModels?.length ?? 0;
+  const totalSubs = profile?.partSubcategories?.length ?? 0;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -106,28 +156,119 @@ export default function VendorProfileScreen() {
           ) : null}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Vehículos</Text>
-          {Object.entries(brandsGrouped).map(([brand, models]) => (
-            <View key={brand} style={styles.chipGroup}>
-              <Text style={styles.chipGroupTitle}>{brand}</Text>
-              <View style={styles.chipRow}>
-                {(models ?? []).map((m, i) => <View key={i} style={styles.chip}><Text style={styles.chipText}>{m}</Text></View>)}
+        {/* ── Accordion: Vehículos ── */}
+        <View style={styles.accordionContainer}>
+          <Pressable style={styles.accordionHeader} onPress={() => toggleSection('vehicles')}>
+            <View style={styles.accordionHeaderLeft}>
+              <Ionicons name="car-sport" size={22} color={colors.primary} />
+              <Text style={styles.accordionTitle}>Vehículos</Text>
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>{totalModels}</Text>
               </View>
             </View>
-          ))}
+            <Ionicons
+              name={expandedSections.has('vehicles') ? 'chevron-down' : 'chevron-forward'}
+              size={20}
+              color={colors.textSecondary}
+            />
+          </Pressable>
+          {expandedSections.has('vehicles') ? (
+            <View style={styles.accordionBody}>
+              {Object.entries(brandsGrouped).map(([brand, models]) => {
+                const itemKey = `brand-${brand}`;
+                const isOpen = expandedItems.has(itemKey);
+                return (
+                  <View key={brand}>
+                    <Pressable style={styles.accordionItemHeader} onPress={() => toggleItem(itemKey)}>
+                      <View style={styles.accordionItemLeft}>
+                        <View style={styles.brandLogoWrap}>
+                          <BrandLogo brandName={brand} size={28} />
+                        </View>
+                        <Text style={styles.accordionItemTitle}>{brand}</Text>
+                        <Text style={styles.accordionItemCount}>({models?.length ?? 0})</Text>
+                      </View>
+                      <Ionicons
+                        name={isOpen ? 'chevron-down' : 'chevron-forward'}
+                        size={16}
+                        color={colors.textSecondary}
+                      />
+                    </Pressable>
+                    {isOpen ? (
+                      <View style={styles.accordionItemBody}>
+                        {(models ?? []).map((m, i) => (
+                          <View key={i} style={styles.leafItem}>
+                            <View style={styles.leafDot} />
+                            <Text style={styles.leafText}>{m}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
+              {Object.keys(brandsGrouped).length === 0 ? (
+                <Text style={styles.emptyText}>Sin vehículos registrados</Text>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categorías</Text>
-          {Object.entries(catsGrouped).map(([cat, subs]) => (
-            <View key={cat} style={styles.chipGroup}>
-              <Text style={styles.chipGroupTitle}>{cat}</Text>
-              <View style={styles.chipRow}>
-                {(subs ?? []).map((s, i) => <View key={i} style={styles.chip}><Text style={styles.chipText}>{s}</Text></View>)}
+        {/* ── Accordion: Categorías ── */}
+        <View style={styles.accordionContainer}>
+          <Pressable style={styles.accordionHeader} onPress={() => toggleSection('categories')}>
+            <View style={styles.accordionHeaderLeft}>
+              <Ionicons name="pricetags" size={22} color={colors.primary} />
+              <Text style={styles.accordionTitle}>Categorías</Text>
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>{totalSubs}</Text>
               </View>
             </View>
-          ))}
+            <Ionicons
+              name={expandedSections.has('categories') ? 'chevron-down' : 'chevron-forward'}
+              size={20}
+              color={colors.textSecondary}
+            />
+          </Pressable>
+          {expandedSections.has('categories') ? (
+            <View style={styles.accordionBody}>
+              {Object.entries(catsGrouped).map(([cat, subs]) => {
+                const itemKey = `cat-${cat}`;
+                const isOpen = expandedItems.has(itemKey);
+                const iconName = getCategoryIcon(cat);
+                return (
+                  <View key={cat}>
+                    <Pressable style={styles.accordionItemHeader} onPress={() => toggleItem(itemKey)}>
+                      <View style={styles.accordionItemLeft}>
+                        <View style={styles.catIconWrap}>
+                          <Ionicons name={iconName as any} size={18} color={colors.primary} />
+                        </View>
+                        <Text style={styles.accordionItemTitle}>{cat}</Text>
+                        <Text style={styles.accordionItemCount}>({subs?.length ?? 0})</Text>
+                      </View>
+                      <Ionicons
+                        name={isOpen ? 'chevron-down' : 'chevron-forward'}
+                        size={16}
+                        color={colors.textSecondary}
+                      />
+                    </Pressable>
+                    {isOpen ? (
+                      <View style={styles.accordionItemBody}>
+                        {(subs ?? []).map((s, i) => (
+                          <View key={i} style={styles.leafItem}>
+                            <View style={styles.leafDot} />
+                            <Text style={styles.leafText}>{s}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
+              {Object.keys(catsGrouped).length === 0 ? (
+                <Text style={styles.emptyText}>Sin categorías registradas</Text>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         <Button title="Editar Perfil" variant="secondary" onPress={() => router.push('/vendor-edit-profile')} style={styles.btn} />
@@ -140,7 +281,7 @@ export default function VendorProfileScreen() {
 
 const createStyles = (c: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.background },
-  scroll: { padding: Spacing.lg },
+  scroll: { padding: Spacing.lg, paddingBottom: 40 },
   themeRow: { alignItems: 'flex-end', marginBottom: Spacing.sm },
   themeBtn: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: c.backgroundSection,
@@ -158,10 +299,49 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '600', color: c.textPrimary, marginBottom: Spacing.sm },
   sectionValue: { fontSize: 14, color: c.textSubtitle, marginBottom: 4 },
   sectionValueMuted: { fontSize: 13, color: c.textSecondary, marginBottom: 4, fontStyle: 'italic' },
-  chipGroup: { marginBottom: Spacing.sm },
-  chipGroupTitle: { fontSize: 13, fontWeight: '600', color: c.textSubtitle, marginBottom: 4 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full, backgroundColor: c.chipBg },
-  chipText: { fontSize: 12, color: c.textSubtitle },
   btn: { marginBottom: Spacing.sm },
+
+  // ── Accordion ──
+  accordionContainer: {
+    backgroundColor: c.cardBg, borderRadius: BorderRadius.md,
+    borderWidth: 1, borderColor: c.border, marginBottom: Spacing.md, overflow: 'hidden',
+  },
+  accordionHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 14, paddingHorizontal: Spacing.md,
+  },
+  accordionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  accordionTitle: { fontSize: 16, fontWeight: '700', color: c.textPrimary },
+  countBadge: {
+    backgroundColor: c.primary, borderRadius: 10,
+    paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center',
+  },
+  countBadgeText: { fontSize: 12, fontWeight: '700', color: '#121212' },
+  accordionBody: { borderTopWidth: 1, borderTopColor: c.border },
+
+  // ── Accordion item (level 2) ──
+  accordionItemHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 12, paddingHorizontal: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border,
+  },
+  accordionItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  brandLogoWrap: {
+    width: 36, height: 36, borderRadius: 8, backgroundColor: '#FFFFFF',
+    justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
+    borderWidth: 1, borderColor: c.border,
+  },
+  catIconWrap: {
+    width: 36, height: 36, borderRadius: 8, backgroundColor: `${c.primary}15`,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  accordionItemTitle: { fontSize: 15, fontWeight: '500', color: c.textPrimary, flex: 1 },
+  accordionItemCount: { fontSize: 13, color: c.textSecondary },
+  accordionItemBody: { paddingLeft: 56, paddingBottom: 8 },
+
+  // ── Leaf items ──
+  leafItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
+  leafDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: c.primary },
+  leafText: { fontSize: 14, color: c.textSubtitle },
+  emptyText: { padding: Spacing.md, fontSize: 14, color: c.textSecondary, textAlign: 'center' },
 });
