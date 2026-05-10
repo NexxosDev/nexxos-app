@@ -1,6 +1,54 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
+
+const MESSAGE_SELECT = {
+  id: true,
+  senderId: true,
+  messageText: true,
+  messageType: true,
+  imageUrl: true,
+  status: true,
+  isEdited: true,
+  deletedForAll: true,
+  createdAt: true,
+  sender: { select: { id: true, firstName: true, lastName: true } },
+  replyTo: {
+    select: {
+      id: true,
+      messageText: true,
+      messageType: true,
+      deletedForAll: true,
+      sender: { select: { firstName: true, lastName: true } },
+    },
+  },
+};
+
+function formatMessage(m: any) {
+  if (!m) return null;
+  const isDeleted = !!m.deletedForAll;
+  const rt = m.replyTo;
+  const replyToDeleted = rt?.deletedForAll;
+  return {
+    id: m.id,
+    senderId: m.sender?.id ?? m.senderId,
+    senderName: `${m.sender?.firstName ?? ''} ${m.sender?.lastName ?? ''}`.trim(),
+    messageText: isDeleted ? 'Mensaje eliminado' : (m.messageText ?? ''),
+    messageType: isDeleted ? 'text' : (m.messageType ?? 'text'),
+    imageUrl: isDeleted ? null : (m.imageUrl ?? null),
+    status: m.status ?? 'sent',
+    isEdited: m.isEdited ?? false,
+    deletedForAll: isDeleted,
+    replyTo: rt ? {
+      id: rt.id,
+      messageText: replyToDeleted ? 'Mensaje eliminado' : (rt.messageType === 'image' ? 'Imagen' : rt.messageText),
+      senderName: `${rt.sender?.firstName ?? ''} ${rt.sender?.lastName ?? ''}`.trim(),
+    } : null,
+    createdAt: m.createdAt?.toISOString?.() ?? '',
+  };
+}
+
+const DELETE_FOR_ALL_MAX_AGE_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class ChatService {
@@ -10,6 +58,19 @@ export class ChatService {
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
   ) {}
+
+  private async verifyAccess(chatId: string, userId: string) {
+    const chat = await this.prisma.chat.findUnique({
+      where: { id: chatId },
+      include: { vendor: { select: { id: true, userId: true, businessName: true } } },
+    });
+    if (!chat) throw new NotFoundException('Chat not found');
+    const vendorRecord = await this.prisma.vendor.findUnique({ where: { userId } });
+    const isClient = chat.clientId === userId;
+    const isVendor = vendorRecord?.id === chat.vendorId;
+    if (!isClient && !isVendor) throw new ForbiddenException();
+    return { chat, isClient, isVendor, vendorRecord };
+  }
 
   async getChatDetail(chatId: string, userId: string) {
     const chat = await this.prisma.chat.findUnique({
@@ -24,7 +85,6 @@ export class ChatService {
     });
     if (!chat) throw new NotFoundException('Chat not found');
 
-    // Check access
     const vendor = await this.prisma.vendor.findUnique({ where: { userId } });
     const isClient = chat.clientId === userId;
     const isVendor = vendor?.id === chat.vendorId;
@@ -37,6 +97,15 @@ export class ChatService {
       ? `${chat.vendor.user.firstName} ${chat.vendor.user.lastName}`
       : `${chat.client.firstName} ${chat.client.lastName}`;
 
+    const unreadCount = await this.prisma.chatMessage.count({
+      where: {
+        chatId,
+        senderId: { not: userId },
+        status: { not: 'read' },
+        deletedForAll: false,
+      },
+    });
+
     return {
       id: chat.id,
       requestId: chat.requestId,
@@ -45,18 +114,13 @@ export class ChatService {
       clientId: chat.clientId,
       requestSummary,
       otherUserName,
+      unreadCount,
       createdAt: chat.createdAt.toISOString(),
     };
   }
 
   async getMessages(chatId: string, userId: string, limit = 50, before?: string) {
-    const chat = await this.prisma.chat.findUnique({ where: { id: chatId } });
-    if (!chat) throw new NotFoundException('Chat not found');
-
-    const vendor = await this.prisma.vendor.findUnique({ where: { userId } });
-    const isClient = chat.clientId === userId;
-    const isVendor = vendor?.id === chat.vendorId;
-    if (!isClient && !isVendor) throw new ForbiddenException();
+    await this.verifyAccess(chatId, userId);
 
     const where: any = { chatId };
     if (before) {
@@ -67,103 +131,125 @@ export class ChatService {
       where,
       take: limit + 1,
       orderBy: { createdAt: 'desc' },
-      include: {
-        sender: { select: { id: true, firstName: true, lastName: true } },
-        replyTo: {
-          select: {
-            id: true,
-            messageText: true,
-            messageType: true,
-            sender: { select: { firstName: true, lastName: true } },
-          },
-        },
-      },
+      select: MESSAGE_SELECT,
     });
 
     const hasMore = messages.length > limit;
     const items = messages.slice(0, limit);
 
     return {
-      items: items.map((m: any) => ({
-        id: m.id,
-        senderId: m.sender.id,
-        senderName: `${m.sender.firstName} ${m.sender.lastName}`,
-        messageText: m.messageText,
-        messageType: m.messageType ?? 'text',
-        imageUrl: m.imageUrl ?? null,
-        replyTo: m.replyTo ? {
-          id: m.replyTo.id,
-          messageText: m.replyTo.messageType === 'image' ? '📷 Imagen' : m.replyTo.messageText,
-          senderName: `${m.replyTo.sender?.firstName ?? ''} ${m.replyTo.sender?.lastName ?? ''}`.trim(),
-        } : null,
-        createdAt: m.createdAt.toISOString(),
-      })),
+      items: items.map(formatMessage).filter(Boolean),
       hasMore,
     };
   }
 
   async sendMessage(chatId: string, userId: string, messageText: string, messageType = 'text', imageUrl?: string, replyToId?: string) {
-    const chat = await this.prisma.chat.findUnique({
-      where: { id: chatId },
-      include: { vendor: { select: { userId: true } } },
-    });
-    if (!chat) throw new NotFoundException('Chat not found');
-
-    const vendor = await this.prisma.vendor.findUnique({ where: { userId } });
-    const isClient = chat.clientId === userId;
-    const isVendor = vendor?.id === chat.vendorId;
-    if (!isClient && !isVendor) throw new ForbiddenException();
+    const { chat, isClient, isVendor, vendorRecord } = await this.verifyAccess(chatId, userId);
 
     const message = await this.prisma.chatMessage.create({
       data: {
         chatId, senderId: userId, messageText, messageType,
         imageUrl: imageUrl ?? null,
         replyToId: replyToId ?? null,
+        status: 'sent',
       },
-      include: {
-        sender: { select: { id: true, firstName: true, lastName: true } },
-        replyTo: {
-          select: {
-            id: true,
-            messageText: true,
-            messageType: true,
-            sender: { select: { firstName: true, lastName: true } },
-          },
-        },
-      },
+      select: MESSAGE_SELECT,
     });
 
-    // 🔔 Push: Notificar al otro participante del chat
-    const personalName = `${message.sender.firstName ?? ''} ${message.sender.lastName ?? ''}`.trim();
-    // Si el sender es vendedor, usar razón social; si es cliente, usar nombre personal
-    const senderName = isVendor && vendor?.businessName ? vendor.businessName : (personalName || 'Usuario');
-    const recipientUserId = isClient
-      ? (chat as any).vendor?.userId
-      : chat.clientId;
+    const personalName = `${message.sender?.firstName ?? ''} ${message.sender?.lastName ?? ''}`.trim();
+    const senderName = isVendor && vendorRecord?.businessName ? vendorRecord.businessName : (personalName || 'Usuario');
+    const recipientUserId = isClient ? chat.vendor?.userId : chat.clientId;
     if (recipientUserId) {
-      const preview = messageType === 'image' ? '📷 Imagen' : (messageText.length > 100 ? messageText.substring(0, 97) + '...' : messageText);
+      const preview = messageType === 'image' ? 'Imagen' : (messageText.length > 100 ? messageText.substring(0, 97) + '...' : messageText);
       this.notificationService.sendToUser(
         recipientUserId,
-        `💬 ${senderName}`,
+        senderName,
         preview,
         { type: 'NEW_MESSAGE', chatId },
       ).catch((err) => this.logger.error('Push error (new message)', err));
     }
 
-    const rt = (message as any).replyTo;
-    return {
-      id: message.id,
-      senderId: message.sender.id,
-      senderName,
-      messageText: message.messageText,
-      messageType: message.messageType,
-      imageUrl: message.imageUrl,
-      replyTo: rt ? {
-        id: rt.id,
-        messageText: rt.messageType === 'image' ? '📷 Imagen' : rt.messageText,
-        senderName: `${rt.sender?.firstName ?? ''} ${rt.sender?.lastName ?? ''}`.trim(),
-      } : null,
-      createdAt: message.createdAt.toISOString(),
+    return formatMessage(message);
+  }
+
+  async editMessage(chatId: string, messageId: string, userId: string, newText: string) {
+    await this.verifyAccess(chatId, userId);
+
+    const msg = await this.prisma.chatMessage.findUnique({ where: { id: messageId } });
+    if (!msg || msg.chatId !== chatId) throw new NotFoundException('Message not found');
+    if (msg.senderId !== userId) throw new ForbiddenException('Solo puedes editar tus propios mensajes');
+    if (msg.deletedForAll) throw new BadRequestException('No se puede editar un mensaje eliminado');
+
+    const updated = await this.prisma.chatMessage.update({
+      where: { id: messageId },
+      data: { messageText: newText, isEdited: true },
+      select: MESSAGE_SELECT,
+    });
+
+    return formatMessage(updated);
+  }
+
+  async deleteMessage(chatId: string, messageId: string, userId: string) {
+    await this.verifyAccess(chatId, userId);
+
+    const msg = await this.prisma.chatMessage.findUnique({ where: { id: messageId } });
+    if (!msg || msg.chatId !== chatId) throw new NotFoundException('Message not found');
+    if (msg.senderId !== userId) throw new ForbiddenException('Solo puedes eliminar tus propios mensajes');
+    if (msg.deletedForAll) throw new BadRequestException('El mensaje ya fue eliminado');
+
+    const ageMs = Date.now() - new Date(msg.createdAt).getTime();
+    if (ageMs > DELETE_FOR_ALL_MAX_AGE_MS) {
+      throw new BadRequestException('Solo puedes eliminar mensajes con menos de 1 hora de antiguedad');
+    }
+
+    const updated = await this.prisma.chatMessage.update({
+      where: { id: messageId },
+      data: { deletedForAll: true },
+      select: MESSAGE_SELECT,
+    });
+
+    return formatMessage(updated);
+  }
+
+  async markDelivered(chatId: string, userId: string, messageIds?: string[]) {
+    await this.verifyAccess(chatId, userId);
+
+    const where: any = {
+      chatId,
+      senderId: { not: userId },
+      status: 'sent',
+      deletedForAll: false,
     };
+    if (messageIds?.length) {
+      where.id = { in: messageIds };
+    }
+
+    const result = await this.prisma.chatMessage.updateMany({
+      where,
+      data: { status: 'delivered' },
+    });
+
+    return { updated: result.count };
+  }
+
+  async markRead(chatId: string, userId: string, messageIds?: string[]) {
+    await this.verifyAccess(chatId, userId);
+
+    const where: any = {
+      chatId,
+      senderId: { not: userId },
+      status: { in: ['sent', 'delivered'] },
+      deletedForAll: false,
+    };
+    if (messageIds?.length) {
+      where.id = { in: messageIds };
+    }
+
+    const result = await this.prisma.chatMessage.updateMany({
+      where,
+      data: { status: 'read' },
+    });
+
+    return { updated: result.count };
   }
 }

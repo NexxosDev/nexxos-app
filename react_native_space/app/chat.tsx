@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, Pressable,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Animated,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Animated, Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +10,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useTheme } from '../src/contexts/ThemeContext';
-import { getChatInfo, getChatMessages, sendChatMessage } from '../src/services/chat';
+import {
+  getChatInfo, getChatMessages, sendChatMessage,
+  editChatMessage, deleteChatMessage,
+  markMessagesDelivered, markMessagesRead,
+} from '../src/services/chat';
 import { Spacing, BorderRadius } from '../src/theme/colors';
 import type { ThemeColors } from '../src/theme/colors';
 import ChatMessageComp from '../src/components/ChatMessage';
@@ -23,6 +27,7 @@ export default function ChatScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [chatInfo, setChatInfo] = useState<ChatInfo | null>(null);
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,10 +36,19 @@ export default function ChatScreen() {
   const [uploading, setUploading] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessageItem | null>(null);
+
+  // Edit mode
+  const [editingMessage, setEditingMessage] = useState<ChatMessageItem | null>(null);
+  // Context menu
+  const [contextMenuMsg, setContextMenuMsg] = useState<ChatMessageItem | null>(null);
+  // Delete confirmation
+  const [deleteConfirmMsg, setDeleteConfirmMsg] = useState<ChatMessageItem | null>(null);
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
   const inputRef = useRef<TextInput>(null);
+  const hasMarkedReadRef = useRef(false);
 
   const messageIndexMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -42,11 +56,20 @@ export default function ChatScreen() {
     return map;
   }, [messages]);
 
+  // ---------- Data fetching ----------
   const fetchMessages = useCallback(async () => {
     if (!chatId) return;
     try {
       const data = await getChatMessages(chatId, { limit: 50 });
       setMessages(data?.items ?? []);
+    } catch { }
+  }, [chatId]);
+
+  const markAsDeliveredAndRead = useCallback(async () => {
+    if (!chatId) return;
+    try {
+      await markMessagesDelivered(chatId);
+      await markMessagesRead(chatId);
     } catch { }
   }, [chatId]);
 
@@ -62,17 +85,27 @@ export default function ChatScreen() {
   }, [chatId]);
 
   useEffect(() => {
-    intervalRef.current = setInterval(fetchMessages, 5000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [fetchMessages]);
+    if (!loading && chatId && !hasMarkedReadRef.current) {
+      hasMarkedReadRef.current = true;
+      markAsDeliveredAndRead();
+    }
+  }, [loading, chatId, markAsDeliveredAndRead]);
 
+  useEffect(() => {
+    intervalRef.current = setInterval(async () => {
+      await fetchMessages();
+      await markAsDeliveredAndRead();
+    }, 4000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [fetchMessages, markAsDeliveredAndRead]);
+
+  // ---------- Reply ----------
   const activateReply = useCallback((msg: ChatMessageItem) => {
     setReplyingTo(msg);
     const ref = swipeableRefs.current.get(msg?.id ?? '');
     ref?.close?.();
     setTimeout(() => inputRef.current?.focus?.(), 100);
   }, []);
-
   const cancelReply = useCallback(() => setReplyingTo(null), []);
 
   const scrollToMessage = useCallback((targetId: string) => {
@@ -82,21 +115,60 @@ export default function ChatScreen() {
     }
   }, [messageIndexMap]);
 
+  // ---------- Send / Edit ----------
   const handleSend = async () => {
     const trimmed = text?.trim?.() ?? '';
     if (!trimmed || sending) return;
     setSending(true);
-    try {
-      const newMsg = await sendChatMessage(chatId, trimmed, 'text', undefined, replyingTo?.id);
-      if (newMsg) {
-        setMessages((prev) => [newMsg, ...(prev ?? [])]);
+
+    if (editingMessage) {
+      try {
+        const updated = await editChatMessage(chatId, editingMessage.id, trimmed);
+        if (updated) {
+          setMessages((prev) => (prev ?? []).map((m) => m?.id === updated.id ? updated : m));
+        }
+      } catch {
+        Alert.alert('Error', 'No se pudo editar el mensaje.');
       }
+      setEditingMessage(null);
+      setText('');
+    } else {
+      // Optimistic send
+      const tempId = `temp_${Date.now()}`;
+      const optimistic: ChatMessageItem = {
+        id: tempId,
+        senderId: user?.id ?? '',
+        senderName: '',
+        messageText: trimmed,
+        messageType: 'text',
+        status: 'sending',
+        isEdited: false,
+        deletedForAll: false,
+        replyTo: replyingTo ? {
+          id: replyingTo.id,
+          messageText: replyingTo.messageType === 'image' ? 'Imagen' : (replyingTo.messageText ?? ''),
+          senderName: replyingTo.senderName ?? '',
+        } : null,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [optimistic, ...(prev ?? [])]);
       setText('');
       setReplyingTo(null);
-    } catch { }
+
+      try {
+        const newMsg = await sendChatMessage(chatId, trimmed, 'text', undefined, replyingTo?.id);
+        if (newMsg) {
+          setMessages((prev) => (prev ?? []).map((m) => m?.id === tempId ? { ...newMsg, status: newMsg.status ?? 'sent' } : m));
+        }
+      } catch {
+        setMessages((prev) => (prev ?? []).filter((m) => m?.id !== tempId));
+        Alert.alert('Error', 'No se pudo enviar el mensaje.');
+      }
+    }
     setSending(false);
   };
 
+  // ---------- Image upload ----------
   const pickAndSendImage = async (source: 'gallery' | 'camera') => {
     setShowAttachMenu(false);
     try {
@@ -120,7 +192,7 @@ export default function ChatScreen() {
       const uploadRes = await uploadFileWithUrl(uri, fileName, contentType);
       const imageUrl = uploadRes?.url ?? '';
       if (imageUrl) {
-        const newMsg = await sendChatMessage(chatId, '📷 Imagen', 'image', imageUrl, replyingTo?.id);
+        const newMsg = await sendChatMessage(chatId, 'Imagen', 'image', imageUrl, replyingTo?.id);
         if (newMsg) { setMessages((prev) => [newMsg, ...(prev ?? [])]); }
         setReplyingTo(null);
       }
@@ -128,6 +200,44 @@ export default function ChatScreen() {
     setUploading(false);
   };
 
+  // ---------- Context menu ----------
+  const openContextMenu = useCallback((msg: ChatMessageItem) => {
+    setContextMenuMsg(msg);
+  }, []);
+
+  const handleEdit = useCallback(() => {
+    if (!contextMenuMsg) return;
+    setEditingMessage(contextMenuMsg);
+    setText(contextMenuMsg.messageText ?? '');
+    setContextMenuMsg(null);
+    setTimeout(() => inputRef.current?.focus?.(), 100);
+  }, [contextMenuMsg]);
+
+  const cancelEdit = useCallback(() => {
+    setEditingMessage(null);
+    setText('');
+  }, []);
+
+  const handleDeletePrompt = useCallback(() => {
+    setDeleteConfirmMsg(contextMenuMsg);
+    setContextMenuMsg(null);
+  }, [contextMenuMsg]);
+
+  const handleDeleteForAll = useCallback(async () => {
+    if (!deleteConfirmMsg) return;
+    try {
+      const updated = await deleteChatMessage(chatId, deleteConfirmMsg.id);
+      if (updated) {
+        setMessages((prev) => (prev ?? []).map((m) => m?.id === updated.id ? updated : m));
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'No se pudo eliminar el mensaje.';
+      Alert.alert('Error', msg);
+    }
+    setDeleteConfirmMsg(null);
+  }, [chatId, deleteConfirmMsg]);
+
+  // ---------- Render ----------
   const renderLeftActions = useCallback((_progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
     const scale = dragX.interpolate({ inputRange: [0, 60], outputRange: [0.4, 1], extrapolate: 'clamp' });
     return (
@@ -140,6 +250,7 @@ export default function ChatScreen() {
   }, [colors.primary, styles.swipeReplyAction]);
 
   const renderMessage = useCallback(({ item }: { item: ChatMessageItem }) => {
+    const isOwn = item?.senderId === user?.id;
     return (
       <Swipeable
         ref={(ref) => { if (ref && item?.id) swipeableRefs.current.set(item.id, ref); }}
@@ -153,23 +264,30 @@ export default function ChatScreen() {
           messageText={item?.messageText ?? ''}
           senderName={item?.senderName ?? ''}
           createdAt={item?.createdAt ?? ''}
-          isOwn={item?.senderId === user?.id}
+          isOwn={isOwn}
           isVendorMessage={item?.senderId === chatInfo?.vendorUserId}
           messageType={item?.messageType}
           imageUrl={item?.imageUrl}
+          status={item?.status}
+          isEdited={item?.isEdited}
+          deletedForAll={item?.deletedForAll}
           replyTo={item?.replyTo}
           onReplyPress={scrollToMessage}
+          onLongPress={isOwn && !item?.deletedForAll ? () => openContextMenu(item) : undefined}
         />
       </Swipeable>
     );
-  }, [user?.id, chatInfo?.vendorUserId, renderLeftActions, activateReply, scrollToMessage]);
+  }, [user?.id, chatInfo?.vendorUserId, renderLeftActions, activateReply, scrollToMessage, openContextMenu]);
 
   if (loading) return <LoadingSpinner />;
 
   const replyPreviewText = replyingTo
-    ? ((replyingTo?.messageType ?? 'text') === 'image' ? '📷 Imagen' : (replyingTo?.messageText ?? ''))
+    ? ((replyingTo?.messageType ?? 'text') === 'image' ? 'Imagen' : (replyingTo?.messageText ?? ''))
     : '';
   const replyPreviewSnippet = replyPreviewText.length > 50 ? replyPreviewText.substring(0, 47) + '...' : replyPreviewText;
+
+  const isEditMode = !!editingMessage;
+  const canSend = !!(text?.trim?.());
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -217,7 +335,19 @@ export default function ChatScreen() {
           </View>
         ) : null}
 
-        {replyingTo ? (
+        {isEditMode ? (
+          <View style={styles.editBar}>
+            <View style={styles.editBarLeft}>
+              <Ionicons name="pencil" size={16} color={colors.primary} />
+              <Text style={styles.editBarLabel}>Editando mensaje</Text>
+            </View>
+            <Pressable onPress={cancelEdit} hitSlop={8}>
+              <Ionicons name="close" size={20} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+        ) : null}
+
+        {replyingTo && !isEditMode ? (
           <View style={styles.replyBar}>
             <View style={styles.replyBarLeft}>
               <View style={styles.replyBarAccent} />
@@ -233,29 +363,71 @@ export default function ChatScreen() {
         ) : null}
 
         <View style={styles.inputBar}>
-          <Pressable style={styles.attachBtn} onPress={() => setShowAttachMenu((v) => !v)} disabled={uploading}>
-            <Ionicons name={showAttachMenu ? 'close' : 'attach'} size={24} color={uploading ? colors.textSecondary : colors.primary} />
-          </Pressable>
+          {!isEditMode ? (
+            <Pressable style={styles.attachBtn} onPress={() => setShowAttachMenu((v) => !v)} disabled={uploading}>
+              <Ionicons name={showAttachMenu ? 'close' : 'attach'} size={24} color={uploading ? colors.textSecondary : colors.primary} />
+            </Pressable>
+          ) : null}
           <TextInput
             ref={inputRef}
-            style={styles.input}
+            style={[styles.input, isEditMode && { marginLeft: Spacing.sm }]}
             value={text}
             onChangeText={setText}
-            placeholder="Escribe un mensaje..."
+            placeholder={isEditMode ? 'Editar mensaje...' : 'Escribe un mensaje...'}
             placeholderTextColor={colors.textSecondary}
             multiline
             maxLength={1000}
             onFocus={() => setShowAttachMenu(false)}
           />
           <Pressable
-            style={[styles.sendBtn, (!text?.trim?.() || sending) && styles.sendBtnDisabled]}
+            style={[styles.sendBtn, (!canSend || sending) && styles.sendBtnDisabled]}
             onPress={handleSend}
-            disabled={!text?.trim?.() || sending}
+            disabled={!canSend || sending}
           >
-            <Ionicons name="send" size={20} color={text?.trim?.() ? colors.accent : colors.textSecondary} />
+            <Ionicons name={isEditMode ? 'checkmark' : 'send'} size={20} color={canSend ? colors.accent : colors.textSecondary} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Context menu */}
+      <Modal visible={!!contextMenuMsg} transparent animationType="fade" onRequestClose={() => setContextMenuMsg(null)}>
+        <Pressable style={styles.menuOverlay} onPress={() => setContextMenuMsg(null)}>
+          <View style={styles.menuCard}>
+            <Text style={styles.menuTitle} numberOfLines={1}>
+              {(contextMenuMsg?.messageType === 'image' ? 'Imagen' : (contextMenuMsg?.messageText ?? '')).substring(0, 40)}
+            </Text>
+            {(contextMenuMsg?.messageType ?? 'text') !== 'image' ? (
+              <Pressable style={styles.menuOption} onPress={handleEdit}>
+                <Ionicons name="pencil-outline" size={20} color={colors.primary} />
+                <Text style={styles.menuOptionText}>Editar</Text>
+              </Pressable>
+            ) : null}
+            <Pressable style={[styles.menuOption, styles.menuOptionDanger]} onPress={handleDeletePrompt}>
+              <Ionicons name="trash-outline" size={20} color="#E53935" />
+              <Text style={[styles.menuOptionText, { color: '#E53935' }]}>Eliminar</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Delete confirmation */}
+      <Modal visible={!!deleteConfirmMsg} transparent animationType="fade" onRequestClose={() => setDeleteConfirmMsg(null)}>
+        <Pressable style={styles.menuOverlay} onPress={() => setDeleteConfirmMsg(null)}>
+          <View style={styles.menuCard}>
+            <Ionicons name="warning-outline" size={32} color="#E53935" style={{ alignSelf: 'center', marginBottom: 8 }} />
+            <Text style={styles.deleteTitle}>¿Eliminar este mensaje?</Text>
+            <Text style={styles.deleteSubtitle}>El mensaje será reemplazado por "Mensaje eliminado" para ambos participantes.</Text>
+            <View style={styles.deleteActions}>
+              <Pressable style={styles.deleteCancelBtn} onPress={() => setDeleteConfirmMsg(null)}>
+                <Text style={styles.deleteCancelText}>Cancelar</Text>
+              </Pressable>
+              <Pressable style={styles.deleteConfirmBtn} onPress={handleDeleteForAll}>
+                <Text style={styles.deleteConfirmText}>Eliminar para todos</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -302,6 +474,13 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   attachOption: { alignItems: 'center', paddingVertical: 8, paddingHorizontal: 24 },
   attachOptionText: { fontSize: 12, color: c.textPrimary, marginTop: 4 },
   swipeReplyAction: { width: 60, justifyContent: 'center', alignItems: 'center' },
+  editBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md, paddingVertical: 8,
+    backgroundColor: `${c.primary}15`, borderTopWidth: 1, borderTopColor: c.border,
+  },
+  editBarLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  editBarLabel: { fontSize: 13, fontWeight: '600', color: c.primary },
   replyBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.md, paddingVertical: 8,
@@ -328,4 +507,37 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', marginLeft: Spacing.sm,
   },
   sendBtnDisabled: { backgroundColor: c.border },
+  menuOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center',
+  },
+  menuCard: {
+    width: 280, backgroundColor: c.surface, borderRadius: BorderRadius.lg,
+    padding: Spacing.lg, ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12 },
+      android: { elevation: 8 },
+      default: {},
+    }),
+  },
+  menuTitle: {
+    fontSize: 13, color: c.textSecondary, marginBottom: 12,
+    paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: c.border,
+  },
+  menuOption: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 10,
+  },
+  menuOptionDanger: {},
+  menuOptionText: { fontSize: 15, fontWeight: '500', color: c.textPrimary },
+  deleteTitle: { fontSize: 16, fontWeight: '700', color: c.textPrimary, textAlign: 'center', marginBottom: 6 },
+  deleteSubtitle: { fontSize: 13, color: c.textSecondary, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
+  deleteActions: { flexDirection: 'row', gap: 10 },
+  deleteCancelBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: BorderRadius.md,
+    backgroundColor: c.backgroundSection, alignItems: 'center',
+  },
+  deleteCancelText: { fontSize: 14, fontWeight: '600', color: c.textPrimary },
+  deleteConfirmBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: BorderRadius.md,
+    backgroundColor: '#E53935', alignItems: 'center',
+  },
+  deleteConfirmText: { fontSize: 14, fontWeight: '600', color: '#fff' },
 });

@@ -306,14 +306,17 @@ model Chat {
 }
 
 model ChatMessage {
-  id          String   @id @default(uuid()) @db.Uuid
-  chatId      String   @map("chat_id") @db.Uuid
-  senderId    String   @map("sender_id") @db.Uuid
-  messageText String   @map("message_text")
-  messageType String   @default("text") @map("message_type")
-  imageUrl    String?  @map("image_url")
-  replyToId   String?  @map("reply_to_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid()) @db.Uuid
+  chatId        String   @map("chat_id") @db.Uuid
+  senderId      String   @map("sender_id") @db.Uuid
+  messageText   String   @map("message_text")
+  messageType   String   @default("text") @map("message_type")
+  imageUrl      String?  @map("image_url")
+  replyToId     String?  @map("reply_to_id") @db.Uuid
+  status        String   @default("sent") @map("status") // sent | delivered | read
+  isEdited      Boolean  @default(false) @map("is_edited")
+  deletedForAll Boolean  @default(false) @map("deleted_for_all")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   chat    Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
   sender  User         @relation(fields: [senderId], references: [id])

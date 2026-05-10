@@ -27,3 +27,35 @@ export async function sendChatMessage(
   const res = await api.post(`/chats/${encodeURIComponent(chatId)}/messages`, body);
   return res?.data;
 }
+
+export async function editChatMessage(
+  chatId: string,
+  messageId: string,
+  messageText: string,
+): Promise<ChatMessageItem> {
+  const res = await api.patch(
+    `/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}`,
+    { messageText },
+  );
+  return res?.data;
+}
+
+export async function deleteChatMessage(
+  chatId: string,
+  messageId: string,
+): Promise<ChatMessageItem> {
+  const res = await api.delete(
+    `/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}`,
+  );
+  return res?.data;
+}
+
+export async function markMessagesDelivered(chatId: string, messageIds?: string[]): Promise<{ updated: number }> {
+  const res = await api.post(`/chats/${encodeURIComponent(chatId)}/messages/mark-delivered`, { messageIds });
+  return res?.data;
+}
+
+export async function markMessagesRead(chatId: string, messageIds?: string[]): Promise<{ updated: number }> {
+  const res = await api.post(`/chats/${encodeURIComponent(chatId)}/messages/mark-read`, { messageIds });
+  return res?.data;
+}

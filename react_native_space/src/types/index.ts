@@ -178,6 +178,7 @@ export interface ChatInfo {
   clientId: string;
   requestSummary: string;
   otherUserName: string;
+  unreadCount?: number;
   createdAt: string;
 }
 
@@ -204,6 +205,9 @@ export interface ChatMessageItem {
   messageText: string;
   messageType?: string;
   imageUrl?: string | null;
+  status?: 'sending' | 'sent' | 'delivered' | 'read';
+  isEdited?: boolean;
+  deletedForAll?: boolean;
   replyTo?: ChatMessageReplyTo | null;
   createdAt: string;
 }

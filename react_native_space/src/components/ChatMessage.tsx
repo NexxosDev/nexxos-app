@@ -15,16 +15,40 @@ interface ChatMessageProps {
   isVendorMessage?: boolean;
   messageType?: string;
   imageUrl?: string | null;
+  status?: 'sending' | 'sent' | 'delivered' | 'read';
+  isEdited?: boolean;
+  deletedForAll?: boolean;
   replyTo?: ChatMessageReplyTo | null;
   onReplyPress?: (replyToId: string) => void;
+  onLongPress?: () => void;
 }
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const IMG_SIZE = SCREEN_W * 0.55;
 
+function StatusTicks({ status, colors }: { status?: string; colors: ThemeColors }) {
+  if (!status) return null;
+  const isRead = status === 'read';
+  const tickColor = isRead ? '#4FC3F7' : (colors.textSecondary ?? '#999');
+
+  if (status === 'sending') {
+    return <Ionicons name="time-outline" size={13} color={colors.textSecondary ?? '#999'} style={{ marginLeft: 4 }} />;
+  }
+  if (status === 'sent') {
+    return <Ionicons name="checkmark" size={14} color={tickColor} style={{ marginLeft: 4 }} />;
+  }
+  return (
+    <View style={{ flexDirection: 'row', marginLeft: 4 }}>
+      <Ionicons name="checkmark" size={14} color={tickColor} style={{ marginRight: -6 }} />
+      <Ionicons name="checkmark" size={14} color={tickColor} />
+    </View>
+  );
+}
+
 export default function ChatMessage({
   messageText, senderName, createdAt, isOwn, isVendorMessage = false,
-  messageType, imageUrl, replyTo, onReplyPress,
+  messageType, imageUrl, status, isEdited, deletedForAll,
+  replyTo, onReplyPress, onLongPress,
 }: ChatMessageProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -37,7 +61,8 @@ export default function ChatMessage({
 
   const shouldBeYellow = isVendorMessage;
   const shouldBeOnRight = isVendorMessage;
-  const isImage = (messageType ?? 'text') === 'image' && !!imageUrl;
+  const isImage = !deletedForAll && (messageType ?? 'text') === 'image' && !!imageUrl;
+  const isDeleted = !!deletedForAll;
 
   const replySnippet = (replyTo?.messageText ?? '').length > 60
     ? (replyTo?.messageText ?? '').substring(0, 57) + '...'
@@ -45,10 +70,19 @@ export default function ChatMessage({
 
   return (
     <View style={[styles.row, shouldBeOnRight ? styles.rowOwn : styles.rowOther]}>
-      <View style={[styles.bubble, shouldBeYellow ? styles.bubbleVendor : styles.bubbleClient, isImage && styles.bubbleImage]}>
+      <Pressable
+        style={[
+          styles.bubble,
+          shouldBeYellow ? styles.bubbleVendor : styles.bubbleClient,
+          isImage && styles.bubbleImage,
+          isDeleted && styles.bubbleDeleted,
+        ]}
+        onLongPress={isOwn && !isDeleted ? onLongPress : undefined}
+        delayLongPress={400}
+      >
         {!isOwn ? <Text style={styles.sender}>{senderName ?? ''}</Text> : null}
 
-        {replyTo?.id ? (
+        {replyTo?.id && !isDeleted ? (
           <Pressable
             style={[styles.quotedBox, shouldBeYellow ? styles.quotedBoxVendor : styles.quotedBoxClient]}
             onPress={() => onReplyPress?.(replyTo.id)}
@@ -58,7 +92,12 @@ export default function ChatMessage({
           </Pressable>
         ) : null}
 
-        {isImage ? (
+        {isDeleted ? (
+          <View style={styles.deletedRow}>
+            <Ionicons name="ban-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.deletedText}>Mensaje eliminado</Text>
+          </View>
+        ) : isImage ? (
           <Pressable onPress={() => setPreviewOpen(true)}>
             <Image source={{ uri: imageUrl ?? '' }} style={styles.image} contentFit="cover" transition={200} placeholder={{ color: colors.border } as any} />
           </Pressable>
@@ -66,8 +105,14 @@ export default function ChatMessage({
           <Text style={[styles.text, shouldBeYellow ? styles.textVendor : styles.textClient]}>{messageText ?? ''}</Text>
         )}
 
-        <Text style={styles.time}>{isImage ? '📷 ' : ''}{formatTime(createdAt ?? '')}</Text>
-      </View>
+        <View style={styles.metaRow}>
+          {isEdited && !isDeleted ? (
+            <Text style={styles.editedLabel}>editado</Text>
+          ) : null}
+          <Text style={styles.time}>{formatTime(createdAt ?? '')}</Text>
+          {isOwn ? <StatusTicks status={status} colors={colors} /> : null}
+        </View>
+      </Pressable>
 
       {isImage ? (
         <Modal visible={previewOpen} transparent animationType="fade" onRequestClose={() => setPreviewOpen(false)}>
@@ -91,6 +136,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   bubbleVendor: { backgroundColor: c.bubbleVendor, borderBottomRightRadius: 4, borderWidth: 1, borderColor: c.bubbleVendorBorder },
   bubbleClient: { backgroundColor: c.bubbleClient, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: c.bubbleClientBorder },
   bubbleImage: { padding: 4, paddingHorizontal: 4 },
+  bubbleDeleted: { opacity: 0.7 },
   sender: { fontSize: 11, fontWeight: '600', color: c.textSecondary, marginBottom: 2, paddingHorizontal: 4 },
   quotedBox: { borderLeftWidth: 3, borderRadius: 6, padding: 6, paddingLeft: 8, marginBottom: 4 },
   quotedBoxVendor: { borderLeftColor: '#F9A825', backgroundColor: 'rgba(249,168,37,0.12)' },
@@ -100,7 +146,11 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   text: { fontSize: 15, lineHeight: 20 },
   textVendor: { color: c.textPrimary },
   textClient: { color: c.textPrimary },
-  time: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end', paddingHorizontal: 4, color: c.textSecondary },
+  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 3, paddingHorizontal: 4 },
+  editedLabel: { fontSize: 10, color: c.textSecondary, fontStyle: 'italic', marginRight: 4 },
+  time: { fontSize: 10, color: c.textSecondary },
+  deletedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
+  deletedText: { fontSize: 14, fontStyle: 'italic', color: c.textSecondary },
   image: { width: IMG_SIZE, height: IMG_SIZE, borderRadius: BorderRadius.md },
   previewOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' },
   previewClose: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, right: 20, zIndex: 10 },
