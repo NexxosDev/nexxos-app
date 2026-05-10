@@ -16,6 +16,7 @@ interface ResponseCardProps {
   vendorLatitude?: number | null;
   vendorLongitude?: number | null;
   onOpenChat?: () => void;
+  unreadCount?: number;
 }
 
 function formatDistance(km: number): string {
@@ -33,21 +34,29 @@ function openGoogleMaps(lat: number, lng: number) {
   }
 }
 
-export default function ResponseCard({ businessName, avgRating, initialMessage, distanceKm, vendorLatitude, vendorLongitude, onOpenChat }: ResponseCardProps) {
+export default function ResponseCard({ businessName, avgRating, initialMessage, distanceKm, vendorLatitude, vendorLongitude, onOpenChat, unreadCount }: ResponseCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const hasDistance = typeof distanceKm === 'number' && isFinite(distanceKm);
   const hasCoords = typeof vendorLatitude === 'number' && typeof vendorLongitude === 'number';
   const canNavigate = hasDistance && hasCoords;
+  const unread = unreadCount ?? 0;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, unread > 0 && { borderColor: colors.primary, borderWidth: 1.5 }]}>
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Ionicons name="storefront-outline" size={20} color={colors.primary} />
         </View>
         <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>{businessName ?? ''}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.name} numberOfLines={1}>{businessName ?? ''}</Text>
+            {unread > 0 ? (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadText}>{unread > 99 ? '99+' : String(unread)}</Text>
+              </View>
+            ) : null}
+          </View>
           <View style={styles.metaRow}>
             {typeof avgRating === 'number' ? (
               <View style={styles.ratingRow}>
@@ -95,4 +104,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   distanceLink: { fontSize: 12, color: '#07a0ff', textDecorationLine: 'underline', fontWeight: '600' },
   message: { fontSize: 13, color: c.textSubtitle, marginBottom: Spacing.sm, lineHeight: 18 },
   chatBtn: { alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: Spacing.md },
+  unreadBadge: { backgroundColor: '#E53935', borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 5, justifyContent: 'center', alignItems: 'center' },
+  unreadText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 });

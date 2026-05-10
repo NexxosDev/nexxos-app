@@ -285,20 +285,23 @@ export class ChatService {
       _count: { id: true },
     });
 
-    // Build requestId -> unreadCount map
+    // Build requestId -> unreadCount and chatId -> unreadCount maps
     const chatToRequest = new Map(chats.map((c) => [c.id, c.requestId]));
     const byRequestId: Record<string, number> = {};
+    const byChatId: Record<string, number> = {};
     let totalUnread = 0;
 
     for (const entry of unreadCounts ?? []) {
       const count = entry?._count?.id ?? 0;
+      if (count <= 0) continue;
       const requestId = chatToRequest.get(entry.chatId) ?? '';
-      if (requestId && count > 0) {
+      if (requestId) {
         byRequestId[requestId] = (byRequestId[requestId] ?? 0) + count;
-        totalUnread += count;
       }
+      byChatId[entry.chatId] = count;
+      totalUnread += count;
     }
 
-    return { totalUnread, byRequestId };
+    return { totalUnread, byRequestId, byChatId };
   }
 }

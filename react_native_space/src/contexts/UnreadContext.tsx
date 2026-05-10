@@ -6,12 +6,14 @@ import api from '../services/api';
 interface UnreadState {
   totalUnread: number;
   byRequestId: Record<string, number>;
+  byChatId: Record<string, number>;
   refresh: () => Promise<void>;
 }
 
 const UnreadContext = createContext<UnreadState>({
   totalUnread: 0,
   byRequestId: {},
+  byChatId: {},
   refresh: async () => {},
 });
 
@@ -25,12 +27,14 @@ export function UnreadProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [totalUnread, setTotalUnread] = useState(0);
   const [byRequestId, setByRequestId] = useState<Record<string, number>>({});
+  const [byChatId, setByChatId] = useState<Record<string, number>>({});
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchUnread = useCallback(async () => {
     if (!user?.id) {
       setTotalUnread(0);
       setByRequestId({});
+      setByChatId({});
       return;
     }
     try {
@@ -38,16 +42,17 @@ export function UnreadProvider({ children }: { children: React.ReactNode }) {
       const data = res?.data;
       setTotalUnread(data?.totalUnread ?? 0);
       setByRequestId(data?.byRequestId ?? {});
+      setByChatId(data?.byChatId ?? {});
     } catch {
-      // silently fail — network hiccup, auth expired, etc.
+      // silently fail
     }
   }, [user?.id]);
 
-  // Poll when authenticated
   useEffect(() => {
     if (!user?.id) {
       setTotalUnread(0);
       setByRequestId({});
+      setByChatId({});
       return;
     }
 
@@ -66,7 +71,7 @@ export function UnreadProvider({ children }: { children: React.ReactNode }) {
   }, [user?.id, fetchUnread]);
 
   return (
-    <UnreadContext.Provider value={{ totalUnread, byRequestId, refresh: fetchUnread }}>
+    <UnreadContext.Provider value={{ totalUnread, byRequestId, byChatId, refresh: fetchUnread }}>
       {children}
     </UnreadContext.Provider>
   );

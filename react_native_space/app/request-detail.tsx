@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getRequestDetail, getRequestResponses, closeRequest } from '../src/services/requests';
 import { getErrorMessage } from '../src/services/api';
+import { useUnread } from '../src/contexts/UnreadContext';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { Spacing, BorderRadius } from '../src/theme/colors';
 import type { ThemeColors } from '../src/theme/colors';
@@ -20,6 +21,7 @@ export default function RequestDetailScreen() {
   const router = useRouter();
   const { id = '' } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const { byChatId } = useUnread();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const iStyles = useMemo(() => createInfoStyles(colors), [colors]);
   const [detail, setDetail] = useState<RequestDetail | null>(null);
@@ -111,6 +113,7 @@ export default function RequestDetailScreen() {
               vendorLatitude={resp?.vendor?.latitude}
               vendorLongitude={resp?.vendor?.longitude}
               onOpenChat={detail?.status !== 'CERRADA' ? () => router.push(`/chat?chatId=${resp?.chatId ?? ''}`) : undefined}
+              unreadCount={byChatId?.[resp?.chatId ?? ''] ?? 0}
             />
           ))
         ) : (
