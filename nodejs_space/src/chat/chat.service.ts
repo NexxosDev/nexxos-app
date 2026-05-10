@@ -134,7 +134,9 @@ export class ChatService {
     });
 
     // 🔔 Push: Notificar al otro participante del chat
-    const senderName = `${message.sender.firstName} ${message.sender.lastName}`;
+    const personalName = `${message.sender.firstName ?? ''} ${message.sender.lastName ?? ''}`.trim();
+    // Si el sender es vendedor, usar razón social; si es cliente, usar nombre personal
+    const senderName = isVendor && vendor?.businessName ? vendor.businessName : (personalName || 'Usuario');
     const recipientUserId = isClient
       ? (chat as any).vendor?.userId
       : chat.clientId;

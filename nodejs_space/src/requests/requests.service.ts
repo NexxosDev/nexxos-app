@@ -160,6 +160,8 @@ export class RequestsService {
       const brand = await this.prisma.vehicleBrand.findUnique({ where: { id: dto.vehicleBrandId } });
       const model = await this.prisma.vehicleModel.findUnique({ where: { id: dto.vehicleModelId } });
       const cat = await this.prisma.partCategory.findUnique({ where: { id: dto.partCategoryId } });
+      const clientUser = await this.prisma.user.findUnique({ where: { id: clientId }, select: { firstName: true, lastName: true } });
+      const clientName = `${clientUser?.firstName ?? ''} ${clientUser?.lastName ?? ''}`.trim() || 'Un cliente';
       const vendorRows = await this.prisma.vendor.findMany({
         where: { id: { in: matchedVendors.map((v) => v.id) } },
         select: { userId: true },
@@ -168,7 +170,7 @@ export class RequestsService {
       const summary = `${brand?.name ?? ''} ${model?.name ?? ''} - ${cat?.name ?? ''}`;
       this.notificationService.sendToMultiple(
         vendorUserIds,
-        '📩 Nueva solicitud',
+        `📩 ${clientName} creó una solicitud`,
         summary,
         { type: 'NEW_REQUEST', requestId: request.id },
       ).catch((err) => this.logger.error('Push error (new request)', err));
@@ -391,6 +393,8 @@ export class RequestsService {
     });
 
     // 🔔 Push: Notificar a vendedores que respondieron que la solicitud fue cerrada
+    const closingClient = await this.prisma.user.findUnique({ where: { id: clientId }, select: { firstName: true, lastName: true } });
+    const closingClientName = `${closingClient?.firstName ?? ''} ${closingClient?.lastName ?? ''}`.trim() || 'Un cliente';
     const respondedMatches = await this.prisma.requestVendorMatch.findMany({
       where: { requestId, responded: true },
       include: { vendor: { select: { userId: true, businessName: true } } },
@@ -399,8 +403,8 @@ export class RequestsService {
     if (vendorUserIds.length > 0) {
       this.notificationService.sendToMultiple(
         vendorUserIds,
-        '🔒 Solicitud cerrada',
-        'Una solicitud que respondiste fue cerrada por el cliente',
+        `🔒 ${closingClientName} cerró una solicitud`,
+        'Una solicitud que respondiste fue cerrada',
         { type: 'REQUEST_CLOSED', requestId },
       ).catch((err) => this.logger.error('Push error (request closed)', err));
     }
@@ -414,7 +418,7 @@ export class RequestsService {
       if (ratedVendor) {
         this.notificationService.sendToUser(
           ratedVendor.userId,
-          '⭐ Nueva calificación',
+          `⭐ ${closingClientName} te calificó`,
           `Recibiste una calificación de ${dto.rating} estrella${dto.rating > 1 ? 's' : ''}`,
           { type: 'RATING_RECEIVED', requestId },
         ).catch((err) => this.logger.error('Push error (rating)', err));
