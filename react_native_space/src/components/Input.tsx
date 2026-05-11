@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { View, TextInput, Text, StyleSheet, Pressable, Animated, TextInputProps, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -20,6 +20,13 @@ export default function Input({ label, error, containerStyle, secureTextEntry, v
   const [showPassword, setShowPassword] = useState(false);
   const isLocked = locked === true;
   const labelAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
+
+  // Float label up when value is set externally (e.g. pre-fill)
+  useEffect(() => {
+    if ((value?.length ?? 0) > 0) {
+      Animated.timing(labelAnim, { toValue: 1, duration: 150, useNativeDriver: false }).start();
+    }
+  }, [value]);
 
   const handleFocus = (e: any) => {
     if (isLocked) return;

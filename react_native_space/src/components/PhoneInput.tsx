@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MaskInput from 'react-native-mask-input';
@@ -25,6 +25,13 @@ export default function PhoneInput({ label, value, onChangeText, error, containe
   const [focused, setFocused] = useState(false);
   const isLocked = locked === true;
   const labelAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
+
+  // Float label up when value is set externally (e.g. pre-fill)
+  useEffect(() => {
+    if ((value?.length ?? 0) > 0) {
+      Animated.timing(labelAnim, { toValue: 1, duration: 150, useNativeDriver: false }).start();
+    }
+  }, [value]);
 
   const handleFocus = () => {
     if (isLocked) return;
