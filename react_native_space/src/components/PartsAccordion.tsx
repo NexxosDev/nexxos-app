@@ -166,7 +166,7 @@ export default function PartsAccordion({
                             <Ionicons
                               name={isSelected ? 'checkbox' : 'square-outline'}
                               size={18}
-                              color={isSelected ? colors.primary : colors.border}
+                              color={isSelected ? colors.primary : colors.textSecondary}
                             />
                             <Text
                               style={[
@@ -246,7 +246,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.textSecondary,
   },
   countTextActive: {
-    color: c.accent,
+    color: c.primary,
   },
   chevron: {
     marginLeft: 4,
@@ -304,13 +304,13 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: BorderRadius.sm,
-    backgroundColor: c.cardBg,
+    backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: c.border,
   },
   subCellSelected: {
     borderColor: c.primary,
-    backgroundColor: `${c.primary}10`,
+    backgroundColor: `${c.primary}25`,
   },
   subCellPressed: {
     opacity: 0.7,
@@ -322,6 +322,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   },
   subNameSelected: {
     fontWeight: '600',
-    color: c.accent,
+    color: c.primary,
   },
 });
