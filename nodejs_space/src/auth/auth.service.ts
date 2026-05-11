@@ -210,7 +210,7 @@ export class AuthService {
 
     const hasVendorRole = user.userRoles.some((ur: any) => ur.role.name === 'VENDEDOR');
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx: any) => {
       if (!hasVendorRole) {
         await tx.userRole.create({ data: { userId: user.id, roleId: vendorRole.id } });
       }

@@ -10,16 +10,19 @@ interface InputProps extends Omit<TextInputProps, 'style'> {
   error?: string;
   containerStyle?: ViewStyle;
   secureTextEntry?: boolean;
+  locked?: boolean;
 }
 
-export default function Input({ label, error, containerStyle, secureTextEntry, value, onFocus, onBlur, ...rest }: InputProps) {
+export default function Input({ label, error, containerStyle, secureTextEntry, value, onFocus, onBlur, locked, ...rest }: InputProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [focused, setFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const isLocked = locked === true;
   const labelAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   const handleFocus = (e: any) => {
+    if (isLocked) return;
     setFocused(true);
     Animated.timing(labelAnim, { toValue: 1, duration: 150, useNativeDriver: false }).start();
     onFocus?.(e);
@@ -41,31 +44,36 @@ export default function Input({ label, error, containerStyle, secureTextEntry, v
     <View style={[styles.container, containerStyle]}>
       <View style={[
         styles.inputContainer,
-        focused && styles.focused,
+        focused && !isLocked && styles.focused,
+        isLocked && styles.lockedContainer,
         error ? styles.errorBorder : null,
       ]}>
         <Animated.Text style={[
           styles.label,
-          { top: labelTop, fontSize: labelSize, backgroundColor: colors.inputBg },
-          (focused || hasValue) && styles.labelFocused,
+          { top: labelTop, fontSize: labelSize, backgroundColor: isLocked ? 'transparent' : colors.inputBg },
+          (focused || hasValue) && !isLocked && styles.labelFocused,
+          isLocked && styles.lockedLabel,
           error ? styles.labelError : null,
         ]}>
           {label ?? ''}
         </Animated.Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, isLocked && styles.lockedInput]}
           value={value}
           onFocus={handleFocus}
           onBlur={handleBlur}
           secureTextEntry={secureTextEntry && !showPassword}
           placeholderTextColor={colors.textSecondary}
+          editable={!isLocked}
           {...rest}
         />
-        {secureTextEntry && (
+        {isLocked ? (
+          <Ionicons name="lock-closed" size={16} color={colors.textSecondary} style={{ marginLeft: 6 }} />
+        ) : secureTextEntry ? (
           <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn} hitSlop={8}>
             <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textSecondary} />
           </Pressable>
-        )}
+        ) : null}
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
@@ -100,4 +108,15 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   input: { flex: 1, fontSize: 16, color: c.textPrimary, paddingVertical: 0 },
   eyeBtn: { marginLeft: Spacing.sm },
   errorText: { color: c.error, fontSize: 12, marginTop: 4, marginLeft: 4 },
+  lockedContainer: {
+    backgroundColor: c.backgroundSection,
+    borderColor: c.border,
+    borderStyle: 'dashed' as const,
+  },
+  lockedLabel: {
+    color: c.textSecondary,
+  },
+  lockedInput: {
+    color: c.textSecondary,
+  },
 });

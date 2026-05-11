@@ -64,7 +64,7 @@ export class NotificationService implements OnModuleInit {
       return;
     }
 
-    const messages = tokens.map((t) => ({
+    const messages = tokens.map((t: any) => ({
       to: t.token,
       sound: 'default' as const,
       title,
@@ -91,7 +91,7 @@ export class NotificationService implements OnModuleInit {
 
     if (tokens.length === 0) return;
 
-    const messages = tokens.map((t) => ({
+    const messages = tokens.map((t: any) => ({
       to: t.token,
       sound: 'default' as const,
       title,

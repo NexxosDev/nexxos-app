@@ -356,11 +356,11 @@ export default function RegisterVendorScreen() {
                 <Text style={styles.existingUserNoticeText}>Tus datos personales ya están registrados. Solo necesitas completar la verificación de identidad.</Text>
               </View>
             ) : null}
-            <Input label="Nombre" value={personal.firstName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), firstName: v }))} editable={!isExisting} containerStyle={isExisting ? { opacity: 0.5 } : undefined} />
-            <Input label="Apellido" value={personal.lastName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), lastName: v }))} editable={!isExisting} containerStyle={isExisting ? { opacity: 0.5 } : undefined} />
-            <Input label="Cédula" value={personal.documentId} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), documentId: formatCedula(v) }))} placeholder="V-12345678" editable={!isExisting} containerStyle={isExisting ? { opacity: 0.5 } : undefined} />
-            <PhoneInput label="Teléfono" value={personal.phone} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), phone: v }))} editable={!isExisting} style={isExisting ? { opacity: 0.5 } : undefined} />
-            <Input label="Email" value={personal.email} onChangeText={(v) => { setPersonal((p) => ({ ...(p ?? {}), email: v })); setEmailVerified(false); }} keyboardType="email-address" autoCapitalize="none" editable={!isExisting} containerStyle={isExisting ? { opacity: 0.5 } : undefined} />
+            <Input label="Nombre" value={personal.firstName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), firstName: v }))} locked={isExisting} />
+            <Input label="Apellido" value={personal.lastName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), lastName: v }))} locked={isExisting} />
+            <Input label="Cédula" value={personal.documentId} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), documentId: formatCedula(v) }))} placeholder="V-12345678" locked={isExisting} />
+            <PhoneInput label="Teléfono" value={personal.phone} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), phone: v }))} locked={isExisting} />
+            <Input label="Email" value={personal.email} onChangeText={(v) => { setPersonal((p) => ({ ...(p ?? {}), email: v })); setEmailVerified(false); }} keyboardType="email-address" autoCapitalize="none" locked={isExisting} />
             {!isExisting ? (
               <>
                 <EmailVerification email={personal.email} verified={emailVerified} onVerified={setEmailVerified} />

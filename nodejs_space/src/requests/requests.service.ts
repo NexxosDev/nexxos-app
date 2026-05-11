@@ -165,10 +165,10 @@ export class RequestsService {
       const clientUser = await this.prisma.user.findUnique({ where: { id: clientId }, select: { firstName: true, lastName: true } });
       const clientName = `${clientUser?.firstName ?? ''} ${clientUser?.lastName ?? ''}`.trim() || 'Un cliente';
       const vendorRows = await this.prisma.vendor.findMany({
-        where: { id: { in: matchedVendors.map((v) => v.id) } },
+        where: { id: { in: matchedVendors.map((v: any) => v.id) } },
         select: { userId: true },
       });
-      const vendorUserIds = vendorRows.map((v) => v.userId);
+      const vendorUserIds = vendorRows.map((v: any) => v.userId);
       const summary = `${brand?.name ?? ''} ${model?.name ?? ''} - ${cat?.name ?? ''}`;
       this.notificationService.sendToMultiple(
         vendorUserIds,

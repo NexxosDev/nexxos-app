@@ -278,7 +278,7 @@ export class ChatService {
       return { totalUnread: 0, byRequestId: {} };
     }
 
-    const chatIds = chats.map((c) => c.id);
+    const chatIds = chats.map((c: any) => c.id);
 
     // Count unread messages per chat (messages NOT sent by this user, not read, not deleted)
     const unreadCounts = await this.prisma.chatMessage.groupBy({
@@ -293,19 +293,20 @@ export class ChatService {
     });
 
     // Build requestId -> unreadCount and chatId -> unreadCount maps
-    const chatToRequest = new Map(chats.map((c) => [c.id, c.requestId]));
+    const chatToRequest = new Map<string, string>(chats.map((c: any) => [c.id, c.requestId]));
     const byRequestId: Record<string, number> = {};
     const byChatId: Record<string, number> = {};
     let totalUnread = 0;
 
     for (const entry of unreadCounts ?? []) {
-      const count = entry?._count?.id ?? 0;
+      const count = (entry as any)?._count?.id ?? 0;
       if (count <= 0) continue;
-      const requestId = chatToRequest.get(entry.chatId) ?? '';
+      const chatId = String((entry as any).chatId ?? '');
+      const requestId = chatToRequest.get(chatId) ?? '';
       if (requestId) {
         byRequestId[requestId] = (byRequestId[requestId] ?? 0) + count;
       }
-      byChatId[entry.chatId] = count;
+      byChatId[chatId] = count;
       totalUnread += count;
     }
 
