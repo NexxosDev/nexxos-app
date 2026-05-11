@@ -35,6 +35,7 @@ export interface RequestListItem {
   responseCount: number;
   state: string;
   municipality: string;
+  lastMessageAt: string | null;
   createdAt: string;
 }
 
@@ -82,6 +83,7 @@ export interface VendorRequestListItem {
     municipality: string;
     state: string;
     searchRadiusKm: number;
+    lastMessageAt: string | null;
     createdAt: string;
     clientFirstName: string;
     clientLastName?: string;

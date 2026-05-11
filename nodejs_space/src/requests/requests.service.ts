@@ -203,7 +203,7 @@ export class RequestsService {
         where,
         skip: offset,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ lastMessageAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }],
         include: {
           vehicleBrand: true,
           vehicleModel: true,
@@ -228,6 +228,7 @@ export class RequestsService {
         responseCount: r._count.requestResponses,
         state: r.state?.name ?? null,
         municipality: r.municipality?.name ?? null,
+        lastMessageAt: r.lastMessageAt?.toISOString?.() ?? null,
         createdAt: r.createdAt.toISOString(),
       })),
       total,
@@ -452,7 +453,7 @@ export class RequestsService {
         where,
         skip: offset,
         take: limit,
-        orderBy: { deliveredAt: 'desc' },
+        orderBy: [{ request: { lastMessageAt: { sort: 'desc', nulls: 'last' } } }, { deliveredAt: 'desc' }],
         include: {
           request: {
             include: {
@@ -480,6 +481,7 @@ export class RequestsService {
           municipality: m.request.municipality?.name ?? null,
           state: m.request.state?.name ?? null,
           searchRadiusKm: m.request.searchRadiusKm,
+          lastMessageAt: m.request.lastMessageAt?.toISOString?.() ?? null,
           createdAt: m.request.createdAt.toISOString(),
           clientFirstName: m.request.client.firstName,
           clientLastName: m.request.client.lastName ?? '',

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, ScrollView } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -49,6 +49,16 @@ export default function VendorRequests() {
     notificationTypes: ['NEW_REQUEST', 'REQUEST_CLOSED'],
     enabled: focused,
   });
+
+  // Re-fetch list when unread counts change (new message → order may shift)
+  const prevUnreadRef = useRef<string>('');
+  useEffect(() => {
+    const key = JSON.stringify(byRequestId ?? {});
+    if (prevUnreadRef.current && prevUnreadRef.current !== key) {
+      fetchData(true);
+    }
+    prevUnreadRef.current = key;
+  }, [byRequestId]);
 
   const filters: { key: VFilter; label: string }[] = [
     { key: 'all', label: 'Todas' },

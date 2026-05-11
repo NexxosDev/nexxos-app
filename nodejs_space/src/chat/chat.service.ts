@@ -146,15 +146,22 @@ export class ChatService {
   async sendMessage(chatId: string, userId: string, messageText: string, messageType = 'text', imageUrl?: string, replyToId?: string) {
     const { chat, isClient, isVendor, vendorRecord } = await this.verifyAccess(chatId, userId);
 
-    const message = await this.prisma.chatMessage.create({
-      data: {
-        chatId, senderId: userId, messageText, messageType,
-        imageUrl: imageUrl ?? null,
-        replyToId: replyToId ?? null,
-        status: 'sent',
-      },
-      select: MESSAGE_SELECT,
-    });
+    const now = new Date();
+    const [message] = await this.prisma.$transaction([
+      this.prisma.chatMessage.create({
+        data: {
+          chatId, senderId: userId, messageText, messageType,
+          imageUrl: imageUrl ?? null,
+          replyToId: replyToId ?? null,
+          status: 'sent',
+        },
+        select: MESSAGE_SELECT,
+      }),
+      this.prisma.request.update({
+        where: { id: chat.requestId },
+        data: { lastMessageAt: now },
+      }),
+    ]);
 
     const personalName = `${message.sender?.firstName ?? ''} ${message.sender?.lastName ?? ''}`.trim();
     const senderName = isVendor && vendorRecord?.businessName ? vendorRecord.businessName : (personalName || 'Usuario');
