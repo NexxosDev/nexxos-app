@@ -12,6 +12,7 @@ import { Spacing, BorderRadius } from '../src/theme/colors';
 import Button from '../src/components/Button';
 import LoadingSpinner from '../src/components/LoadingSpinner';
 import VehicleAccordion from '../src/components/VehicleAccordion';
+import PartsAccordion from '../src/components/PartsAccordion';
 import type { VendorProfile, CatalogItem } from '../src/types';
 
 export default function VendorEditProfileScreen() {
@@ -26,7 +27,6 @@ export default function VendorEditProfileScreen() {
   const [success, setSuccess] = useState(false);
 
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
 
   const [modelsMap, setModelsMap] = useState<Record<string, CatalogItem[]>>({});
@@ -51,7 +51,6 @@ export default function VendorEditProfileScreen() {
         }
         const subs = p?.partSubcategories ?? [];
         const catIds = [...new Set(subs.map((s) => s?.category?.id).filter(Boolean))] as string[];
-        setSelectedCategories(catIds);
         setSelectedSubcategories(subs.map((s) => s?.id).filter(Boolean) as string[]);
         for (const catId of catIds) {
           const items = await catalog?.loadSubcategories?.(catId) ?? [];
@@ -94,24 +93,23 @@ export default function VendorEditProfileScreen() {
     setSelectedModels((prev) => (prev ?? []).filter((id) => !brandModelIds.has(id)));
   }, [modelsMap]);
 
-  const toggleCategory = (catId: string) => {
-    setSelectedCategories((prev) => {
-      const arr = prev ?? [];
-      if (arr.includes(catId)) {
-        setSelectedSubcategories((s) => (s ?? []).filter((sid) => !(subcategoriesMap?.[catId] ?? []).some((sub) => sub?.id === sid)));
-        return arr.filter((id) => id !== catId);
-      }
-      loadSubsForCategory(catId);
-      return [...arr, catId];
-    });
-  };
-
-  const toggleSubcategory = (subId: string) => {
+  const toggleSubcategory = useCallback((subId: string) => {
     setSelectedSubcategories((prev) => {
       const arr = prev ?? [];
       return arr.includes(subId) ? arr.filter((id) => id !== subId) : [...arr, subId];
     });
-  };
+  }, []);
+
+  const selectAllSubs = useCallback((catId: string) => {
+    const catSubs = subcategoriesMap?.[catId] ?? [];
+    const ids = catSubs.map((s) => s?.id).filter(Boolean) as string[];
+    setSelectedSubcategories((prev) => [...new Set([...(prev ?? []), ...ids])]);
+  }, [subcategoriesMap]);
+
+  const deselectAllSubs = useCallback((catId: string) => {
+    const catSubIds = new Set((subcategoriesMap?.[catId] ?? []).map((s) => s?.id).filter(Boolean));
+    setSelectedSubcategories((prev) => (prev ?? []).filter((id) => !catSubIds.has(id)));
+  }, [subcategoriesMap]);
 
   const handleSave = async () => {
     setError('');
@@ -185,43 +183,16 @@ export default function VendorEditProfileScreen() {
           />
 
           <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>¿Qué repuestos ofreces?</Text>
-          <Text style={styles.sectionDesc}>Selecciona categorías y subcategorías</Text>
-          {(catalog?.categories ?? []).map((cat) => {
-            const isSelected = (selectedCategories ?? []).includes(cat?.id ?? '');
-            const subs = subcategoriesMap?.[cat?.id ?? ''] ?? [];
-            return (
-              <View key={cat?.id}>
-                <Pressable
-                  style={[styles.categoryRow, isSelected && styles.categoryRowSelected]}
-                  onPress={() => toggleCategory(cat?.id ?? '')}
-                >
-                  <Text style={[styles.categoryText, isSelected && styles.categoryTextSelected]}>
-                    {cat?.name ?? ''}
-                  </Text>
-                  <Ionicons
-                    name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={22}
-                    color={isSelected ? colors.primary : colors.border}
-                  />
-                </Pressable>
-                {isSelected && (subs?.length ?? 0) > 0 ? (
-                  <View style={styles.chipContainer}>
-                    {(subs ?? []).map((sub) => (
-                      <Pressable
-                        key={sub?.id}
-                        style={[styles.chip, styles.chipSmall, (selectedSubcategories ?? []).includes(sub?.id ?? '') && styles.chipSelected]}
-                        onPress={() => toggleSubcategory(sub?.id ?? '')}
-                      >
-                        <Text style={[styles.chipTextSmall, (selectedSubcategories ?? []).includes(sub?.id ?? '') && styles.chipTextSelected]}>
-                          {sub?.name ?? ''}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-            );
-          })}
+          <Text style={styles.sectionDesc}>Toca una categoría para ver subcategorías</Text>
+          <PartsAccordion
+            categories={catalog?.categories ?? []}
+            subcategoriesMap={subcategoriesMap ?? {}}
+            selectedSubcategories={selectedSubcategories ?? []}
+            onToggleSubcategory={toggleSubcategory}
+            onSelectAllSubs={selectAllSubs}
+            onDeselectAllSubs={deselectAllSubs}
+            onExpandCategory={loadSubsForCategory}
+          />
 
           <Button title="Guardar Cambios" onPress={handleSave} loading={saving} style={styles.saveBtn} />
         </ScrollView>
@@ -247,16 +218,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   divider: { height: 1, backgroundColor: c.border, marginVertical: 4 },
   sectionLabel: { fontSize: 16, fontWeight: '600', color: c.textPrimary, marginBottom: 4 },
   sectionDesc: { fontSize: 13, color: c.textSecondary, marginBottom: Spacing.sm },
-  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Spacing.md },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: BorderRadius.full, backgroundColor: c.chipBg },
-  chipSmall: { paddingHorizontal: 10, paddingVertical: 6 },
-  chipSelected: { backgroundColor: c.chipSelectedBg },
-  chipText: { fontSize: 14, color: c.textSubtitle },
-  chipTextSmall: { fontSize: 12, color: c.textSubtitle },
-  chipTextSelected: { color: c.accent, fontWeight: '600' },
-  categoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: Spacing.sm, borderRadius: BorderRadius.sm, marginBottom: 4 },
-  categoryRowSelected: { backgroundColor: `${c.primary}15` },
-  categoryText: { fontSize: 15, color: c.textPrimary },
-  categoryTextSelected: { fontWeight: '600', color: c.primary },
+
   saveBtn: { marginTop: Spacing.lg },
 });
