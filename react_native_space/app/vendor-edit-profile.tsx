@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,7 @@ import type { ThemeColors } from '../src/theme/colors';
 import { Spacing, BorderRadius } from '../src/theme/colors';
 import Button from '../src/components/Button';
 import LoadingSpinner from '../src/components/LoadingSpinner';
-import BrandsByOrigin from '../src/components/BrandsByOrigin';
+import VehicleAccordion from '../src/components/VehicleAccordion';
 import type { VendorProfile, CatalogItem } from '../src/types';
 
 export default function VendorEditProfileScreen() {
@@ -25,7 +25,6 @@ export default function VendorEditProfileScreen() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
@@ -45,7 +44,6 @@ export default function VendorEditProfileScreen() {
         setProfile(p ?? null);
         const models = p?.vehicleModels ?? [];
         const brandIds = [...new Set(models.map((m) => m?.brand?.id).filter(Boolean))] as string[];
-        setSelectedBrands(brandIds);
         setSelectedModels(models.map((m) => m?.id).filter(Boolean) as string[]);
         for (const brandId of brandIds) {
           const items = await catalog?.loadModels?.(brandId) ?? [];
@@ -78,24 +76,23 @@ export default function VendorEditProfileScreen() {
     }
   }, [subcategoriesMap, catalog]);
 
-  const toggleBrand = (brandId: string) => {
-    setSelectedBrands((prev) => {
-      const arr = prev ?? [];
-      if (arr.includes(brandId)) {
-        setSelectedModels((m) => (m ?? []).filter((mid) => !(modelsMap?.[brandId] ?? []).some((model) => model?.id === mid)));
-        return arr.filter((id) => id !== brandId);
-      }
-      loadModelsForBrand(brandId);
-      return [...arr, brandId];
-    });
-  };
-
-  const toggleModel = (modelId: string) => {
+  const toggleModel = useCallback((modelId: string) => {
     setSelectedModels((prev) => {
       const arr = prev ?? [];
       return arr.includes(modelId) ? arr.filter((id) => id !== modelId) : [...arr, modelId];
     });
-  };
+  }, []);
+
+  const selectAllModels = useCallback((brandId: string) => {
+    const brandModels = modelsMap?.[brandId] ?? [];
+    const ids = brandModels.map((m) => m?.id).filter(Boolean) as string[];
+    setSelectedModels((prev) => [...new Set([...(prev ?? []), ...ids])]);
+  }, [modelsMap]);
+
+  const deselectAllModels = useCallback((brandId: string) => {
+    const brandModelIds = new Set((modelsMap?.[brandId] ?? []).map((m) => m?.id).filter(Boolean));
+    setSelectedModels((prev) => (prev ?? []).filter((id) => !brandModelIds.has(id)));
+  }, [modelsMap]);
 
   const toggleCategory = (catId: string) => {
     setSelectedCategories((prev) => {
@@ -176,38 +173,16 @@ export default function VendorEditProfileScreen() {
           </View>
 
           <Text style={styles.sectionLabel}>¿Qué vehículos manejas?</Text>
-          <Text style={styles.sectionDesc}>Selecciona marcas y luego modelos</Text>
-          <BrandsByOrigin
+          <Text style={styles.sectionDesc}>Toca una marca para ver sus modelos</Text>
+          <VehicleAccordion
             brands={catalog?.brands ?? []}
-            selectedBrands={selectedBrands ?? []}
-            onToggleBrand={toggleBrand}
+            modelsMap={modelsMap ?? {}}
+            selectedModels={selectedModels ?? []}
+            onToggleModel={toggleModel}
+            onSelectAllModels={selectAllModels}
+            onDeselectAllModels={deselectAllModels}
+            onExpandBrand={loadModelsForBrand}
           />
-          {(selectedBrands ?? []).map((brandId) => {
-            const brand = (catalog?.brands ?? []).find((b) => b?.id === brandId);
-            const models = modelsMap?.[brandId] ?? [];
-            return (
-              <View key={brandId} style={styles.modelSection}>
-                <Text style={styles.modelBrand}>{brand?.name ?? ''}</Text>
-                {(models?.length ?? 0) === 0 ? (
-                  <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 4 }} />
-                ) : (
-                  <View style={styles.chipContainer}>
-                    {(models ?? []).map((m) => (
-                      <Pressable
-                        key={m?.id}
-                        style={[styles.chip, styles.chipSmall, (selectedModels ?? []).includes(m?.id ?? '') && styles.chipSelected]}
-                        onPress={() => toggleModel(m?.id ?? '')}
-                      >
-                        <Text style={[styles.chipTextSmall, (selectedModels ?? []).includes(m?.id ?? '') && styles.chipTextSelected]}>
-                          {m?.name ?? ''}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
-              </View>
-            );
-          })}
 
           <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>¿Qué repuestos ofreces?</Text>
           <Text style={styles.sectionDesc}>Selecciona categorías y subcategorías</Text>
@@ -279,8 +254,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   chipText: { fontSize: 14, color: c.textSubtitle },
   chipTextSmall: { fontSize: 12, color: c.textSubtitle },
   chipTextSelected: { color: c.accent, fontWeight: '600' },
-  modelSection: { marginBottom: Spacing.md, paddingLeft: Spacing.sm },
-  modelBrand: { fontSize: 14, fontWeight: '600', color: c.textPrimary, marginBottom: 6 },
   categoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: Spacing.sm, borderRadius: BorderRadius.sm, marginBottom: 4 },
   categoryRowSelected: { backgroundColor: `${c.primary}15` },
   categoryText: { fontSize: 15, color: c.textPrimary },
