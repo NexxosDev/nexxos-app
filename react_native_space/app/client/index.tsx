@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,6 +35,16 @@ export default function ClientHome() {
   }, []);
 
   useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
+
+  // Re-fetch when unread counts change (new message → order may shift)
+  const prevUnreadRef = useRef<string>('');
+  useEffect(() => {
+    const key = JSON.stringify(byRequestId ?? {});
+    if (prevUnreadRef.current && prevUnreadRef.current !== key) {
+      fetchData(true);
+    }
+    prevUnreadRef.current = key;
+  }, [byRequestId]);
 
   const renderHeader = () => (
     <View>
