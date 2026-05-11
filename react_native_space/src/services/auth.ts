@@ -76,6 +76,32 @@ export async function resendVerificationEmailApi(email: string): Promise<{ succe
   return response.json();
 }
 
+export async function upgradeToVendorApi(data: {
+  businessName: string;
+  rif: string;
+  country?: string;
+  city?: string;
+  state?: string;
+  municipality?: string;
+  parish?: string;
+  street?: string;
+  postalCode?: string;
+  latitude?: number;
+  longitude?: number;
+  fullAddress?: string;
+  referencePoint?: string;
+  vehicleModelIds: string[];
+  partSubcategoryIds: string[];
+  documentImagePath?: string;
+  logoPath?: string;
+  personalDocPath?: string;
+  selfiePath?: string;
+  identityVerified?: boolean;
+}): Promise<{ success: boolean; user: User }> {
+  const res = await api.post('/auth/upgrade-to-vendor', data);
+  return res?.data;
+}
+
 export async function resetPasswordApi(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
   const response = await fetch(new URL('auth/reset-password', process.env.EXPO_PUBLIC_API_URL).toString(), {
     method: 'POST',

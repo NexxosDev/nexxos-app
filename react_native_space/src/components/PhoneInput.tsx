@@ -11,11 +11,13 @@ interface PhoneInputProps {
   onChangeText: (text: string) => void;
   error?: string;
   containerStyle?: ViewStyle;
+  editable?: boolean;
+  style?: ViewStyle;
 }
 
 const PHONE_MASK = ['+', '5', '8', '-', /\d/, /\d/, /\d/, '-', /\d/, /\d/, /\d/, '-', /\d/, /\d/, '-', /\d/, /\d/];
 
-export default function PhoneInput({ label, value, onChangeText, error, containerStyle }: PhoneInputProps) {
+export default function PhoneInput({ label, value, onChangeText, error, containerStyle, editable = true, style }: PhoneInputProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [focused, setFocused] = useState(false);
@@ -36,7 +38,7 @@ export default function PhoneInput({ label, value, onChangeText, error, containe
   const hasValue = (value?.length ?? 0) > 0;
 
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View style={[styles.container, containerStyle, style]}>
       <View style={[styles.inputContainer, focused && styles.focused, error ? styles.errorBorder : null]}>
         <Animated.Text style={[styles.label, { top: labelTop, fontSize: labelSize, backgroundColor: colors.inputBg }, (focused || hasValue) && styles.labelFocused, error ? styles.labelError : null]}>
           {label ?? ''}
@@ -50,6 +52,7 @@ export default function PhoneInput({ label, value, onChangeText, error, containe
           mask={PHONE_MASK}
           keyboardType="phone-pad"
           placeholderTextColor={colors.textSecondary}
+          editable={editable}
         />
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}

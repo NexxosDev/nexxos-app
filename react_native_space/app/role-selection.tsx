@@ -41,7 +41,7 @@ export default function RoleSelectionScreen() {
           style={[styles.card, !hasVendor && styles.cardLocked]}
           onPress={() => {
             if (hasVendor) router.replace('/vendor');
-            else router.push('/auth/register-vendor');
+            else router.push('/auth/vendor-confirm');
           }}
         >
           <View style={styles.cardIcon}>

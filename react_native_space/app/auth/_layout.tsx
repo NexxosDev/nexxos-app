@@ -9,6 +9,7 @@ export default function AuthLayout() {
       <Stack.Screen name="register-type" />
       <Stack.Screen name="register-client" />
       <Stack.Screen name="register-vendor" />
+      <Stack.Screen name="vendor-confirm" />
     </Stack>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Alert, Image, Modal, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -10,6 +10,7 @@ import { getErrorMessage } from '../../src/services/api';
 import { uploadFile } from '../../src/services/upload';
 import { updateVendorProfile } from '../../src/services/vendor';
 import { uploadRegistrationFile, verifyIdentity } from '../../src/services/identity';
+import { upgradeToVendorApi } from '../../src/services/auth';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { formatCedula, validateCedula } from '../../src/utils/cedula';
 import type { ThemeColors } from '../../src/theme/colors';
@@ -29,7 +30,9 @@ const TOTAL_STEPS = 6;
 
 export default function RegisterVendorScreen() {
   const router = useRouter();
-  const { signup, user } = useAuth();
+  const { existing: existingParam = '' } = useLocalSearchParams<{ existing?: string }>();
+  const isExisting = existingParam === '1';
+  const { signup, user, refreshUser } = useAuth();
   const catalog = useCatalog();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -73,11 +76,28 @@ export default function RegisterVendorScreen() {
   const [showLiveness, setShowLiveness] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
 
+  // Pre-fill personal data for existing users
   useEffect(() => {
-    if (user) {
+    if (isExisting && user) {
+      setPersonal((p) => ({
+        ...(p ?? {}),
+        firstName: user?.firstName ?? '',
+        lastName: user?.lastName ?? '',
+        phone: user?.phone ?? '',
+        documentId: user?.documentId ?? '',
+        email: user?.email ?? '',
+        password: '',
+        confirmPassword: '',
+      }));
+    }
+  }, [isExisting, user]);
+
+  // Only redirect logged-in users away if this is NOT an existing-user upgrade
+  useEffect(() => {
+    if (user && !isExisting) {
       router.replace('/role-selection');
     }
-  }, [user]);
+  }, [user, isExisting]);
 
   useEffect(() => { catalog?.loadBrands?.(); catalog?.loadCategories?.(); }, []);
 
@@ -231,6 +251,10 @@ export default function RegisterVendorScreen() {
 
   const canNext = (): boolean => {
     if (step === 1) {
+      if (isExisting) {
+        // Existing user: personal data is pre-filled, only identity verification needed
+        return identityVerified;
+      }
       const emailValid = personal?.email?.trim?.() && /\S+@\S+\.\S+/.test(personal.email);
       const cedulaOk = !validateCedula(personal?.documentId ?? '');
       const personalValid = !!(personal?.firstName?.trim?.() && personal?.lastName?.trim?.() && personal?.phone?.trim?.() && cedulaOk && emailValid && personal?.password && personal?.password === personal?.confirmPassword && (personal?.password?.length ?? 0) >= 6);
@@ -251,36 +275,44 @@ export default function RegisterVendorScreen() {
     try {
       const subcatIds = (selectedSubcategories?.length ?? 0) > 0 ? selectedSubcategories : [];
 
-      await signup({
-        email: personal?.email?.trim?.() ?? '',
-        password: personal?.password ?? '',
-        name: `${personal?.firstName?.trim?.() ?? ''} ${personal?.lastName?.trim?.() ?? ''}`,
-        firstName: personal?.firstName?.trim?.() ?? '',
-        lastName: personal?.lastName?.trim?.() ?? '',
-        phone: personal?.phone?.trim?.() ?? '',
-        documentId: personal?.documentId?.trim?.() ?? '',
-        role: 'VENDEDOR',
-        vendor: {
-          businessName: business?.businessName?.trim?.() ?? '',
-          rif: business?.rif?.trim?.() ?? '',
-          personalDocPath: personalDocPath || undefined,
-          selfiePath: selfiePath || undefined,
-          identityVerified: identityVerified,
-          country: location?.country ?? '',
-          city: location?.city ?? '',
-          state: location?.state ?? '',
-          municipality: location?.municipality ?? '',
-          parish: location?.parish ?? '',
-          street: location?.street ?? '',
-          postalCode: location?.postalCode ?? '',
-          latitude: location?.latitude,
-          longitude: location?.longitude,
-          referencePoint: location?.referencePoint ?? '',
-          fullAddress: location?.fullAddress ?? '',
-          vehicleModelIds: selectedModels ?? [],
-          partSubcategoryIds: subcatIds ?? [],
-        },
-      });
+      const vendorData = {
+        businessName: business?.businessName?.trim?.() ?? '',
+        rif: business?.rif?.trim?.() ?? '',
+        personalDocPath: personalDocPath || undefined,
+        selfiePath: selfiePath || undefined,
+        identityVerified: identityVerified,
+        country: location?.country ?? '',
+        city: location?.city ?? '',
+        state: location?.state ?? '',
+        municipality: location?.municipality ?? '',
+        parish: location?.parish ?? '',
+        street: location?.street ?? '',
+        postalCode: location?.postalCode ?? '',
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+        referencePoint: location?.referencePoint ?? '',
+        fullAddress: location?.fullAddress ?? '',
+        vehicleModelIds: selectedModels ?? [],
+        partSubcategoryIds: subcatIds ?? [],
+      };
+
+      if (isExisting) {
+        // Existing user: upgrade to vendor (no signup needed)
+        await upgradeToVendorApi(vendorData);
+      } else {
+        // New user: full signup flow
+        await signup({
+          email: personal?.email?.trim?.() ?? '',
+          password: personal?.password ?? '',
+          name: `${personal?.firstName?.trim?.() ?? ''} ${personal?.lastName?.trim?.() ?? ''}`,
+          firstName: personal?.firstName?.trim?.() ?? '',
+          lastName: personal?.lastName?.trim?.() ?? '',
+          phone: personal?.phone?.trim?.() ?? '',
+          documentId: personal?.documentId?.trim?.() ?? '',
+          role: 'VENDEDOR',
+          vendor: vendorData,
+        });
+      }
 
       try {
         let docPath = '';
@@ -300,6 +332,11 @@ export default function RegisterVendorScreen() {
       } catch (imgErr) {
         console.warn('Image upload failed after signup:', imgErr);
       }
+
+      if (isExisting) {
+        await refreshUser?.();
+        router.replace('/vendor');
+      }
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -313,14 +350,24 @@ export default function RegisterVendorScreen() {
         return (
           <View>
             <Text style={styles.stepTitle}>Datos Personales</Text>
-            <Input label="Nombre" value={personal.firstName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), firstName: v }))} />
-            <Input label="Apellido" value={personal.lastName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), lastName: v }))} />
-            <Input label="Cédula" value={personal.documentId} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), documentId: formatCedula(v) }))} placeholder="V-12345678" />
-            <PhoneInput label="Teléfono" value={personal.phone} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), phone: v }))} />
-            <Input label="Email" value={personal.email} onChangeText={(v) => { setPersonal((p) => ({ ...(p ?? {}), email: v })); setEmailVerified(false); }} keyboardType="email-address" autoCapitalize="none" />
-            <EmailVerification email={personal.email} verified={emailVerified} onVerified={setEmailVerified} />
-            <Input label="Contraseña" value={personal.password} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), password: v }))} secureTextEntry />
-            <Input label="Confirmar Contraseña" value={personal.confirmPassword} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), confirmPassword: v }))} secureTextEntry />
+            {isExisting ? (
+              <View style={styles.existingUserNotice}>
+                <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
+                <Text style={styles.existingUserNoticeText}>Tus datos personales ya están registrados. Solo necesitas completar la verificación de identidad.</Text>
+              </View>
+            ) : null}
+            <Input label="Nombre" value={personal.firstName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), firstName: v }))} editable={!isExisting} containerStyle={isExisting ? { opacity: 0.5 } : undefined} />
+            <Input label="Apellido" value={personal.lastName} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), lastName: v }))} editable={!isExisting} containerStyle={isExisting ? { opacity: 0.5 } : undefined} />
+            <Input label="Cédula" value={personal.documentId} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), documentId: formatCedula(v) }))} placeholder="V-12345678" editable={!isExisting} containerStyle={isExisting ? { opacity: 0.5 } : undefined} />
+            <PhoneInput label="Teléfono" value={personal.phone} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), phone: v }))} editable={!isExisting} style={isExisting ? { opacity: 0.5 } : undefined} />
+            <Input label="Email" value={personal.email} onChangeText={(v) => { setPersonal((p) => ({ ...(p ?? {}), email: v })); setEmailVerified(false); }} keyboardType="email-address" autoCapitalize="none" editable={!isExisting} containerStyle={isExisting ? { opacity: 0.5 } : undefined} />
+            {!isExisting ? (
+              <>
+                <EmailVerification email={personal.email} verified={emailVerified} onVerified={setEmailVerified} />
+                <Input label="Contraseña" value={personal.password} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), password: v }))} secureTextEntry />
+                <Input label="Confirmar Contraseña" value={personal.confirmPassword} onChangeText={(v) => setPersonal((p) => ({ ...(p ?? {}), confirmPassword: v }))} secureTextEntry />
+              </>
+            ) : null}
 
             <View style={styles.identitySection}>
               <Text style={styles.identitySectionTitle}>Verificación de Identidad</Text>
@@ -767,5 +814,20 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     color: '#22C55E',
     flex: 1,
     fontWeight: '600',
+  },
+  existingUserNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: c.primary + '15',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    marginBottom: Spacing.md,
+    gap: 8,
+  },
+  existingUserNoticeText: {
+    fontSize: 13,
+    color: c.textSecondary,
+    flex: 1,
+    lineHeight: 18,
   },
 });

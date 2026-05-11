@@ -197,6 +197,79 @@ export class AuthService {
     };
   }
 
+  async upgradeToVendor(userId: string, dto: import('./dto/upgrade-to-vendor.dto').UpgradeToVendorDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } }, vendor: true },
+    });
+    if (!user) throw new UnauthorizedException('User not found');
+    if (user.vendor) throw new ConflictException('Ya tienes un perfil de vendedor.');
+
+    const vendorRole = await this.prisma.role.findUnique({ where: { name: 'VENDEDOR' } });
+    if (!vendorRole) throw new BadRequestException('Vendor role not configured');
+
+    const hasVendorRole = user.userRoles.some((ur: any) => ur.role.name === 'VENDEDOR');
+
+    await this.prisma.$transaction(async (tx) => {
+      if (!hasVendorRole) {
+        await tx.userRole.create({ data: { userId: user.id, roleId: vendorRole.id } });
+      }
+      const vendor = await tx.vendor.create({
+        data: {
+          userId: user.id,
+          businessName: dto.businessName,
+          rif: dto.rif,
+          country: dto.country || null,
+          city: dto.city || null,
+          state: dto.state || null,
+          municipality: dto.municipality || null,
+          parish: dto.parish || null,
+          street: dto.street || null,
+          postalCode: dto.postalCode || null,
+          latitude: dto.latitude || null,
+          longitude: dto.longitude || null,
+          referencePoint: dto.referencePoint || null,
+          fullAddress: dto.fullAddress || null,
+          logoUrl: dto.logoPath || null,
+          documentImageUrl: dto.documentImagePath || null,
+          personalDocUrl: dto.personalDocPath || null,
+          selfieUrl: dto.selfiePath || null,
+          identityVerified: !!dto.identityVerified,
+          identityVerifiedAt: dto.identityVerified ? new Date() : null,
+          vendorVehicleModels: {
+            create: dto.vehicleModelIds.map((id) => ({ vehicleModelId: id })),
+          },
+          vendorPartSubcategories: {
+            create: dto.partSubcategoryIds.map((id) => ({ partSubcategoryId: id })),
+          },
+        },
+      });
+      await tx.vendorMetrics.create({ data: { vendorId: vendor.id } });
+    });
+
+    // Return updated user info
+    const updated = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } }, vendor: true },
+    });
+
+    this.logger.log(`User ${user.email} upgraded to VENDEDOR`);
+
+    return {
+      success: true,
+      user: {
+        id: updated!.id,
+        email: updated!.email,
+        name: updated!.name,
+        firstName: updated!.firstName,
+        lastName: updated!.lastName,
+        emailVerified: updated!.emailVerified,
+        roles: updated!.userRoles.map((ur: any) => ur.role.name),
+        hasVendorProfile: true,
+      },
+    };
+  }
+
   private generateToken(userId: string, email: string): string {
     return this.jwtService.sign({ sub: userId, email });
   }

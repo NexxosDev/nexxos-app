@@ -6,6 +6,7 @@ import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpgradeToVendorDto } from './dto/upgrade-to-vendor.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
 
@@ -55,5 +56,13 @@ export class AuthController {
       success: true, 
       message: 'Contraseña restablecida exitosamente.' 
     };
+  }
+
+  @Post('auth/upgrade-to-vendor')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Upgrade existing client to vendor (creates vendor profile)' })
+  upgradeToVendor(@CurrentUser('id') userId: string, @Body() dto: UpgradeToVendorDto) {
+    return this.authService.upgradeToVendor(userId, dto);
   }
 }
