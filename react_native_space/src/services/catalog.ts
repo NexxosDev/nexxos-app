@@ -35,3 +35,17 @@ export async function getPartSubcategories(categoryId: string): Promise<CatalogI
   const res = await api.get(`/catalog/part-subcategories?categoryId=${encodeURIComponent(categoryId)}`);
   return res?.data?.items ?? [];
 }
+
+export interface PartSearchResult {
+  subcategoryId: string;
+  subcategoryName: string;
+  categoryId: string;
+  categoryName: string;
+}
+
+export async function searchParts(query: string): Promise<PartSearchResult[]> {
+  const q = (query ?? '').trim();
+  if (q.length < 2) return [];
+  const res = await api.get(`/catalog/part-search?q=${encodeURIComponent(q)}`);
+  return res?.data?.items ?? [];
+}

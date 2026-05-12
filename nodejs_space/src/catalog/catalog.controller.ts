@@ -52,4 +52,11 @@ export class CatalogController {
   getPartSubcategories(@Query('categoryId') categoryId?: string) {
     return this.catalogService.getPartSubcategories(categoryId);
   }
+
+  @Get('part-search')
+  @ApiOperation({ summary: 'Search parts by name or keyword (supports Venezuelan slang)' })
+  @ApiQuery({ name: 'q', required: true, description: 'Search query (min 2 chars)' })
+  searchParts(@Query('q') q: string) {
+    return this.catalogService.searchParts(q);
+  }
 }

@@ -167,9 +167,21 @@ model PartSubcategory {
   category               PartCategory            @relation(fields: [categoryId], references: [id])
   vendorPartSubcategories VendorPartSubcategory[]
   requests               Request[]
+  keywords               PartKeyword[]
 
   @@unique([categoryId, name])
   @@map("part_subcategories")
+}
+
+model PartKeyword {
+  id              String @id @default(uuid()) @db.Uuid
+  subcategoryId   String @map("subcategory_id") @db.Uuid
+  keyword         String
+
+  subcategory PartSubcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+
+  @@index([keyword])
+  @@map("part_keywords")
 }
 
 model State {

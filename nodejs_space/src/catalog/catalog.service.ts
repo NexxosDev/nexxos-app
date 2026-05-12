@@ -62,4 +62,36 @@ export class CatalogService {
     });
     return { items };
   }
+
+  async searchParts(query: string) {
+    const q = (query ?? '').trim().toLowerCase();
+    if (!q || q.length < 2) return { items: [] };
+
+    // Search by subcategory name OR keyword match
+    const items = await this.prisma.partSubcategory.findMany({
+      where: {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { keywords: { some: { keyword: { contains: q, mode: 'insensitive' } } } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        categoryId: true,
+        category: { select: { id: true, name: true } },
+      },
+      orderBy: { name: 'asc' },
+      take: 10,
+    });
+
+    return {
+      items: items.map((i) => ({
+        subcategoryId: i.id,
+        subcategoryName: i.name,
+        categoryId: i.category.id,
+        categoryName: i.category.name,
+      })),
+    };
+  }
 }

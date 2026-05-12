@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Modal, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +13,8 @@ import Button from '../src/components/Button';
 import StepIndicator from '../src/components/StepIndicator';
 import SelectInput from '../src/components/SelectInput';
 import RequestLocationMap from '../src/components/RequestLocationMap';
+import PartSearchInput from '../src/components/PartSearchInput';
+import type { PartSearchResult } from '../src/services/catalog';
 import type { CatalogItem } from '../src/types';
 
 const TOTAL_STEPS = 4;
@@ -52,6 +54,16 @@ export default function CreateRequestScreen() {
     if (categoryId) { catalog?.loadSubcategories?.(categoryId)?.then?.((items) => setSubcategories(items ?? [])); }
     else { setSubcategories([]); setSubcategoryId(''); }
   }, [categoryId]);
+
+  const handlePartSearchSelect = useCallback(async (result: PartSearchResult) => {
+    setCategoryId(result?.categoryId ?? '');
+    setSubcategoryId(result?.subcategoryId ?? '');
+    // Load subcategories for the selected category so the dropdown is populated
+    if (result?.categoryId) {
+      const items = await catalog?.loadSubcategories?.(result.categoryId) ?? [];
+      setSubcategories(items ?? []);
+    }
+  }, [catalog]);
 
   const canNext = (): boolean => {
     if (step === 1) {
@@ -136,9 +148,15 @@ export default function CreateRequestScreen() {
         return (
           <View>
             <Text style={styles.stepTitle}>¿Qué repuesto necesitas?</Text>
+            <PartSearchInput onSelect={handlePartSearchSelect} />
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>o selecciona manualmente</Text>
+              <View style={styles.dividerLine} />
+            </View>
             <SelectInput label="Categoría" items={catalog?.categories ?? []} selectedId={categoryId} onSelect={(i) => { setCategoryId(i?.id ?? ''); setSubcategoryId(''); }} searchable />
             {(subcategories?.length ?? 0) > 0 ? (
-              <SelectInput label="Subcategoría (opcional)" items={subcategories} selectedId={subcategoryId} onSelect={(i) => setSubcategoryId(i?.id ?? '')} />
+              <SelectInput label="Subcategoría (opcional)" items={subcategories} selectedId={subcategoryId} onSelect={(i) => setSubcategoryId(i?.id ?? '')} searchable />
             ) : null}
             <Text style={styles.fieldLabel}>Descripción</Text>
             <TextInput
@@ -243,6 +261,9 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     padding: Spacing.md, fontSize: 15, color: c.textPrimary, minHeight: 100, backgroundColor: c.inputBg,
   },
   charCount: { fontSize: 12, color: c.textSecondary, textAlign: 'right', marginTop: 4 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md },
+  dividerLine: { flex: 1, height: 1, backgroundColor: c.border },
+  dividerText: { fontSize: 12, color: c.textSecondary, marginHorizontal: Spacing.sm },
   summaryCard: { backgroundColor: c.backgroundSection, borderRadius: BorderRadius.md, padding: Spacing.md },
   modalOverlay: { flex: 1, backgroundColor: c.overlay, justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
   modalContent: { backgroundColor: c.surface, borderRadius: BorderRadius.lg, padding: Spacing.xl, alignItems: 'center', width: '100%', maxWidth: 340 },
