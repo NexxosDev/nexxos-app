@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getVendorRequestDetail, respondToRequest, declineRequest } from '../src/services/vendor';
 import { getErrorMessage } from '../src/services/api';
+import { dismissNotificationsForContext } from '../src/services/pushNotifications';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { Spacing, BorderRadius } from '../src/theme/colors';
@@ -37,6 +38,7 @@ export default function VendorRequestDetailScreen() {
     try {
       const data = await getVendorRequestDetail(matchId);
       setDetail(data ?? null);
+      if (data?.request?.id) dismissNotificationsForContext({ requestId: data.request.id });
     } catch { }
     if (isRefresh) setRefreshing(false); else setLoading(false);
   }, [matchId]);

@@ -16,6 +16,7 @@ import {
   editChatMessage, deleteChatMessage,
   markMessagesDelivered, markMessagesRead,
 } from '../src/services/chat';
+import { dismissNotificationsForContext } from '../src/services/pushNotifications';
 import { Spacing, BorderRadius } from '../src/theme/colors';
 import type { ThemeColors } from '../src/theme/colors';
 import ChatMessageComp from '../src/components/ChatMessage';
@@ -92,6 +93,7 @@ export default function ChatScreen() {
     if (!loading && chatId && !hasMarkedReadRef.current) {
       hasMarkedReadRef.current = true;
       markAsDeliveredAndRead();
+      dismissNotificationsForContext({ chatId });
     }
   }, [loading, chatId, markAsDeliveredAndRead]);
 

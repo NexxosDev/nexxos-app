@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getRequestDetail, getRequestResponses, closeRequest } from '../src/services/requests';
 import { getErrorMessage } from '../src/services/api';
+import { dismissNotificationsForContext } from '../src/services/pushNotifications';
 import { useUnread } from '../src/contexts/UnreadContext';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { Spacing, BorderRadius } from '../src/theme/colors';
@@ -47,7 +48,10 @@ export default function RequestDetailScreen() {
     if (isRefresh) setRefreshing(false); else setLoading(false);
   }, [id]);
 
-  useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
+  useFocusEffect(useCallback(() => {
+    fetchData();
+    if (id) dismissNotificationsForContext({ requestId: id });
+  }, [fetchData, id]));
 
   const handleClose = async () => {
     setCloseError('');
