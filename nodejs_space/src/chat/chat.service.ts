@@ -16,6 +16,7 @@ const MESSAGE_SELECT = {
   replyTo: {
     select: {
       id: true,
+      senderId: true,
       messageText: true,
       messageType: true,
       deletedForAll: true,
@@ -24,15 +25,30 @@ const MESSAGE_SELECT = {
   },
 };
 
-function formatMessage(m: any) {
+function formatMessage(m: any, vendorUserId?: string, vendorBusinessName?: string) {
   if (!m) return null;
   const isDeleted = !!m.deletedForAll;
   const rt = m.replyTo;
   const replyToDeleted = rt?.deletedForAll;
+
+  const personalName = `${m.sender?.firstName ?? ''} ${m.sender?.lastName ?? ''}`.trim();
+  const senderId = m.sender?.id ?? m.senderId;
+  const senderName = (vendorUserId && senderId === vendorUserId && vendorBusinessName)
+    ? vendorBusinessName
+    : personalName;
+
+  let replySenderName = '';
+  if (rt?.sender) {
+    const replyPersonal = `${rt.sender?.firstName ?? ''} ${rt.sender?.lastName ?? ''}`.trim();
+    replySenderName = (vendorUserId && rt.senderId === vendorUserId && vendorBusinessName)
+      ? vendorBusinessName
+      : replyPersonal;
+  }
+
   return {
     id: m.id,
-    senderId: m.sender?.id ?? m.senderId,
-    senderName: `${m.sender?.firstName ?? ''} ${m.sender?.lastName ?? ''}`.trim(),
+    senderId,
+    senderName,
     messageText: isDeleted ? 'Mensaje eliminado' : (m.messageText ?? ''),
     messageType: isDeleted ? 'text' : (m.messageType ?? 'text'),
     imageUrl: isDeleted ? null : (m.imageUrl ?? null),
@@ -42,7 +58,7 @@ function formatMessage(m: any) {
     replyTo: rt ? {
       id: rt.id,
       messageText: replyToDeleted ? 'Mensaje eliminado' : (rt.messageType === 'image' ? 'Imagen' : rt.messageText),
-      senderName: `${rt.sender?.firstName ?? ''} ${rt.sender?.lastName ?? ''}`.trim(),
+      senderName: replySenderName,
     } : null,
     createdAt: m.createdAt?.toISOString?.() ?? '',
   };
@@ -93,8 +109,9 @@ export class ChatService {
     const r = chat.request;
     const requestSummary = `${r.vehicleBrand.name} ${r.vehicleModel.name} - ${r.partCategory.name}${r.partSubcategory ? ' / ' + r.partSubcategory.name : ''}`;
 
+    const vendorBiz = await this.prisma.vendor.findUnique({ where: { id: chat.vendorId }, select: { businessName: true } });
     const otherUserName = isClient
-      ? `${chat.vendor.user.firstName} ${chat.vendor.user.lastName}`
+      ? (vendorBiz?.businessName || `${chat.vendor.user.firstName} ${chat.vendor.user.lastName}`)
       : `${chat.client.firstName} ${chat.client.lastName}`;
 
     const unreadCount = await this.prisma.chatMessage.count({
@@ -120,7 +137,7 @@ export class ChatService {
   }
 
   async getMessages(chatId: string, userId: string, limit = 50, before?: string) {
-    await this.verifyAccess(chatId, userId);
+    const { chat } = await this.verifyAccess(chatId, userId);
 
     const where: any = { chatId };
     if (before) {
@@ -137,8 +154,11 @@ export class ChatService {
     const hasMore = messages.length > limit;
     const items = messages.slice(0, limit);
 
+    const vendorUserId = chat?.vendor?.userId;
+    const vendorBusinessName = chat?.vendor?.businessName;
+
     return {
-      items: items.map(formatMessage).filter(Boolean),
+      items: items.map((m) => formatMessage(m, vendorUserId, vendorBusinessName)).filter(Boolean),
       hasMore,
     };
   }
@@ -176,11 +196,11 @@ export class ChatService {
       ).catch((err) => this.logger.error('Push error (new message)', err));
     }
 
-    return formatMessage(message);
+    return formatMessage(message, chat?.vendor?.userId, chat?.vendor?.businessName);
   }
 
   async editMessage(chatId: string, messageId: string, userId: string, newText: string) {
-    await this.verifyAccess(chatId, userId);
+    const { chat } = await this.verifyAccess(chatId, userId);
 
     const msg = await this.prisma.chatMessage.findUnique({ where: { id: messageId } });
     if (!msg || msg.chatId !== chatId) throw new NotFoundException('Message not found');
@@ -193,11 +213,11 @@ export class ChatService {
       select: MESSAGE_SELECT,
     });
 
-    return formatMessage(updated);
+    return formatMessage(updated, chat?.vendor?.userId, chat?.vendor?.businessName);
   }
 
   async deleteMessage(chatId: string, messageId: string, userId: string) {
-    await this.verifyAccess(chatId, userId);
+    const { chat } = await this.verifyAccess(chatId, userId);
 
     const msg = await this.prisma.chatMessage.findUnique({ where: { id: messageId } });
     if (!msg || msg.chatId !== chatId) throw new NotFoundException('Message not found');
@@ -215,7 +235,7 @@ export class ChatService {
       select: MESSAGE_SELECT,
     });
 
-    return formatMessage(updated);
+    return formatMessage(updated, chat?.vendor?.userId, chat?.vendor?.businessName);
   }
 
   async markDelivered(chatId: string, userId: string, messageIds?: string[]) {
