@@ -156,7 +156,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   loadingText: { marginTop: Spacing.md, fontSize: 15, color: c.textSecondary },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
   errorText: { fontSize: 15, color: c.error, textAlign: 'center' },
-  mapContainer: { height: 300, borderRadius: BorderRadius.md, overflow: 'hidden', marginBottom: Spacing.md },
+  mapContainer: { height: 200, borderRadius: BorderRadius.md, overflow: 'hidden', marginBottom: Spacing.sm },
   map: { flex: 1 },
   filtersContainer: { gap: Spacing.sm },
   radiusInfo: { backgroundColor: c.backgroundSection, padding: Spacing.md, borderRadius: BorderRadius.md, borderLeftWidth: 3, borderLeftColor: c.warning },
