@@ -127,10 +127,21 @@ export default function VendorHome() {
     setToggling(false);
   };
 
+  const reqs = dashboard?.recentRequests ?? [];
+
+  const renderFooter = useCallback(() => {
+    if ((reqs?.length ?? 0) === 0) return null;
+    return (
+      <Pressable style={styles.loadMoreBtn} onPress={() => router.push('/vendor/requests')}>
+        <Ionicons name="chevron-down-circle-outline" size={20} color={colors.textPrimary} />
+        <Text style={styles.loadMoreText}>Ver más solicitudes</Text>
+      </Pressable>
+    );
+  }, [reqs?.length, styles, colors, router]);
+
   if (loading) return <LoadingSpinner />;
 
   const metrics = dashboard?.metrics;
-  const reqs = dashboard?.recentRequests ?? [];
 
   const renderHeader = () => (
     <View>
@@ -220,16 +231,6 @@ export default function VendorHome() {
       <Text style={styles.sectionTitle}>Solicitudes Recientes</Text>
     </View>
   );
-
-  const renderFooter = useCallback(() => {
-    if ((reqs?.length ?? 0) === 0) return null;
-    return (
-      <Pressable style={styles.loadMoreBtn} onPress={() => router.push('/vendor/requests')}>
-        <Ionicons name="chevron-down-circle-outline" size={20} color={colors.textPrimary} />
-        <Text style={styles.loadMoreText}>Ver más solicitudes</Text>
-      </Pressable>
-    );
-  }, [reqs?.length, styles, colors, router]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
