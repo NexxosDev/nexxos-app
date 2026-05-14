@@ -14,6 +14,7 @@ import StepIndicator from '../src/components/StepIndicator';
 import SelectInput from '../src/components/SelectInput';
 import RequestLocationMap from '../src/components/RequestLocationMap';
 import PartSearchInput from '../src/components/PartSearchInput';
+import BrandLogo from '../src/components/BrandLogo';
 import type { PartSearchResult } from '../src/services/catalog';
 import type { CatalogItem } from '../src/types';
 
@@ -54,6 +55,10 @@ export default function CreateRequestScreen() {
     if (categoryId) { catalog?.loadSubcategories?.(categoryId)?.then?.((items) => setSubcategories(items ?? [])); }
     else { setSubcategories([]); setSubcategoryId(''); }
   }, [categoryId]);
+
+  const renderBrandIcon = useCallback((item: CatalogItem) => (
+    <BrandLogo brandName={item?.name ?? ''} size={24} />
+  ), []);
 
   const handlePartSearchSelect = useCallback(async (result: PartSearchResult) => {
     setCategoryId(result?.categoryId ?? '');
@@ -140,7 +145,7 @@ export default function CreateRequestScreen() {
         return (
           <View>
             <Text style={styles.stepTitle}>¿Para qué vehículo?</Text>
-            <SelectInput label="Marca" items={catalog?.brands ?? []} selectedId={brandId} onSelect={(i) => { setBrandId(i?.id ?? ''); setModelId(''); }} searchable />
+            <SelectInput label="Marca" items={catalog?.brands ?? []} selectedId={brandId} onSelect={(i) => { setBrandId(i?.id ?? ''); setModelId(''); }} searchable renderItemIcon={renderBrandIcon} />
             <SelectInput label="Modelo" items={models} selectedId={modelId} onSelect={(i) => setModelId(i?.id ?? '')} searchable />
           </View>
         );
