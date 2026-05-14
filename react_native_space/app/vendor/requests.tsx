@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getVendorRequests } from '../../src/services/vendor';
@@ -12,6 +12,9 @@ import EmptyState from '../../src/components/EmptyState';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
 import { useUnread } from '../../src/contexts/UnreadContext';
 import type { VendorRequestListItem } from '../../src/types';
+import { Ionicons } from '@expo/vector-icons';
+
+const PAGE_SIZE = 20;
 
 type VFilter = 'all' | 'PENDING' | 'RESPONDED' | 'DECLINED';
 
@@ -21,21 +24,39 @@ export default function VendorRequests() {
   const { byRequestId } = useUnread();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [items, setItems] = useState<VendorRequestListItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [filter, setFilter] = useState<VFilter>('all');
   const [focused, setFocused] = useState(false);
+
+  const hasMore = (items?.length ?? 0) < total;
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else if (!items?.length) setLoading(true);
     try {
-      const params: Record<string, unknown> = {};
+      const params: Record<string, unknown> = { limit: PAGE_SIZE, offset: 0 };
       if (filter !== 'all') params.status = filter;
       const data = await getVendorRequests(params as Parameters<typeof getVendorRequests>[0]);
       setItems(data?.items ?? []);
+      setTotal(data?.total ?? 0);
     } catch { }
     if (isRefresh) setRefreshing(false); else setLoading(false);
   }, [filter]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const params: Record<string, unknown> = { limit: PAGE_SIZE, offset: items?.length ?? 0 };
+      if (filter !== 'all') params.status = filter;
+      const data = await getVendorRequests(params as Parameters<typeof getVendorRequests>[0]);
+      setItems(prev => [...(prev ?? []), ...(data?.items ?? [])]);
+      setTotal(data?.total ?? 0);
+    } catch { }
+    setLoadingMore(false);
+  }, [loadingMore, hasMore, filter, items?.length]);
 
   useFocusEffect(useCallback(() => {
     setFocused(true);
@@ -67,6 +88,24 @@ export default function VendorRequests() {
     { key: 'DECLINED', label: 'Declinadas' },
   ];
 
+  const renderFooter = useCallback(() => {
+    if (!hasMore) return null;
+    if (loadingMore) {
+      return (
+        <View style={styles.footerContainer}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.footerText}>Cargando más...</Text>
+        </View>
+      );
+    }
+    return (
+      <Pressable style={styles.loadMoreBtn} onPress={loadMore}>
+        <Ionicons name="chevron-down-circle-outline" size={20} color={colors.primary} />
+        <Text style={styles.loadMoreText}>Ver más solicitudes</Text>
+      </Pressable>
+    );
+  }, [hasMore, loadingMore, loadMore, styles, colors]);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <Text style={styles.title}>Solicitudes</Text>
@@ -97,6 +136,7 @@ export default function VendorRequests() {
             />
           )}
           ListEmptyComponent={<EmptyState icon="mail-outline" title="Sin solicitudes" message="No hay solicitudes con este filtro" />}
+          ListFooterComponent={renderFooter}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={colors.primary} />}
         />
@@ -115,4 +155,8 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   filterText: { fontSize: 13, color: c.textSubtitle },
   filterTextActive: { color: c.accent, fontWeight: '600' },
   list: { padding: Spacing.md, paddingBottom: 100 },
+  footerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.md, gap: 8 },
+  footerText: { fontSize: 13, color: c.textSubtitle },
+  loadMoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, gap: 8, marginTop: 4, borderRadius: BorderRadius.md, backgroundColor: c.surface },
+  loadMoreText: { fontSize: 14, fontWeight: '600', color: c.primary },
 });
