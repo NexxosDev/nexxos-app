@@ -166,7 +166,7 @@ export class VendorService {
       include: {
         vendorMetrics: true,
         requestVendorMatches: {
-          take: 10,
+          take: 20,
           orderBy: [{ request: { lastMessageAt: { sort: 'desc', nulls: 'last' } } }, { deliveredAt: 'desc' }],
           include: {
             request: {
