@@ -339,6 +339,12 @@ export class RequestsService {
           );
         }
 
+        // Get tags for this response by this client
+        const tags = await this.prisma.responseTag.findMany({
+          where: { responseId: r.id, userId: clientId },
+          select: { tag: true },
+        });
+
         return {
           id: r.id,
           vendor: {
@@ -352,6 +358,7 @@ export class RequestsService {
           initialMessage: r.initialMessage,
           chatId: chat?.id ?? null,
           distanceKm,
+          tags: tags?.map((t: any) => t?.tag) ?? [],
           createdAt: r.createdAt.toISOString(),
         };
       }),
@@ -664,5 +671,28 @@ export class RequestsService {
     });
 
     return { success: true };
+  }
+
+  // ── Client: Update tags on a response ──
+  async updateResponseTags(responseId: string, userId: string, tags: string[]) {
+    const response = await this.prisma.requestResponse.findUnique({
+      where: { id: responseId },
+      include: { request: true },
+    });
+    if (!response) throw new NotFoundException('Response not found');
+    if (response.request.clientId !== userId) throw new ForbiddenException();
+
+    // Delete existing tags for this user+response, then create new ones
+    await this.prisma.responseTag.deleteMany({
+      where: { userId, responseId },
+    });
+
+    if (tags?.length) {
+      await this.prisma.responseTag.createMany({
+        data: tags.map((tag) => ({ userId, responseId, tag })),
+      });
+    }
+
+    return { responseId, tags };
   }
 }

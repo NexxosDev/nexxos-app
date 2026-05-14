@@ -55,6 +55,8 @@ export interface RequestDetail {
   closedAt: string | null;
 }
 
+export type ResponseTagValue = 'FAVORITO' | 'MEJOR_PRECIO' | 'EN_NEGOCIACION' | 'TIENE_REPUESTO' | 'DESCARTADO';
+
 export interface RequestResponseItem {
   id: string;
   vendor: {
@@ -68,6 +70,7 @@ export interface RequestResponseItem {
   initialMessage: string;
   chatId: string;
   distanceKm: number | null;
+  tags: ResponseTagValue[];
   createdAt: string;
 }
 

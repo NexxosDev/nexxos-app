@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { Spacing, BorderRadius } from '../theme/colors';
 import type { ThemeColors } from '../theme/colors';
+import type { ResponseTagValue } from '../types';
+import { getTagDef } from '../utils/responseTags';
 import Button from './Button';
 
 const LINK_COLOR = '#07a0ff';
@@ -17,6 +19,8 @@ interface ResponseCardProps {
   vendorLongitude?: number | null;
   onOpenChat?: () => void;
   unreadCount?: number;
+  tags?: ResponseTagValue[];
+  onTagPress?: () => void;
 }
 
 function formatDistance(km: number): string {
@@ -34,13 +38,14 @@ function openGoogleMaps(lat: number, lng: number) {
   }
 }
 
-export default function ResponseCard({ businessName, avgRating, initialMessage, distanceKm, vendorLatitude, vendorLongitude, onOpenChat, unreadCount }: ResponseCardProps) {
+export default function ResponseCard({ businessName, avgRating, initialMessage, distanceKm, vendorLatitude, vendorLongitude, onOpenChat, unreadCount, tags, onTagPress }: ResponseCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const hasDistance = typeof distanceKm === 'number' && isFinite(distanceKm);
   const hasCoords = typeof vendorLatitude === 'number' && typeof vendorLongitude === 'number';
   const canNavigate = hasDistance && hasCoords;
   const unread = unreadCount ?? 0;
+  const activeTags = (tags ?? []).filter(Boolean);
 
   return (
     <View style={[styles.card, unread > 0 && { borderColor: colors.primary, borderWidth: 1.5 }]}>
@@ -79,7 +84,28 @@ export default function ResponseCard({ businessName, avgRating, initialMessage, 
             ) : null}
           </View>
         </View>
+        {onTagPress ? (
+          <Pressable onPress={onTagPress} hitSlop={10} style={styles.moreBtn}>
+            <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+          </Pressable>
+        ) : null}
       </View>
+
+      {activeTags.length > 0 ? (
+        <View style={styles.tagsRow}>
+          {activeTags.map((t) => {
+            const def = getTagDef(t);
+            if (!def) return null;
+            return (
+              <View key={t} style={[styles.tagChip, { backgroundColor: def.bgColor }]}>
+                <Text style={styles.tagChipEmoji}>{def.emoji}</Text>
+                <Text style={[styles.tagChipText, { color: def.color }]}>{def.label}</Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+
       <Text style={styles.message} numberOfLines={2}>{initialMessage ?? ''}</Text>
       {onOpenChat ? <Button title="Abrir Chat" variant="secondary" onPress={onOpenChat} style={styles.chatBtn} /> : null}
     </View>
@@ -106,4 +132,9 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   chatBtn: { alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: Spacing.md },
   unreadBadge: { backgroundColor: '#E53935', borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 5, justifyContent: 'center', alignItems: 'center' },
   unreadText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  moreBtn: { padding: 4 },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: Spacing.sm },
+  tagChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full, gap: 4 },
+  tagChipEmoji: { fontSize: 12 },
+  tagChipText: { fontSize: 11, fontWeight: '600' },
 });

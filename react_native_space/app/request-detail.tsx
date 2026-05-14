@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Modal, TextInput, Refres
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { getRequestDetail, getRequestResponses, closeRequest } from '../src/services/requests';
+import { getRequestDetail, getRequestResponses, closeRequest, updateResponseTags } from '../src/services/requests';
 import { getErrorMessage } from '../src/services/api';
 import { dismissNotificationsForContext } from '../src/services/pushNotifications';
 import { useUnread } from '../src/contexts/UnreadContext';
@@ -16,7 +16,11 @@ import Button from '../src/components/Button';
 import StarRating from '../src/components/StarRating';
 import LoadingSpinner from '../src/components/LoadingSpinner';
 import BrandLogo from '../src/components/BrandLogo';
-import type { RequestDetail, RequestResponseItem } from '../src/types';
+import TagSelectorSheet from '../src/components/TagSelectorSheet';
+import { TAG_DEFINITIONS } from '../src/utils/responseTags';
+import type { RequestDetail, RequestResponseItem, ResponseTagValue } from '../src/types';
+
+type TagFilter = 'ALL' | ResponseTagValue;
 
 export default function RequestDetailScreen() {
   const router = useRouter();
@@ -36,6 +40,13 @@ export default function RequestDetailScreen() {
   const [comment, setComment] = useState('');
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState('');
+
+  // Tag state
+  const [tagFilter, setTagFilter] = useState<TagFilter>('ALL');
+  const [tagSheetVisible, setTagSheetVisible] = useState(false);
+  const [tagSheetResponseId, setTagSheetResponseId] = useState('');
+  const [tagSheetVendorName, setTagSheetVendorName] = useState('');
+  const [tagSheetCurrentTags, setTagSheetCurrentTags] = useState<ResponseTagValue[]>([]);
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (!id) return;
@@ -71,10 +82,40 @@ export default function RequestDetailScreen() {
     } catch (err) { setCloseError(getErrorMessage(err)); } finally { setClosing(false); }
   };
 
+  const handleOpenTagSheet = useCallback((resp: RequestResponseItem) => {
+    setTagSheetResponseId(resp?.id ?? '');
+    setTagSheetVendorName(resp?.vendor?.businessName ?? '');
+    setTagSheetCurrentTags(resp?.tags ?? []);
+    setTagSheetVisible(true);
+  }, []);
+
+  const handleSaveTags = useCallback(async (tags: ResponseTagValue[]) => {
+    if (!tagSheetResponseId) return;
+    // Optimistic update
+    setResponses((prev) =>
+      (prev ?? []).map((r) => r?.id === tagSheetResponseId ? { ...r, tags } : r),
+    );
+    try {
+      await updateResponseTags(tagSheetResponseId, tags);
+    } catch {
+      // Revert on error — refetch
+      fetchData(true);
+    }
+  }, [tagSheetResponseId, fetchData]);
+
   const formatDate = (d: string) => {
     try { return new Date(d)?.toLocaleDateString?.('es-VE', { day: '2-digit', month: 'long', year: 'numeric' }) ?? ''; }
     catch { return ''; }
   };
+
+  // Filter responses by selected tag
+  const filteredResponses = useMemo(() => {
+    if (tagFilter === 'ALL') return responses ?? [];
+    return (responses ?? []).filter((r) => (r?.tags ?? []).includes(tagFilter));
+  }, [responses, tagFilter]);
+
+  // Check if any response has tags (to show filter row)
+  const anyTagged = useMemo(() => (responses ?? []).some((r) => (r?.tags ?? []).length > 0), [responses]);
 
   if (loading) return <LoadingSpinner />;
   if (!detail) return <View style={styles.safe}><Text style={styles.errorMsg}>Solicitud no encontrada</Text></View>;
@@ -106,8 +147,32 @@ export default function RequestDetailScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Respuestas ({responses?.length ?? 0})</Text>
-        {(responses?.length ?? 0) > 0 ? (
-          (responses ?? []).map((resp) => (
+
+        {anyTagged && (responses?.length ?? 0) > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
+            <Pressable style={[styles.filterChip, tagFilter === 'ALL' && styles.filterChipActive]} onPress={() => setTagFilter('ALL')}>
+              <Text style={[styles.filterChipText, tagFilter === 'ALL' && styles.filterChipTextActive]}>Todas</Text>
+            </Pressable>
+            {(TAG_DEFINITIONS ?? []).map((def) => {
+              const count = (responses ?? []).filter((r) => (r?.tags ?? []).includes(def?.key)).length;
+              if (count === 0) return null;
+              return (
+                <Pressable
+                  key={def?.key}
+                  style={[styles.filterChip, tagFilter === def?.key && { backgroundColor: def?.bgColor, borderColor: def?.color }]}
+                  onPress={() => setTagFilter(tagFilter === def?.key ? 'ALL' : def?.key)}
+                >
+                  <Text style={styles.filterEmoji}>{def?.emoji}</Text>
+                  <Text style={[styles.filterChipText, tagFilter === def?.key && { color: def?.color, fontWeight: '600' }]}>{def?.label}</Text>
+                  <Text style={[styles.filterCount, tagFilter === def?.key && { color: def?.color }]}>{count}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
+
+        {(filteredResponses?.length ?? 0) > 0 ? (
+          (filteredResponses ?? []).map((resp) => (
             <ResponseCard
               key={resp?.id}
               businessName={resp?.vendor?.businessName ?? ''}
@@ -116,6 +181,8 @@ export default function RequestDetailScreen() {
               distanceKm={resp?.distanceKm}
               vendorLatitude={resp?.vendor?.latitude}
               vendorLongitude={resp?.vendor?.longitude}
+              tags={resp?.tags}
+              onTagPress={() => handleOpenTagSheet(resp)}
               onOpenChat={() => {
                 const base = `/chat?chatId=${resp?.chatId ?? ''}`;
                 router.push(detail?.status === 'CERRADA' ? `${base}&readOnly=1` : base);
@@ -123,6 +190,8 @@ export default function RequestDetailScreen() {
               unreadCount={byChatId?.[resp?.chatId ?? ''] ?? 0}
             />
           ))
+        ) : tagFilter !== 'ALL' ? (
+          <Text style={styles.noResponses}>No hay respuestas con esta etiqueta.</Text>
         ) : (
           <Text style={styles.noResponses}>Aún no hay respuestas. Los vendedores están revisando tu solicitud.</Text>
         )}
@@ -131,6 +200,14 @@ export default function RequestDetailScreen() {
           <Button title="Cerrar Solicitud" variant="destructive" onPress={() => setCloseModal(true)} style={styles.closeBtn} />
         ) : null}
       </ScrollView>
+
+      <TagSelectorSheet
+        visible={tagSheetVisible}
+        selectedTags={tagSheetCurrentTags}
+        vendorName={tagSheetVendorName}
+        onSave={handleSaveTags}
+        onClose={() => setTagSheetVisible(false)}
+      />
 
       <Modal visible={closeModal} transparent animationType="slide">
         <Pressable style={styles.overlay} onPress={() => setCloseModal(false)} />
@@ -204,6 +281,14 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   scroll: { padding: Spacing.md, paddingBottom: 40 },
   infoCard: { backgroundColor: c.cardBg, borderRadius: BorderRadius.md, padding: Spacing.md, borderWidth: 1, borderColor: c.border, marginBottom: Spacing.lg },
   sectionTitle: { fontSize: 17, fontWeight: '600', color: c.textPrimary, marginBottom: Spacing.md },
+  filterScroll: { marginBottom: Spacing.md },
+  filterRow: { flexDirection: 'row', gap: 6 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 7, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: c.border, backgroundColor: c.chipBg },
+  filterChipActive: { backgroundColor: c.primary, borderColor: c.primary },
+  filterChipText: { fontSize: 12, color: c.textSubtitle },
+  filterChipTextActive: { color: c.accent, fontWeight: '600' },
+  filterEmoji: { fontSize: 12 },
+  filterCount: { fontSize: 11, color: c.textSecondary, fontWeight: '600' },
   noResponses: { fontSize: 14, color: c.textSecondary, textAlign: 'center', paddingVertical: Spacing.xl, lineHeight: 20 },
   closeBtn: { marginTop: Spacing.lg },
   errorMsg: { padding: Spacing.lg, textAlign: 'center', color: c.textSecondary, fontSize: 16 },

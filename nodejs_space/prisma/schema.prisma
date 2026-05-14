@@ -34,6 +34,7 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
   pushTokens          PushToken[]
+  responseTags        ResponseTag[]
 
   @@map("users")
 }
@@ -312,9 +313,25 @@ model RequestResponse {
 
   request Request @relation(fields: [requestId], references: [id])
   vendor  Vendor  @relation(fields: [vendorId], references: [id])
+  tags    ResponseTag[]
 
   @@unique([requestId, vendorId])
   @@map("request_responses")
+}
+
+model ResponseTag {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  responseId String   @map("response_id") @db.Uuid
+  tag        String   // FAVORITO, MEJOR_PRECIO, EN_NEGOCIACION, TIENE_REPUESTO, DESCARTADO
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  response RequestResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, responseId, tag])
+  @@index([userId, responseId])
+  @@map("response_tags")
 }
 
 model Chat {

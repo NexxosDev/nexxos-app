@@ -1,5 +1,5 @@
 import api from './api';
-import type { RequestListItem, RequestDetail, RequestResponseItem } from '../types';
+import type { RequestListItem, RequestDetail, RequestResponseItem, ResponseTagValue } from '../types';
 
 export async function createRequest(data: {
   stateId?: string;
@@ -45,5 +45,10 @@ export async function closeRequest(id: string, data: {
   comment?: string;
 }): Promise<{ id: string; status: string; closedAt: string }> {
   const res = await api.patch(`/requests/${encodeURIComponent(id)}/close`, data);
+  return res?.data;
+}
+
+export async function updateResponseTags(responseId: string, tags: ResponseTagValue[]): Promise<{ responseId: string; tags: string[] }> {
+  const res = await api.put(`/requests/responses/${encodeURIComponent(responseId)}/tags`, { tags });
   return res?.data;
 }

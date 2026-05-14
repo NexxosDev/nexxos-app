@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Put, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { RequestsService } from './requests.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -7,6 +7,7 @@ import { Roles } from '../auth/roles.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { CloseRequestDto } from './dto/close-request.dto';
+import { UpdateResponseTagsDto } from './dto/update-response-tags.dto';
 
 @ApiTags('Requests (Client)')
 @ApiBearerAuth()
@@ -65,5 +66,16 @@ export class RequestsController {
     @Body() dto: CloseRequestDto,
   ) {
     return this.requestsService.closeRequest(id, userId, dto);
+  }
+
+  @Put('responses/:responseId/tags')
+  @Roles('CLIENTE')
+  @ApiOperation({ summary: 'Update tags on a vendor response (replaces existing tags)' })
+  updateTags(
+    @CurrentUser('id') userId: string,
+    @Param('responseId') responseId: string,
+    @Body() dto: UpdateResponseTagsDto,
+  ) {
+    return this.requestsService.updateResponseTags(responseId, userId, dto.tags);
   }
 }
