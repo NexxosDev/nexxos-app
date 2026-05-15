@@ -60,7 +60,7 @@ export default function ClientHome() {
       <Text style={styles.greeting}>¡Hola, {user?.firstName ?? 'Usuario'}!</Text>
       <Text style={styles.subtitle}>¿Qué necesitas hoy?</Text>
       <View style={styles.banner}>
-        <Ionicons name="megaphone-outline" size={28} color={colors.accent} />
+        <Ionicons name="megaphone-outline" size={28} color={colors.textPrimary} />
         <View style={styles.bannerContent}>
           <Text style={styles.bannerTitle}>Encuentra repuestos rápido</Text>
           <Text style={styles.bannerText}>Crea una solicitud y recibe ofertas de vendedores cercanos</Text>
