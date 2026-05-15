@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, Linking, Alert, Modal } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -49,13 +49,16 @@ export default function ResponseCard({ businessName, logoUrl, avgRating, initial
   const unread = unreadCount ?? 0;
   const activeTags = (tags ?? []).filter(Boolean);
   const [logoError, setLogoError] = useState(false);
+  const [logoModal, setLogoModal] = useState(false);
   const hasLogo = !!logoUrl && !logoError;
 
   return (
     <View style={[styles.card, unread > 0 && { borderColor: colors.primary, borderWidth: 1.5 }]}>
       <View style={styles.header}>
         {hasLogo ? (
-          <Image source={{ uri: logoUrl }} style={styles.avatarImg} contentFit="cover" onError={() => setLogoError(true)} />
+          <Pressable onPress={() => setLogoModal(true)}>
+            <Image source={{ uri: logoUrl }} style={styles.avatarImg} contentFit="cover" onError={() => setLogoError(true)} />
+          </Pressable>
         ) : (
           <View style={styles.avatar}>
             <Ionicons name="storefront-outline" size={20} color={colors.primary} />
@@ -116,6 +119,20 @@ export default function ResponseCard({ businessName, logoUrl, avgRating, initial
 
       <Text style={styles.message} numberOfLines={2}>{initialMessage ?? ''}</Text>
       {onOpenChat ? <Button title="Abrir Chat" variant="secondary" onPress={onOpenChat} style={styles.chatBtn} /> : null}
+
+      {hasLogo ? (
+        <Modal visible={logoModal} transparent animationType="fade" onRequestClose={() => setLogoModal(false)}>
+          <Pressable style={styles.logoModalOverlay} onPress={() => setLogoModal(false)}>
+            <View style={styles.logoModalContent}>
+              <Image source={{ uri: logoUrl }} style={styles.logoModalImg} contentFit="contain" />
+              <Text style={styles.logoModalName}>{businessName ?? ''}</Text>
+            </View>
+            <Pressable style={styles.logoModalClose} onPress={() => setLogoModal(false)} hitSlop={12}>
+              <Ionicons name="close-circle" size={32} color="#fff" />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      ) : null}
     </View>
   );
 }
@@ -146,4 +163,11 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   tagChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full, gap: 4 },
   tagChipEmoji: { fontSize: 12 },
   tagChipText: { fontSize: 11, fontWeight: '600' },
+  logoModalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center',
+  },
+  logoModalContent: { alignItems: 'center' },
+  logoModalImg: { width: 200, height: 200, borderRadius: 20 },
+  logoModalName: { color: '#fff', fontSize: 16, fontWeight: '600', marginTop: Spacing.md, textAlign: 'center' },
+  logoModalClose: { position: 'absolute', top: Platform.OS === 'ios' ? 56 : 36, right: 20 },
 });
