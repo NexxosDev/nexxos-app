@@ -65,7 +65,7 @@ export default function ChatMessage({
   };
 
   const shouldBeYellow = isVendorMessage;
-  const shouldBeOnRight = isVendorMessage;
+  const shouldBeOnRight = isOwn;
   const isImage = !deletedForAll && (messageType ?? 'text') === 'image' && !!imageUrl;
   const isDeleted = !!deletedForAll;
 
