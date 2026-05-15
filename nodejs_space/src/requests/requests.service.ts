@@ -212,6 +212,8 @@ export class RequestsService {
     if (status) where.status = status;
     if (hasResponses === 'true') {
       where.requestResponses = { some: {} };
+    } else if (hasResponses === 'false') {
+      where.requestResponses = { none: {} };
     }
 
     const [items, total] = await Promise.all([
