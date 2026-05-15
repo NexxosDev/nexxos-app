@@ -121,7 +121,12 @@ export default function VendorRequestDetailScreen() {
         </View>
 
         {detail?.status === 'CERRADA' ? (
-          <Text style={styles.declinedText}>Esta solicitud ha sido cerrada por el cliente</Text>
+          <View style={styles.closedSection}>
+            <Text style={styles.declinedText}>Esta solicitud ha sido cerrada por el cliente</Text>
+            {detail?.chatId ? (
+              <Button title="Ver Chat (solo lectura)" variant="secondary" onPress={() => router.push(`/chat?chatId=${detail?.chatId ?? ''}&readOnly=1`)} />
+            ) : null}
+          </View>
         ) : detail?.status === 'PENDING' ? (
           <View style={styles.actions}>
             <Button title="Responder" onPress={handleRespondClick} />
@@ -190,6 +195,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   clientName: { fontSize: 16, fontWeight: '600', color: c.textPrimary },
   infoCard: { backgroundColor: c.cardBg, borderRadius: BorderRadius.md, padding: Spacing.md, borderWidth: 1, borderColor: c.border, marginBottom: Spacing.lg },
   actions: { gap: Spacing.sm },
+  closedSection: { gap: Spacing.sm, alignItems: 'center' },
   declinedText: { fontSize: 15, color: c.textSecondary, textAlign: 'center', paddingVertical: Spacing.lg },
   errorMsg: { padding: Spacing.lg, textAlign: 'center', color: c.textSecondary, fontSize: 16 },
   modalContainer: { flex: 1, backgroundColor: c.overlay },
