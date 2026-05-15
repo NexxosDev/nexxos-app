@@ -23,6 +23,7 @@ import ChatMessageComp from '../src/components/ChatMessage';
 import LoadingSpinner from '../src/components/LoadingSpinner';
 import { getDateKey, getDateLabel } from '../src/utils/dateSeparator';
 import type { ChatInfo, ChatMessageItem } from '../src/types';
+import useChatSounds from '../src/hooks/useChatSounds';
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -31,6 +32,7 @@ export default function ChatScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { refresh: refreshUnread } = useUnread();
+  const { playSend, playReceive } = useChatSounds();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [chatInfo, setChatInfo] = useState<ChatInfo | null>(null);
@@ -62,13 +64,31 @@ export default function ChatScreen() {
   }, [messages]);
 
   // ---------- Data fetching ----------
+  const prevMsgIdsRef = useRef<Set<string>>(new Set());
+
   const fetchMessages = useCallback(async () => {
     if (!chatId) return;
     try {
       const data = await getChatMessages(chatId, { limit: 50 });
-      setMessages(data?.items ?? []);
+      const items = data?.items ?? [];
+      const prevIds = prevMsgIdsRef.current;
+
+      // Detect new messages from other users (not initial load)
+      if (prevIds.size > 0) {
+        const hasNewFromOther = items.some(
+          (m) => m?.id && !m.id.startsWith('temp_') && !prevIds.has(m.id) && m.senderId !== user?.id,
+        );
+        if (hasNewFromOther) playReceive();
+      }
+
+      // Update tracked ids
+      const newIds = new Set<string>();
+      items.forEach((m) => { if (m?.id) newIds.add(m.id); });
+      prevMsgIdsRef.current = newIds;
+
+      setMessages(items);
     } catch { }
-  }, [chatId]);
+  }, [chatId, user?.id, playReceive]);
 
   const markAsDeliveredAndRead = useCallback(async () => {
     if (!chatId) return;
@@ -167,6 +187,7 @@ export default function ChatScreen() {
       setMessages((prev) => [optimistic, ...(prev ?? [])]);
       setText('');
       setReplyingTo(null);
+      playSend();
 
       try {
         const newMsg = await sendChatMessage(chatId, trimmed, 'text', undefined, replyingTo?.id);
@@ -205,6 +226,7 @@ export default function ChatScreen() {
       const uploadRes = await uploadFileWithUrl(uri, fileName, contentType);
       const imageUrl = uploadRes?.url ?? '';
       if (imageUrl) {
+        playSend();
         const newMsg = await sendChatMessage(chatId, 'Imagen', 'image', imageUrl, replyingTo?.id);
         if (newMsg) { setMessages((prev) => [newMsg, ...(prev ?? [])]); }
         setReplyingTo(null);
