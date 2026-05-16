@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
@@ -6,12 +6,25 @@ import api from './api';
 
 // ── Active chat suppression (WhatsApp-style) ──
 let _activeChatId: string | null = null;
+let _appIsActive = AppState.currentState === 'active';
+
+// Track app state changes
+AppState.addEventListener('change', (state) => {
+  _appIsActive = state === 'active';
+});
 
 /** Call when the user opens a specific chat screen */
-export function setActiveChatId(chatId: string) { _activeChatId = chatId; }
+export function setActiveChatId(chatId: string) {
+  _activeChatId = chatId;
+  // Also dismiss any existing notifications for this chat immediately
+  dismissNotificationsForContext({ chatId }).catch(() => {});
+}
 
 /** Call when the user leaves the chat screen */
 export function clearActiveChatId() { _activeChatId = null; }
+
+/** Check if a specific chat is currently active */
+export function getActiveChatId(): string | null { return _activeChatId; }
 
 // Configurar handler para notificaciones en foreground
 Notifications.setNotificationHandler({
@@ -20,8 +33,9 @@ Notifications.setNotificationHandler({
     const incomingChatId = data?.chatId;
     const notifType = data?.type;
 
-    // Suppress banner/tray if user is viewing this exact chat
+    // Suppress banner/sound/badge if user is viewing this exact chat AND app is in foreground
     if (
+      _appIsActive &&
       _activeChatId &&
       incomingChatId &&
       incomingChatId === _activeChatId &&
