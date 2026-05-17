@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, Platform, Image as RNImage } from 'react-native';
+import { View, StyleSheet, Dimensions, Platform, Image as RNImage, ImageBackground } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,10 +10,14 @@ import Animated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-const LOGO_SIZE = Math.min(SCREEN_W * 0.28, 120);
+const LOGO_SIZE = Math.min(SCREEN_W * 0.3, 130);
+
+const textureDark = require('../../assets/images/texture-automotive-dark.png');
+const textureLight = require('../../assets/images/texture-automotive-light.png');
+const logoYellow = require('../../assets/images/nexxos-logo-yellow.png');
 
 interface AnimatedSplashProps {
   onFinish: () => void;
@@ -21,8 +25,9 @@ interface AnimatedSplashProps {
 }
 
 export default function AnimatedSplash({ onFinish, fontLoaded }: AnimatedSplashProps) {
+  const { isDark } = useTheme();
+
   // ── Shared values ──
-  const bgOpacity = useSharedValue(1);
   const logoScale = useSharedValue(0.6);
   const logoOpacity = useSharedValue(0);
   const glowOpacity = useSharedValue(0);
@@ -41,12 +46,12 @@ export default function AnimatedSplash({ onFinish, fontLoaded }: AnimatedSplashP
     logoOpacity.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) });
     logoScale.value = withSpring(1, { damping: 14, stiffness: 100, mass: 0.8 });
 
-    // Step 2: Glow appears (300ms → 900ms)
+    // Step 2: Glow appears behind logo (300ms → 1100ms)
     glowOpacity.value = withDelay(
       300,
       withSequence(
-        withTiming(0.7, { duration: 600, easing: Easing.out(Easing.cubic) }),
-        withTiming(0.35, { duration: 800, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0.8, { duration: 600, easing: Easing.out(Easing.cubic) }),
+        withTiming(0.4, { duration: 800, easing: Easing.inOut(Easing.sin) }),
       ),
     );
 
@@ -57,9 +62,9 @@ export default function AnimatedSplash({ onFinish, fontLoaded }: AnimatedSplashP
       withSpring(0, { damping: 16, stiffness: 120, mass: 0.7 }),
     );
 
-    // Step 4: Whole splash fades out (2600ms → 3200ms)
+    // Step 4: Whole splash fades out (2800ms → 3400ms)
     wholeOpacity.value = withDelay(
-      2600,
+      2800,
       withTiming(0, { duration: 600, easing: Easing.in(Easing.cubic) }, (finished) => {
         if (finished) {
           runOnJS(finishSplash)();
@@ -87,56 +92,39 @@ export default function AnimatedSplash({ onFinish, fontLoaded }: AnimatedSplashP
     transform: [{ translateY: textTranslateY.value }],
   }));
 
+  const bgColor = isDark ? '#0A0A0A' : '#FFFFFF';
+  const textColor = isDark ? '#FFFFFF' : '#121212';
+  const glowColor = isDark
+    ? 'rgba(255,193,7,0.10)'
+    : 'rgba(255,193,7,0.12)';
+  const shadowColor = isDark
+    ? 'rgba(255,193,7,0.25)'
+    : 'rgba(255,193,7,0.3)';
+
   return (
-    <Animated.View style={[styles.container, containerStyle]}>
-      {/* Background gradient */}
-      <LinearGradient
-        colors={['#0D0D0D', '#141414', '#1A1A1A', '#141414', '#0A0A0A']}
-        locations={[0, 0.25, 0.5, 0.75, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+    <Animated.View style={[styles.container, containerStyle, { backgroundColor: bgColor }]}>
+      {/* Tileable automotive texture */}
+      <ImageBackground
+        source={isDark ? textureDark : textureLight}
+        resizeMode="repeat"
+        imageStyle={{ opacity: isDark ? 0.025 : 0.03 }}
         style={StyleSheet.absoluteFill}
       />
-
-      {/* Subtle radial vignette effect using overlapping gradients */}
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.4)']}
-        start={{ x: 0.5, y: 0.5 }}
-        end={{ x: 0.5, y: 0 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.4)']}
-        start={{ x: 0.5, y: 0.5 }}
-        end={{ x: 0.5, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {/* Dot texture overlay */}
-      <View style={styles.textureOverlay} />
 
       {/* Center content */}
       <View style={styles.content}>
         {/* Glow behind logo — subtle amber halo */}
         <Animated.View style={[styles.glowContainer, glowStyle]}>
-          <LinearGradient
-            colors={['rgba(255,193,7,0.06)', 'rgba(255,193,7,0.03)', 'transparent']}
-            start={{ x: 0.5, y: 0.5 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.glowGradient}
-          />
-          <LinearGradient
-            colors={['rgba(255,193,7,0.05)', 'rgba(255,193,7,0.02)', 'transparent']}
-            start={{ x: 0.5, y: 0.5 }}
-            end={{ x: 0, y: 0 }}
-            style={styles.glowGradient}
-          />
+          <View style={[
+            styles.glowCircle,
+            { backgroundColor: glowColor, shadowColor: shadowColor },
+          ]} />
         </Animated.View>
 
-        {/* Logo icon */}
+        {/* Logo icon — yellow */}
         <Animated.View style={[styles.logoWrap, logoStyle]}>
           <RNImage
-            source={require('../../assets/images/nexxos-logo-white.png')}
+            source={logoYellow}
             style={styles.logoImage}
             resizeMode="contain"
           />
@@ -148,6 +136,7 @@ export default function AnimatedSplash({ onFinish, fontLoaded }: AnimatedSplashP
             styles.brandText,
             textStyle,
             {
+              color: textColor,
               fontFamily: Platform.select({
                 ios: 'Montserrat-ExtraBold',
                 android: 'Montserrat-ExtraBold',
@@ -171,45 +160,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  textureOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.03,
-    backgroundColor: '#FFFFFF',
-    // Subtle noise effect via background pattern
-  },
   content: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   glowContainer: {
     position: 'absolute',
-    width: LOGO_SIZE * 3,
-    height: LOGO_SIZE * 3,
+    width: LOGO_SIZE * 3.5,
+    height: LOGO_SIZE * 3.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  glowGradient: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: LOGO_SIZE * 1.5,
+  glowCircle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: LOGO_SIZE * 1.75,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 60,
+    elevation: 0,
   },
   logoWrap: {
     width: LOGO_SIZE,
     height: LOGO_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   logoImage: {
     width: LOGO_SIZE,
     height: LOGO_SIZE,
   },
   brandText: {
-    fontSize: 38,
+    fontSize: 40,
     fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 6,
-    textShadowColor: 'rgba(255, 193, 7, 0.2)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
+    letterSpacing: 8,
   },
 });
