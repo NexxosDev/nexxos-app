@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- Fondo oscuro -->
+  <rect width="1080" height="1920" fill="#2A2A2A" />
+
+  <!-- Texto principal: NEXXOS -->
+  <text
+    x="540"
+    y="920"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="'Montserrat', sans-serif"
+    font-weight="800"
+    font-size="128"
+    letter-spacing="6"
+    fill="#FFC107"
+  >NEXXOS</text>
+
+  <!-- Subtítulo: Repuestos al alcance de tu mano -->
+  <text
+    x="540"
+    y="1010"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="'Montserrat', sans-serif"
+    font-weight="400"
+    font-size="36"
+    letter-spacing="1"
+    fill="#B0B0B0"
+  >Repuestos al alcance de tu mano</text>
+</svg>
