@@ -7,12 +7,13 @@ import Animated, {
   withDelay,
   withSequence,
   withSpring,
+  withRepeat,
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
 import { useTheme } from '../contexts/ThemeContext';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+const { width: SCREEN_W } = Dimensions.get('window');
 const LOGO_SIZE = Math.min(SCREEN_W * 0.3, 130);
 
 const textureDark = require('../../assets/images/texture-automotive-dark.png');
@@ -28,11 +29,12 @@ export default function AnimatedSplash({ onFinish, fontLoaded }: AnimatedSplashP
   const { isDark } = useTheme();
 
   // ── Shared values ──
-  const logoScale = useSharedValue(0.6);
+  const logoScale = useSharedValue(0.7);
   const logoOpacity = useSharedValue(0);
-  const glowOpacity = useSharedValue(0);
+  const logoRotation = useSharedValue(-8); // start rotated -8 degrees
+  const logoBrightness = useSharedValue(1);
   const textOpacity = useSharedValue(0);
-  const textTranslateY = useSharedValue(24);
+  const textTranslateY = useSharedValue(20);
   const wholeOpacity = useSharedValue(1);
 
   const finishSplash = useCallback(() => {
@@ -42,29 +44,39 @@ export default function AnimatedSplash({ onFinish, fontLoaded }: AnimatedSplashP
   useEffect(() => {
     if (!fontLoaded) return;
 
-    // Step 1: Logo fade-in + scale (0ms → 800ms)
-    logoOpacity.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) });
+    // ── STEP 1: Logo rotation + fade-in + scale (0ms → 900ms) ──
+    // Logo rotates from -8° to 0° while fading in
+    logoOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
+    logoRotation.value = withSpring(0, { damping: 12, stiffness: 80, mass: 0.9 });
     logoScale.value = withSpring(1, { damping: 14, stiffness: 100, mass: 0.8 });
 
-    // Step 2: Glow appears behind logo (300ms → 1100ms)
-    glowOpacity.value = withDelay(
-      300,
-      withSequence(
-        withTiming(0.8, { duration: 600, easing: Easing.out(Easing.cubic) }),
-        withTiming(0.4, { duration: 800, easing: Easing.inOut(Easing.sin) }),
+    // ── STEP 2: Glow pulse — logo "comes alive" (700ms → 2200ms) ──
+    // Scale pulses subtly 1.0 → 1.06 → 1.0 twice
+    logoBrightness.value = withDelay(
+      700,
+      withRepeat(
+        withSequence(
+          withTiming(1.08, { duration: 500, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1.0, { duration: 500, easing: Easing.inOut(Easing.sin) }),
+        ),
+        2, // repeat twice
+        false,
       ),
     );
 
-    // Step 3: Text "NEXXOS" fade-in + slide up (600ms → 1300ms)
-    textOpacity.value = withDelay(600, withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) }));
+    // ── STEP 3: Text "NEXXOS" fade-in + slide up (600ms → 1200ms) ──
+    textOpacity.value = withDelay(
+      600,
+      withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) }),
+    );
     textTranslateY.value = withDelay(
       600,
       withSpring(0, { damping: 16, stiffness: 120, mass: 0.7 }),
     );
 
-    // Step 4: Whole splash fades out (2800ms → 3400ms)
+    // ── STEP 4: Whole splash fades out (3000ms → 3600ms) ──
     wholeOpacity.value = withDelay(
-      2800,
+      3000,
       withTiming(0, { duration: 600, easing: Easing.in(Easing.cubic) }, (finished) => {
         if (finished) {
           runOnJS(finishSplash)();
@@ -80,11 +92,10 @@ export default function AnimatedSplash({ onFinish, fontLoaded }: AnimatedSplashP
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
-    transform: [{ scale: logoScale.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
+    transform: [
+      { scale: logoScale.value * logoBrightness.value },
+      { rotate: `${logoRotation.value}deg` },
+    ],
   }));
 
   const textStyle = useAnimatedStyle(() => ({
@@ -94,34 +105,20 @@ export default function AnimatedSplash({ onFinish, fontLoaded }: AnimatedSplashP
 
   const bgColor = isDark ? '#0A0A0A' : '#FFFFFF';
   const textColor = isDark ? '#FFFFFF' : '#121212';
-  const glowColor = isDark
-    ? 'rgba(255,193,7,0.10)'
-    : 'rgba(255,193,7,0.12)';
-  const shadowColor = isDark
-    ? 'rgba(255,193,7,0.25)'
-    : 'rgba(255,193,7,0.3)';
 
   return (
     <Animated.View style={[styles.container, containerStyle, { backgroundColor: bgColor }]}>
-      {/* Tileable automotive texture */}
+      {/* Tileable automotive texture — 6% opacity */}
       <ImageBackground
         source={isDark ? textureDark : textureLight}
         resizeMode="repeat"
-        imageStyle={{ opacity: isDark ? 0.025 : 0.03 }}
+        imageStyle={{ opacity: 0.06 }}
         style={StyleSheet.absoluteFill}
       />
 
       {/* Center content */}
       <View style={styles.content}>
-        {/* Glow behind logo — subtle amber halo */}
-        <Animated.View style={[styles.glowContainer, glowStyle]}>
-          <View style={[
-            styles.glowCircle,
-            { backgroundColor: glowColor, shadowColor: shadowColor },
-          ]} />
-        </Animated.View>
-
-        {/* Logo icon — yellow */}
+        {/* Logo icon — yellow with rotation + pulse animation */}
         <Animated.View style={[styles.logoWrap, logoStyle]}>
           <RNImage
             source={logoYellow}
@@ -163,22 +160,6 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  glowContainer: {
-    position: 'absolute',
-    width: LOGO_SIZE * 3.5,
-    height: LOGO_SIZE * 3.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  glowCircle: {
-    width: '100%',
-    height: '100%',
-    borderRadius: LOGO_SIZE * 1.75,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 60,
-    elevation: 0,
   },
   logoWrap: {
     width: LOGO_SIZE,
