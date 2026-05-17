@@ -112,7 +112,7 @@ export default function AnimatedSplash({ onFinish, fontLoaded }: AnimatedSplashP
       <ImageBackground
         source={isDark ? textureDark : textureLight}
         resizeMode="repeat"
-        imageStyle={{ opacity: 0.06 }}
+        imageStyle={{ opacity: 0.08 }}
         style={StyleSheet.absoluteFill}
       />
 
