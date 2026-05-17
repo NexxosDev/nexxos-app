@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TextInput, Pressable,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Animated, Modal,
+  ImageBackground,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,12 +26,15 @@ import { getDateKey, getDateLabel } from '../src/utils/dateSeparator';
 import type { ChatInfo, ChatMessageItem } from '../src/types';
 import useChatSounds from '../src/hooks/useChatSounds';
 
+const textureDark = require('../assets/images/texture-automotive-dark.png');
+const textureLight = require('../assets/images/texture-automotive-light.png');
+
 export default function ChatScreen() {
   const router = useRouter();
   const { chatId = '', readOnly: readOnlyParam = '' } = useLocalSearchParams<{ chatId: string; readOnly?: string }>();
   const isReadOnly = readOnlyParam === '1';
   const { user } = useAuth();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { refresh: refreshUnread } = useUnread();
   const { playSend, playReceive } = useChatSounds();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -354,18 +358,25 @@ export default function ChatScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-        <FlatList
-          ref={flatListRef}
-          data={messages ?? []}
-          keyExtractor={(item) => item?.id ?? Math.random().toString()}
-          renderItem={renderMessage}
-          inverted
-          contentContainerStyle={styles.messageList}
-          ListEmptyComponent={<Text style={styles.emptyChat}>No hay mensajes aún. ¡Inicia la conversación!</Text>}
-          onScrollToIndexFailed={(info) => {
-            flatListRef.current?.scrollToOffset?.({ offset: info.averageItemLength * info.index, animated: true });
-          }}
-        />
+        <ImageBackground
+          source={isDark ? textureDark : textureLight}
+          resizeMode="repeat"
+          imageStyle={{ opacity: 0.08 }}
+          style={{ flex: 1 }}
+        >
+          <FlatList
+            ref={flatListRef}
+            data={messages ?? []}
+            keyExtractor={(item) => item?.id ?? Math.random().toString()}
+            renderItem={renderMessage}
+            inverted
+            contentContainerStyle={styles.messageList}
+            ListEmptyComponent={<Text style={styles.emptyChat}>No hay mensajes aún. ¡Inicia la conversación!</Text>}
+            onScrollToIndexFailed={(info) => {
+              flatListRef.current?.scrollToOffset?.({ offset: info.averageItemLength * info.index, animated: true });
+            }}
+          />
+        </ImageBackground>
 
         {uploading ? (
           <View style={styles.uploadingBar}>
