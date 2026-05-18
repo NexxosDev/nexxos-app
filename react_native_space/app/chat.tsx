@@ -26,8 +26,8 @@ import { getDateKey, getDateLabel } from '../src/utils/dateSeparator';
 import type { ChatInfo, ChatMessageItem } from '../src/types';
 import useChatSounds from '../src/hooks/useChatSounds';
 
-const textureDark = require('../assets/images/texture-automotive-dark.png');
-const textureLight = require('../assets/images/texture-automotive-light.png');
+const textureDark = require('../assets/images/texture-chat-dark.png');
+const textureLight = require('../assets/images/texture-chat-light.png');
 
 export default function ChatScreen() {
   const router = useRouter();
