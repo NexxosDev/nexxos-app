@@ -73,7 +73,7 @@ const KEYWORDS: Record<string, string[]> = {
 async function main() {
   // Get all subcategories
   const subcats = await prisma.partSubcategory.findMany({ select: { id: true, name: true } });
-  const nameToId = new Map(subcats.map(s => [s.name, s.id]));
+  const nameToId = new Map(subcats.map((s: any) => [s.name, s.id]));
 
   // Clear existing keywords
   await prisma.partKeyword.deleteMany({});

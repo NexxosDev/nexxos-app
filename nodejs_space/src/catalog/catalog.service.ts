@@ -86,7 +86,7 @@ export class CatalogService {
     });
 
     return {
-      items: items.map((i) => ({
+      items: items.map((i: any) => ({
         subcategoryId: i.id,
         subcategoryName: i.name,
         categoryId: i.category.id,

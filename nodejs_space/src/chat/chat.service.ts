@@ -158,7 +158,7 @@ export class ChatService {
     const vendorBusinessName = chat?.vendor?.businessName;
 
     return {
-      items: items.map((m) => formatMessage(m, vendorUserId, vendorBusinessName)).filter(Boolean),
+      items: items.map((m: any) => formatMessage(m, vendorUserId, vendorBusinessName)).filter(Boolean),
       hasMore,
     };
   }
