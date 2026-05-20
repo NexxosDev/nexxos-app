@@ -8,6 +8,7 @@ import { CloseRequestDto } from './dto/close-request.dto';
 import { RespondRequestDto } from './dto/respond-request.dto';
 import { getFileUrl } from '../lib/s3';
 import { NotificationService } from '../notification/notification.service';
+import { PlansService } from '../plans/plans.service';
 
 @Injectable()
 export class RequestsService {
@@ -17,6 +18,7 @@ export class RequestsService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly notificationService: NotificationService,
+    private readonly plansService: PlansService,
   ) {}
 
   // Haversine distance in kilometers
@@ -154,32 +156,48 @@ export class RequestsService {
       });
     }
 
-    if (matchedVendors.length > 0) {
+    // Filter vendors by plan limits (exclude those who exceeded monthly limit)
+    const eligibleVendors: { id: string }[] = [];
+    for (const v of matchedVendors) {
+      const canReceive = await this.plansService.canReceiveRequests(v.id);
+      if (canReceive) eligibleVendors.push(v);
+    }
+
+    this.logger.log(`Matching: ${matchedVendors.length} matched, ${eligibleVendors.length} eligible (within plan limits)`);
+
+    if (eligibleVendors.length > 0) {
       await this.prisma.requestVendorMatch.createMany({
-        data: matchedVendors.map((v: any) => ({
+        data: eligibleVendors.map((v: any) => ({
           requestId: request.id,
           vendorId: v.id,
         })),
       });
 
-      // Increment metrics
+      // Increment metrics and monthly request counts
       await this.prisma.vendorMetrics.updateMany({
-        where: { vendorId: { in: matchedVendors.map((v: any) => v.id) } },
+        where: { vendorId: { in: eligibleVendors.map((v: any) => v.id) } },
         data: { totalRequestsReceived: { increment: 1 } },
       });
+
+      // Increment monthly counts for plan tracking
+      for (const v of eligibleVendors) {
+        this.plansService.incrementMonthlyCount(v.id).catch((err) =>
+          this.logger.error(`Failed to increment monthly count for vendor ${v.id}`, err),
+        );
+      }
     }
 
-    this.logger.log(`Request ${request.id} created, matched ${matchedVendors.length} vendors`);
+    this.logger.log(`Request ${request.id} created, matched ${eligibleVendors.length} vendors`);
 
     // 🔔 Push: Notificar vendedores matcheados
-    if (matchedVendors.length > 0) {
+    if (eligibleVendors.length > 0) {
       const brand = await this.prisma.vehicleBrand.findUnique({ where: { id: dto.vehicleBrandId } });
       const model = await this.prisma.vehicleModel.findUnique({ where: { id: dto.vehicleModelId } });
       const cat = await this.prisma.partCategory.findUnique({ where: { id: dto.partCategoryId } });
       const clientUser = await this.prisma.user.findUnique({ where: { id: clientId }, select: { firstName: true, lastName: true } });
       const clientName = `${clientUser?.firstName ?? ''} ${clientUser?.lastName ?? ''}`.trim() || 'Un cliente';
       const vendorRows = await this.prisma.vendor.findMany({
-        where: { id: { in: matchedVendors.map((v: any) => v.id) } },
+        where: { id: { in: eligibleVendors.map((v: any) => v.id) } },
         select: { userId: true },
       });
       const vendorUserIds = vendorRows.map((v: any) => v.userId);
@@ -195,7 +213,7 @@ export class RequestsService {
     return {
       id: request.id,
       status: request.status,
-      matchedVendorsCount: matchedVendors.length,
+      matchedVendorsCount: eligibleVendors.length,
       createdAt: request.createdAt.toISOString(),
     };
   }

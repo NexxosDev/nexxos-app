@@ -10,6 +10,7 @@ import { ChatModule } from './chat/chat.module';
 import { UploadModule } from './upload/upload.module';
 import { NotificationModule } from './notification/notification.module';
 import { IdentityModule } from './identity/identity.module';
+import { PlansModule } from './plans/plans.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { IdentityModule } from './identity/identity.module';
     UploadModule,
     NotificationModule,
     IdentityModule,
+    PlansModule,
   ],
 })
 export class AppModule {}

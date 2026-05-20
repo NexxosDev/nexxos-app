@@ -8,6 +8,7 @@ import { RegistrationCodeService } from './registration-code.service';
 import { formatCedula } from '../lib/cedula';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { PlansService } from '../plans/plans.service';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,7 @@ export class AuthService {
     private readonly emailVerificationService: EmailVerificationService,
     private readonly registrationCodeService: RegistrationCodeService,
     private readonly configService: ConfigService,
+    private readonly plansService: PlansService,
   ) {}
 
   async signup(dto: SignupDto) {
@@ -115,6 +117,8 @@ export class AuthService {
         },
       });
       await this.prisma.vendorMetrics.create({ data: { vendorId: vendor.id } });
+      // Assign default plan (Beta or Gratuito depending on cutoff date)
+      await this.plansService.assignDefaultPlan(vendor.id);
     }
 
     // Email was already pre-verified via registration code, no need to send post-signup verification
@@ -245,6 +249,8 @@ export class AuthService {
         },
       });
       await tx.vendorMetrics.create({ data: { vendorId: vendor.id } });
+      // Assign default plan (Beta or Gratuito depending on cutoff date)
+      await this.plansService.assignDefaultPlan(vendor.id);
     });
 
     // Return updated user info

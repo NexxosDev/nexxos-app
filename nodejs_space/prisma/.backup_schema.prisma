@@ -111,6 +111,7 @@ model Vendor {
   chats                   Chat[]
   requestRatingsReceived  RequestRating[]         @relation("RatingVendor")
   vendorSubscriptions     VendorSubscription[]
+  vendorMonthlyRequests   VendorMonthlyRequests[]
 
   @@map("vendors")
 }
@@ -411,12 +412,19 @@ model File {
 }
 
 model Plan {
-  id           String  @id @default(uuid()) @db.Uuid
-  name         String
-  description  String?
-  price        Float
-  billingCycle String  @map("billing_cycle")
-  isActive     Boolean @default(true) @map("is_active")
+  id                    String  @id @default(uuid()) @db.Uuid
+  name                  String
+  slug                  String  @unique
+  description           String?
+  solicitudesMensuales  Int     @default(50) @map("solicitudes_mensuales")
+  prioridad             Int     @default(1)
+  precioMensual         Float   @default(0) @map("precio_mensual")
+  precioAnual           Float   @default(0) @map("precio_anual")
+  comisionPorcentaje    Float   @default(0) @map("comision_porcentaje")
+  visibleEnApp          Boolean @default(true) @map("visible_en_app")
+  isActive              Boolean @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   vendorSubscriptions VendorSubscription[]
 
@@ -424,17 +432,36 @@ model Plan {
 }
 
 model VendorSubscription {
-  id        String   @id @default(uuid()) @db.Uuid
-  vendorId  String   @map("vendor_id") @db.Uuid
-  planId    String   @map("plan_id") @db.Uuid
-  startDate DateTime @map("start_date")
-  endDate   DateTime @map("end_date")
-  status    String
+  id               String   @id @default(uuid()) @db.Uuid
+  vendorId         String   @map("vendor_id") @db.Uuid
+  planId           String   @map("plan_id") @db.Uuid
+  estado           String   @default("ACTIVE")
+  fechaAsignacion  DateTime @default(now()) @map("fecha_asignacion")
+  fechaExpiracion  DateTime? @map("fecha_expiracion")
+  fechaGracia      DateTime? @map("fecha_gracia")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   vendor Vendor @relation(fields: [vendorId], references: [id])
   plan   Plan   @relation(fields: [planId], references: [id])
 
+  @@index([vendorId, estado])
   @@map("vendor_subscriptions")
+}
+
+model VendorMonthlyRequests {
+  id        String @id @default(uuid()) @db.Uuid
+  vendorId  String @map("vendor_id") @db.Uuid
+  year      Int
+  month     Int
+  count     Int    @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@unique([vendorId, year, month])
+  @@map("vendor_monthly_requests")
 }
 
 model EmailVerificationToken {

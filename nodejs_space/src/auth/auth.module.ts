@@ -11,11 +11,13 @@ import { RegistrationCodeService } from './registration-code.service';
 import { PasswordResetService } from './password-reset.service';
 import { JwtStrategy } from './jwt.strategy';
 import { EmailModule } from '../email/email.module';
+import { PlansModule } from '../plans/plans.module';
 
 @Module({
   imports: [
     PassportModule,
     EmailModule,
+    PlansModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
