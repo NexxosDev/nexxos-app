@@ -11,4 +11,8 @@ export class UpdatePlanDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() comisionPorcentaje?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() visibleEnApp?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
+
+  // ── Legacy fields from admin panel v1 ──
+  @ApiPropertyOptional({ description: 'Legacy: maps to precioMensual' }) @IsOptional() @IsNumber() price?: number;
+  @ApiPropertyOptional({ description: 'Legacy: billing cycle' }) @IsOptional() @IsString() billingCycle?: string;
 }

@@ -20,24 +20,49 @@ export class PlansService {
     private readonly configService: ConfigService,
   ) {}
 
-  // ── Create plan (admin) ──
+  // ── Helper: add legacy fields for admin panel v1 compatibility ──
+  private withLegacyFields(plan: any) {
+    if (!plan) return plan;
+    const billingCycle = (plan.precioAnual ?? 0) > 0 && (plan.precioMensual ?? 0) === 0 ? 'annual' : 'monthly';
+    return {
+      ...plan,
+      price: plan.precioMensual ?? plan.precioAnual ?? 0,
+      billingCycle,
+    };
+  }
+
+  // ── Create plan (admin) — accepts both new and legacy fields ──
   async createPlan(dto: CreatePlanDto) {
-    const existing = await this.prisma.plan.findUnique({ where: { slug: dto.slug } });
-    if (existing) throw new BadRequestException(`Ya existe un plan con slug '${dto.slug}'`);
-    return this.prisma.plan.create({
+    // Auto-generate slug from name if not provided
+    const slug = dto.slug ?? dto.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const existing = await this.prisma.plan.findUnique({ where: { slug } });
+    if (existing) throw new BadRequestException(`Ya existe un plan con slug '${slug}'`);
+
+    // Map legacy price field → precioMensual if new fields not provided
+    const precioMensual = dto.precioMensual ?? dto.price ?? 0;
+
+    // Get max prioridad if not provided
+    let prioridad = dto.prioridad;
+    if (prioridad == null) {
+      const maxPlan = await this.prisma.plan.findFirst({ orderBy: { prioridad: 'desc' } });
+      prioridad = (maxPlan?.prioridad ?? 0) + 1;
+    }
+
+    const plan = await this.prisma.plan.create({
       data: {
         name: dto.name,
-        slug: dto.slug,
+        slug,
         description: dto.description ?? '',
-        solicitudesMensuales: dto.solicitudesMensuales,
-        prioridad: dto.prioridad,
-        precioMensual: dto.precioMensual ?? 0,
+        solicitudesMensuales: dto.solicitudesMensuales ?? 50,
+        prioridad,
+        precioMensual,
         precioAnual: dto.precioAnual ?? 0,
         comisionPorcentaje: dto.comisionPorcentaje ?? 0,
         visibleEnApp: dto.visibleEnApp ?? false,
         isActive: dto.isActive ?? true,
       },
     });
+    return this.withLegacyFields(plan);
   }
 
   // ── Delete plan (admin) ──
@@ -55,9 +80,10 @@ export class PlansService {
     return { deleted: true };
   }
 
-  // ── List all plans (admin) ──
+  // ── List all plans (admin) — includes legacy fields for panel v1 ──
   async listAllPlans() {
-    return this.prisma.plan.findMany({ orderBy: { prioridad: 'asc' } });
+    const plans = await this.prisma.plan.findMany({ orderBy: { prioridad: 'asc' } });
+    return plans.map((p) => this.withLegacyFields(p));
   }
 
   // ── List visible plans (app) ──
@@ -72,7 +98,15 @@ export class PlansService {
   async updatePlan(planId: string, dto: UpdatePlanDto) {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) throw new NotFoundException('Plan no encontrado');
-    return this.prisma.plan.update({ where: { id: planId }, data: dto as any });
+    // Map legacy price → precioMensual
+    const data: any = { ...dto };
+    if (data.price != null && data.precioMensual == null) {
+      data.precioMensual = data.price;
+    }
+    delete data.price;
+    delete data.billingCycle;
+    const updated = await this.prisma.plan.update({ where: { id: planId }, data });
+    return this.withLegacyFields(updated);
   }
 
   // ── Get vendor's active plan ──
