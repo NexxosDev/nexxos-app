@@ -1,9 +1,10 @@
 import {
-  Controller, Get, Post, Patch, Param, Body, Query, Req, UseGuards, HttpCode, Logger,
+  Controller, Get, Post, Patch, Delete, Param, Body, Query, Req, UseGuards, HttpCode, Logger,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { PlansService } from './plans.service';
+import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { AssignPlanDto } from './dto/assign-plan.dto';
 
@@ -37,6 +38,24 @@ export class PlansController {
   @ApiOperation({ summary: 'Admin: List all plans (including hidden)' })
   async listAllPlans() {
     return this.plansService.listAllPlans();
+  }
+
+  // ── Admin: create plan ──
+  @Post('admin/plans')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Admin: Create a new plan' })
+  async createPlan(@Body() dto: CreatePlanDto) {
+    return this.plansService.createPlan(dto);
+  }
+
+  // ── Admin: delete plan ──
+  @Delete('admin/plans/:planId')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Admin: Delete a plan (only if no active subscriptions)' })
+  async deletePlan(@Param('planId') planId: string) {
+    return this.plansService.deletePlan(planId);
   }
 
   // ── Admin: update plan ──

@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { ConfigService } from '@nestjs/config';
 import { UpdatePlanDto } from './dto/update-plan.dto';
+import { CreatePlanDto } from './dto/create-plan.dto';
 
 const BETA_DURATION_MONTHS = 4; // for new vendors during beta period
 const GRACE_PERIOD_DAYS = 5;
@@ -18,6 +19,41 @@ export class PlansService {
     private readonly notificationService: NotificationService,
     private readonly configService: ConfigService,
   ) {}
+
+  // ── Create plan (admin) ──
+  async createPlan(dto: CreatePlanDto) {
+    const existing = await this.prisma.plan.findUnique({ where: { slug: dto.slug } });
+    if (existing) throw new BadRequestException(`Ya existe un plan con slug '${dto.slug}'`);
+    return this.prisma.plan.create({
+      data: {
+        name: dto.name,
+        slug: dto.slug,
+        description: dto.description ?? '',
+        solicitudesMensuales: dto.solicitudesMensuales,
+        prioridad: dto.prioridad,
+        precioMensual: dto.precioMensual ?? 0,
+        precioAnual: dto.precioAnual ?? 0,
+        comisionPorcentaje: dto.comisionPorcentaje ?? 0,
+        visibleEnApp: dto.visibleEnApp ?? false,
+        isActive: dto.isActive ?? true,
+      },
+    });
+  }
+
+  // ── Delete plan (admin) ──
+  async deletePlan(planId: string) {
+    const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
+    if (!plan) throw new NotFoundException('Plan no encontrado');
+    // Check if any active subscriptions use this plan
+    const activeSubs = await this.prisma.vendorSubscription.count({
+      where: { planId, estado: { in: ['ACTIVE', 'GRACE_PERIOD'] } },
+    });
+    if (activeSubs > 0) {
+      throw new BadRequestException(`No se puede eliminar: ${activeSubs} vendor(es) tienen este plan activo`);
+    }
+    await this.prisma.plan.delete({ where: { id: planId } });
+    return { deleted: true };
+  }
 
   // ── List all plans (admin) ──
   async listAllPlans() {
