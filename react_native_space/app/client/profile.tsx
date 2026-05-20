@@ -7,10 +7,10 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { Spacing, BorderRadius } from '../../src/theme/colors';
 import type { ThemeColors } from '../../src/theme/colors';
-import Button from '../../src/components/Button';
 import ProfileAvatar from '../../src/components/ProfileAvatar';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
 import DeleteAccountModal from '../../src/components/DeleteAccountModal';
+import ProfileActionButton from '../../src/components/ProfileActionButton';
 
 export default function ClientProfile() {
   const router = useRouter();
@@ -67,14 +67,37 @@ export default function ClientProfile() {
           <InfoRow icon="mail-outline" label="Email" value={user?.email ?? '-'} c={colors} />
         </View>
 
-        <Button title="Editar Perfil" variant="secondary" onPress={() => router.push('/edit-profile')} style={styles.editBtn} />
-        <Button title="Cambiar Modo" variant="ghost" onPress={() => router.replace('/role-selection')} icon={<Ionicons name="swap-horizontal-outline" size={18} color={colors.textSecondary} />} />
-        <Button title="Cerrar Sesión" variant="destructive" onPress={handleLogout} style={styles.logoutBtn} />
+        {/* ── Action Buttons ── */}
+        <View style={styles.actionsCard}>
+          <ProfileActionButton
+            label="Editar Perfil"
+            icon="create-outline"
+            onPress={() => router.push('/edit-profile')}
+          />
+          <View style={styles.actionDivider} />
+          <ProfileActionButton
+            label="Cambiar Modo"
+            icon="swap-horizontal-outline"
+            onPress={() => router.replace('/role-selection')}
+          />
+        </View>
 
-        <Pressable style={styles.deleteAccountBtn} onPress={() => setDeleteModalVisible(true)}>
-          <Ionicons name="trash-outline" size={16} color={colors.error} />
-          <Text style={styles.deleteAccountText}>Eliminar cuenta</Text>
-        </Pressable>
+        <View style={styles.dangerCard}>
+          <ProfileActionButton
+            label="Cerrar Sesión"
+            icon="log-out-outline"
+            onPress={handleLogout}
+            showChevron={false}
+          />
+          <View style={styles.actionDivider} />
+          <ProfileActionButton
+            label="Eliminar cuenta"
+            icon="trash-outline"
+            variant="danger"
+            onPress={() => setDeleteModalVisible(true)}
+            showChevron={false}
+          />
+        </View>
       </ScrollView>
 
       <DeleteAccountModal
@@ -117,19 +140,15 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.cardBg, borderRadius: BorderRadius.md, padding: Spacing.md,
     borderWidth: 1, borderColor: c.border, marginBottom: Spacing.lg,
   },
-  editBtn: { marginBottom: Spacing.sm },
-  logoutBtn: { marginTop: Spacing.sm },
-  deleteAccountBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: Spacing.lg,
-    paddingVertical: Spacing.md,
+  actionsCard: {
+    marginBottom: Spacing.md,
+    gap: 2,
   },
-  deleteAccountText: {
-    fontSize: 14,
-    color: c.error,
-    fontWeight: '500',
+  dangerCard: {
+    marginTop: Spacing.sm,
+    gap: 2,
+  },
+  actionDivider: {
+    height: 4,
   },
 });

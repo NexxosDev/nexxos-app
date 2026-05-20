@@ -8,13 +8,13 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { getVendorProfile, getVendorPlan } from '../../src/services/vendor';
 import { Spacing, BorderRadius } from '../../src/theme/colors';
 import type { ThemeColors } from '../../src/theme/colors';
-import Button from '../../src/components/Button';
 import ProfileAvatar from '../../src/components/ProfileAvatar';
 import StarRating from '../../src/components/StarRating';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
 import BrandLogo from '../../src/components/BrandLogo';
 import VendorPlanCard from '../../src/components/VendorPlanCard';
 import DeleteAccountModal from '../../src/components/DeleteAccountModal';
+import ProfileActionButton from '../../src/components/ProfileActionButton';
 import type { VendorProfile as VPType, VendorPlanInfo } from '../../src/types';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -281,14 +281,37 @@ export default function VendorProfileScreen() {
           ) : null}
         </View>
 
-        <Button title="Editar Perfil" variant="secondary" onPress={() => router.push('/vendor-edit-profile')} style={styles.btn} />
-        <Button title="Cambiar Modo" variant="ghost" onPress={() => router.replace('/role-selection')} icon={<Ionicons name="swap-horizontal-outline" size={18} color={colors.textSecondary} />} />
-        <Button title="Cerrar Sesión" variant="destructive" onPress={handleLogout} style={styles.btn} />
+        {/* ── Action Buttons ── */}
+        <View style={styles.actionsCard}>
+          <ProfileActionButton
+            label="Editar Perfil"
+            icon="create-outline"
+            onPress={() => router.push('/vendor-edit-profile')}
+          />
+          <View style={styles.actionDivider} />
+          <ProfileActionButton
+            label="Cambiar Modo"
+            icon="swap-horizontal-outline"
+            onPress={() => router.replace('/role-selection')}
+          />
+        </View>
 
-        <Pressable style={styles.deleteAccountBtn} onPress={() => setDeleteModalVisible(true)}>
-          <Ionicons name="trash-outline" size={16} color={colors.error} />
-          <Text style={styles.deleteAccountText}>Eliminar cuenta</Text>
-        </Pressable>
+        <View style={styles.dangerCard}>
+          <ProfileActionButton
+            label="Cerrar Sesión"
+            icon="log-out-outline"
+            onPress={handleLogout}
+            showChevron={false}
+          />
+          <View style={styles.actionDivider} />
+          <ProfileActionButton
+            label="Eliminar cuenta"
+            icon="trash-outline"
+            variant="danger"
+            onPress={() => setDeleteModalVisible(true)}
+            showChevron={false}
+          />
+        </View>
       </ScrollView>
 
       <DeleteAccountModal
@@ -324,7 +347,17 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '600', color: c.textPrimary, marginBottom: Spacing.sm },
   sectionValue: { fontSize: 14, color: c.textSubtitle, marginBottom: 4 },
   sectionValueMuted: { fontSize: 13, color: c.textSecondary, marginBottom: 4, fontStyle: 'italic' },
-  btn: { marginBottom: Spacing.sm },
+  actionsCard: {
+    marginBottom: Spacing.md,
+    gap: 2,
+  },
+  dangerCard: {
+    marginTop: Spacing.sm,
+    gap: 2,
+  },
+  actionDivider: {
+    height: 4,
+  },
 
   // ── Accordion ──
   accordionContainer: {
@@ -369,17 +402,5 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   leafDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: c.primary },
   leafText: { fontSize: 14, color: c.textSubtitle },
   emptyText: { padding: Spacing.md, fontSize: 14, color: c.textSecondary, textAlign: 'center' },
-  deleteAccountBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: Spacing.lg,
-    paddingVertical: Spacing.md,
-  },
-  deleteAccountText: {
-    fontSize: 14,
-    color: c.error,
-    fontWeight: '500',
-  },
+
 });
