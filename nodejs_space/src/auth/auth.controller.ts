@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { PasswordResetService } from './password-reset.service';
@@ -73,5 +73,13 @@ export class AuthController {
   @ApiOperation({ summary: 'Upgrade existing client to vendor (creates vendor profile)' })
   upgradeToVendor(@CurrentUser('id') userId: string, @Body() dto: UpgradeToVendorDto) {
     return this.authService.upgradeToVendor(userId, dto);
+  }
+
+  @Delete('auth/account')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete account — anonymizes data, soft deletes user, revokes tokens' })
+  deleteAccount(@CurrentUser('id') userId: string) {
+    return this.authService.deleteAccount(userId);
   }
 }

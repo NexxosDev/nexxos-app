@@ -111,3 +111,8 @@ export async function resetPasswordApi(email: string, code: string, newPassword:
   const res = await api.post('/auth/reset-password', { email, code, newPassword });
   return res?.data;
 }
+
+export async function deleteAccountApi(): Promise<{ success: boolean; message: string }> {
+  const res = await api.delete('/auth/account');
+  return res?.data;
+}

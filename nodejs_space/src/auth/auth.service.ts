@@ -151,6 +151,7 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) throw new UnauthorizedException('Credenciales inválidas');
 
+    if (user.deletedAt) throw new UnauthorizedException('Esta cuenta ha sido eliminada');
     if (!user.isActive) throw new UnauthorizedException('Tu cuenta ha sido desactivada');
 
     const token = this.generateToken(user.id, user.email);
@@ -274,6 +275,145 @@ export class AuthService {
         hasVendorProfile: true,
       },
     };
+  }
+
+  // ── Delete account (soft delete + anonymize) ──
+  async deleteAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { vendor: true },
+    });
+    if (!user) throw new BadRequestException('Usuario no encontrado');
+    if (user.deletedAt) throw new BadRequestException('Esta cuenta ya fue eliminada');
+
+    const vendor = user.vendor;
+
+    // If vendor: block if they have active request matches (PENDING not responded/declined)
+    if (vendor) {
+      const activeMatches = await this.prisma.requestVendorMatch.count({
+        where: {
+          vendorId: vendor.id,
+          responded: false,
+          declined: false,
+          request: { status: 'ABIERTA' },
+        },
+      });
+      if (activeMatches > 0) {
+        throw new BadRequestException(
+          `Debes responder o declinar tus ${activeMatches} solicitud(es) activa(s) antes de eliminar tu cuenta.`,
+        );
+      }
+    }
+
+    // Auto-close client's open requests
+    const openRequests = await this.prisma.request.findMany({
+      where: { clientId: userId, status: 'ABIERTA' },
+      select: { id: true },
+    });
+    if (openRequests.length > 0) {
+      await this.prisma.request.updateMany({
+        where: { clientId: userId, status: 'ABIERTA' },
+        data: { status: 'CERRADA', closedAt: new Date() },
+      });
+      this.logger.log(`Auto-closed ${openRequests.length} open requests for user ${userId}`);
+    }
+
+    // Collect S3 keys to delete
+    const s3KeysToDelete: string[] = [];
+    if (user.profileImageUrl) {
+      const key = this.extractS3Key(user.profileImageUrl);
+      if (key) s3KeysToDelete.push(key);
+    }
+    if (vendor) {
+      for (const field of ['logoUrl', 'documentImageUrl', 'personalDocUrl', 'selfieUrl'] as const) {
+        const url = vendor[field];
+        if (url) {
+          const key = this.extractS3Key(url);
+          if (key) s3KeysToDelete.push(key);
+        }
+      }
+    }
+
+    // Anonymize user data
+    const anonSuffix = userId.substring(0, 8);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: `deleted_${anonSuffix}@anon.nexxos.com`,
+        firstName: 'Usuario',
+        lastName: 'Eliminado',
+        name: 'Usuario Eliminado',
+        phone: '0000000000',
+        documentId: `ANON-${anonSuffix}`,
+        profileImageUrl: null,
+        isActive: false,
+        emailVerified: false,
+        deletedAt: new Date(),
+      },
+    });
+
+    // Anonymize vendor data if exists
+    if (vendor) {
+      await this.prisma.vendor.update({
+        where: { id: vendor.id },
+        data: {
+          businessName: 'Negocio Eliminado',
+          rif: `ANON-${anonSuffix}`,
+          logoUrl: null,
+          documentImageUrl: null,
+          personalDocUrl: null,
+          selfieUrl: null,
+          identityVerified: false,
+          isAvailable: false,
+          latitude: null,
+          longitude: null,
+          street: null,
+          referencePoint: null,
+          fullAddress: null,
+        },
+      });
+
+      // Cancel active subscriptions
+      await this.prisma.vendorSubscription.updateMany({
+        where: { vendorId: vendor.id, estado: { in: ['ACTIVE', 'GRACE_PERIOD'] } },
+        data: { estado: 'CANCELLED' },
+      });
+    }
+
+    // Delete push tokens
+    await this.prisma.pushToken.deleteMany({ where: { userId } });
+
+    // Delete email verification & password reset tokens
+    await this.prisma.emailVerificationToken.deleteMany({ where: { userId } });
+    await this.prisma.passwordResetToken.deleteMany({ where: { userId } });
+
+    // Delete S3 files (best effort)
+    for (const key of s3KeysToDelete) {
+      try {
+        const { deleteFile } = await import('../lib/s3.js');
+        await deleteFile(key);
+        this.logger.log(`Deleted S3 file: ${key}`);
+      } catch (e) {
+        this.logger.warn(`Failed to delete S3 file ${key}: ${(e as Error)?.message}`);
+      }
+    }
+
+    this.logger.log(`Account deleted (anonymized) for user ${userId}`);
+    return { success: true, message: 'Cuenta eliminada exitosamente' };
+  }
+
+  // Extract S3 key from a URL or cloud_storage_path
+  private extractS3Key(url: string): string | null {
+    if (!url) return null;
+    // If it's already a key (starts with folder prefix or uploads/)
+    if (!url.startsWith('http')) return url;
+    // Extract key from S3 URL: https://bucket.s3.region.amazonaws.com/KEY
+    try {
+      const parsed = new URL(url);
+      return parsed.pathname.substring(1); // remove leading /
+    } catch {
+      return null;
+    }
   }
 
   private generateToken(userId: string, email: string): string {

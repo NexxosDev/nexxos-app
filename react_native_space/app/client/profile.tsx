@@ -10,6 +10,7 @@ import type { ThemeColors } from '../../src/theme/colors';
 import Button from '../../src/components/Button';
 import ProfileAvatar from '../../src/components/ProfileAvatar';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
+import DeleteAccountModal from '../../src/components/DeleteAccountModal';
 
 export default function ClientProfile() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function ClientProfile() {
   const { colors, isDark, toggleTheme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [refreshing, setRefreshing] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
   useFocusEffect(useCallback(() => { refreshUser?.(); }, []));
 
@@ -68,7 +70,22 @@ export default function ClientProfile() {
         <Button title="Editar Perfil" variant="secondary" onPress={() => router.push('/edit-profile')} style={styles.editBtn} />
         <Button title="Cambiar Modo" variant="ghost" onPress={() => router.replace('/role-selection')} icon={<Ionicons name="swap-horizontal-outline" size={18} color={colors.textSecondary} />} />
         <Button title="Cerrar Sesión" variant="destructive" onPress={handleLogout} style={styles.logoutBtn} />
+
+        <Pressable style={styles.deleteAccountBtn} onPress={() => setDeleteModalVisible(true)}>
+          <Ionicons name="trash-outline" size={16} color={colors.error} />
+          <Text style={styles.deleteAccountText}>Eliminar cuenta</Text>
+        </Pressable>
       </ScrollView>
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onDeleted={async () => {
+          setDeleteModalVisible(false);
+          await logout();
+          router.replace('/auth/login');
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -102,4 +119,17 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   },
   editBtn: { marginBottom: Spacing.sm },
   logoutBtn: { marginTop: Spacing.sm },
+  deleteAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  deleteAccountText: {
+    fontSize: 14,
+    color: c.error,
+    fontWeight: '500',
+  },
 });

@@ -14,6 +14,7 @@ import StarRating from '../../src/components/StarRating';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
 import BrandLogo from '../../src/components/BrandLogo';
 import VendorPlanCard from '../../src/components/VendorPlanCard';
+import DeleteAccountModal from '../../src/components/DeleteAccountModal';
 import type { VendorProfile as VPType, VendorPlanInfo } from '../../src/types';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -53,6 +54,7 @@ export default function VendorProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
   const fetchProfile = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -282,7 +284,22 @@ export default function VendorProfileScreen() {
         <Button title="Editar Perfil" variant="secondary" onPress={() => router.push('/vendor-edit-profile')} style={styles.btn} />
         <Button title="Cambiar Modo" variant="ghost" onPress={() => router.replace('/role-selection')} icon={<Ionicons name="swap-horizontal-outline" size={18} color={colors.textSecondary} />} />
         <Button title="Cerrar Sesión" variant="destructive" onPress={handleLogout} style={styles.btn} />
+
+        <Pressable style={styles.deleteAccountBtn} onPress={() => setDeleteModalVisible(true)}>
+          <Ionicons name="trash-outline" size={16} color={colors.error} />
+          <Text style={styles.deleteAccountText}>Eliminar cuenta</Text>
+        </Pressable>
       </ScrollView>
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onDeleted={async () => {
+          setDeleteModalVisible(false);
+          await logout();
+          router.replace('/auth/login');
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -352,4 +369,17 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   leafDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: c.primary },
   leafText: { fontSize: 14, color: c.textSubtitle },
   emptyText: { padding: Spacing.md, fontSize: 14, color: c.textSecondary, textAlign: 'center' },
+  deleteAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  deleteAccountText: {
+    fontSize: 14,
+    color: c.error,
+    fontWeight: '500',
+  },
 });
