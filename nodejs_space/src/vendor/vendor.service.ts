@@ -233,15 +233,25 @@ export class VendorService {
     const vendor = await this.prisma.vendor.findUnique({ where: { userId } });
     if (!vendor) throw new NotFoundException('Vendor profile not found');
 
+    // Count responded OR declined as "actioned" (vendor gave a response, even if negative)
     const matches = await this.prisma.requestVendorMatch.findMany({
-      where: { vendorId: vendor.id, responded: true, respondedAt: { not: null } },
-      select: { deliveredAt: true, respondedAt: true },
+      where: {
+        vendorId: vendor.id,
+        OR: [
+          { responded: true, respondedAt: { not: null } },
+          { declined: true, declinedAt: { not: null } },
+        ],
+      },
+      select: { deliveredAt: true, respondedAt: true, declinedAt: true, responded: true, declined: true },
     });
 
     if (matches.length === 0) {
+      const totalReceived = await this.prisma.requestVendorMatch.count({
+        where: { vendorId: vendor.id },
+      });
       return {
         totalResponded: 0,
-        totalReceived: 0,
+        totalReceived,
         responseRate: 0,
         avgResponseTimeMs: null,
         medianResponseTimeMs: null,
@@ -254,10 +264,14 @@ export class VendorService {
       where: { vendorId: vendor.id },
     });
 
+    // Use respondedAt for responses, declinedAt for declines — whichever is available
     const deltas = matches
-      .filter((m: any) => m.respondedAt && m.deliveredAt)
-      .map((m: any) => new Date(m.respondedAt).getTime() - new Date(m.deliveredAt).getTime())
-      .filter((d: number) => d >= 0)
+      .map((m: any) => {
+        const actionTime = m.respondedAt ?? m.declinedAt;
+        if (!actionTime || !m.deliveredAt) return null;
+        return new Date(actionTime).getTime() - new Date(m.deliveredAt).getTime();
+      })
+      .filter((d: number | null): d is number => d !== null && d >= 0)
       .sort((a: number, b: number) => a - b);
 
     const sum = deltas.reduce((a: number, b: number) => a + b, 0);
