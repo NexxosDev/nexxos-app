@@ -10,10 +10,12 @@ import { Spacing } from '../src/theme/colors';
 import type { ThemeColors } from '../src/theme/colors';
 import Input from '../src/components/Input';
 import Button from '../src/components/Button';
+import DeleteAccountModal from '../src/components/DeleteAccountModal';
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [firstName, setFirstName] = useState(user?.firstName ?? '');
@@ -62,8 +64,23 @@ export default function EditProfileScreen() {
             <Text style={styles.readonlyValue}>{user?.documentId ?? ''}</Text>
           </View>
           <Button title="Guardar Cambios" onPress={handleSave} loading={loading} style={styles.saveBtn} />
+
+          <Pressable onPress={() => setDeleteModalVisible(true)} style={styles.deleteLink}>
+            <Ionicons name="trash-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.deleteLinkText}>Eliminar cuenta</Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onDeleted={async () => {
+          setDeleteModalVisible(false);
+          await logout();
+          router.replace('/auth/login');
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -80,4 +97,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   readonlyLabel: { fontSize: 12, color: c.textSecondary },
   readonlyValue: { fontSize: 15, color: c.textPrimary, fontWeight: '500', marginTop: 2 },
   saveBtn: { marginTop: Spacing.md },
+  deleteLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 40, marginBottom: 20, paddingVertical: 8 },
+  deleteLinkText: { fontSize: 13, color: c.textSecondary },
 });

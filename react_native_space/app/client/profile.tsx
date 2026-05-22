@@ -9,7 +9,6 @@ import { Spacing, BorderRadius } from '../../src/theme/colors';
 import type { ThemeColors } from '../../src/theme/colors';
 import ProfileAvatar from '../../src/components/ProfileAvatar';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
-import DeleteAccountModal from '../../src/components/DeleteAccountModal';
 import ProfileActionButton from '../../src/components/ProfileActionButton';
 import ClientPointsCard from '../../src/components/ClientPointsCard';
 
@@ -19,8 +18,6 @@ export default function ClientProfile() {
   const { colors, isDark, toggleTheme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [refreshing, setRefreshing] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-
   useFocusEffect(useCallback(() => { refreshUser?.(); }, []));
 
   const handleLogout = () => {
@@ -93,26 +90,9 @@ export default function ClientProfile() {
             onPress={handleLogout}
             showChevron={false}
           />
-          <View style={styles.actionDivider} />
-          <ProfileActionButton
-            label="Eliminar cuenta"
-            icon="trash-outline"
-            variant="danger"
-            onPress={() => setDeleteModalVisible(true)}
-            showChevron={false}
-          />
         </View>
       </ScrollView>
 
-      <DeleteAccountModal
-        visible={deleteModalVisible}
-        onClose={() => setDeleteModalVisible(false)}
-        onDeleted={async () => {
-          setDeleteModalVisible(false);
-          await logout();
-          router.replace('/auth/login');
-        }}
-      />
     </SafeAreaView>
   );
 }

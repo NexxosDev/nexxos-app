@@ -13,7 +13,7 @@ import StarRating from '../../src/components/StarRating';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
 import BrandLogo from '../../src/components/BrandLogo';
 import VendorPlanCard from '../../src/components/VendorPlanCard';
-import DeleteAccountModal from '../../src/components/DeleteAccountModal';
+
 import ProfileActionButton from '../../src/components/ProfileActionButton';
 import type { VendorProfile as VPType, VendorPlanInfo } from '../../src/types';
 
@@ -54,7 +54,7 @@ export default function VendorProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+
 
   const fetchProfile = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -311,26 +311,9 @@ export default function VendorProfileScreen() {
             onPress={handleLogout}
             showChevron={false}
           />
-          <View style={styles.actionDivider} />
-          <ProfileActionButton
-            label="Eliminar cuenta"
-            icon="trash-outline"
-            variant="danger"
-            onPress={() => setDeleteModalVisible(true)}
-            showChevron={false}
-          />
         </View>
       </ScrollView>
 
-      <DeleteAccountModal
-        visible={deleteModalVisible}
-        onClose={() => setDeleteModalVisible(false)}
-        onDeleted={async () => {
-          setDeleteModalVisible(false);
-          await logout();
-          router.replace('/auth/login');
-        }}
-      />
     </SafeAreaView>
   );
 }

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getVendorProfile, updateVendorProfile } from '../src/services/vendor';
 import { getErrorMessage } from '../src/services/api';
 import { useCatalog } from '../src/contexts/CatalogContext';
+import { useAuth } from '../src/contexts/AuthContext';
 import { useTheme } from '../src/contexts/ThemeContext';
 import type { ThemeColors } from '../src/theme/colors';
 import { Spacing, BorderRadius } from '../src/theme/colors';
@@ -14,12 +15,15 @@ import LoadingSpinner from '../src/components/LoadingSpinner';
 import VehicleAccordion from '../src/components/VehicleAccordion';
 import PartsAccordion from '../src/components/PartsAccordion';
 import QuickRepliesManager from '../src/components/QuickRepliesManager';
+import DeleteAccountModal from '../src/components/DeleteAccountModal';
 import type { VendorProfile, CatalogItem } from '../src/types';
 
 export default function VendorEditProfileScreen() {
   const router = useRouter();
   const catalog = useCatalog();
+  const { logout } = useAuth();
   const { colors } = useTheme();
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [profile, setProfile] = useState<VendorProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,8 +202,23 @@ export default function VendorEditProfileScreen() {
           <QuickRepliesManager />
 
           <Button title="Guardar Cambios" onPress={handleSave} loading={saving} style={styles.saveBtn} />
+
+          <Pressable onPress={() => setDeleteModalVisible(true)} style={styles.deleteLink}>
+            <Ionicons name="trash-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.deleteLinkText}>Eliminar cuenta</Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onDeleted={async () => {
+          setDeleteModalVisible(false);
+          await logout();
+          router.replace('/auth/login');
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -223,4 +242,6 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   sectionDesc: { fontSize: 13, color: c.textSecondary, marginBottom: Spacing.sm },
 
   saveBtn: { marginTop: Spacing.lg },
+  deleteLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 40, marginBottom: 20, paddingVertical: 8 },
+  deleteLinkText: { fontSize: 13, color: c.textSecondary },
 });
