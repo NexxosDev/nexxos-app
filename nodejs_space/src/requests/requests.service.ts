@@ -9,6 +9,7 @@ import { RespondRequestDto } from './dto/respond-request.dto';
 import { getFileUrl } from '../lib/s3';
 import { NotificationService } from '../notification/notification.service';
 import { PlansService } from '../plans/plans.service';
+import { ClientPointsService } from '../client-points/client-points.service';
 
 @Injectable()
 export class RequestsService {
@@ -19,6 +20,7 @@ export class RequestsService {
     private readonly configService: ConfigService,
     private readonly notificationService: NotificationService,
     private readonly plansService: PlansService,
+    private readonly clientPointsService: ClientPointsService,
   ) {}
 
   // Haversine distance in kilometers
@@ -209,6 +211,10 @@ export class RequestsService {
         { type: 'NEW_REQUEST', requestId: request.id },
       ).catch((err) => this.logger.error('Push error (new request)', err));
     }
+
+    // Award client points for creating a request
+    this.clientPointsService.awardCreateRequest(clientId, request.id)
+      .catch((err) => this.logger.error('Error awarding create request points', err));
 
     return {
       id: request.id,
@@ -467,6 +473,11 @@ export class RequestsService {
           { type: 'RATING_RECEIVED', requestId },
         ).catch((err) => this.logger.error('Push error (rating)', err));
       }
+
+      // Award client points for rating
+      const hasComment = !!(dto.comment && dto.comment.trim().length >= 20);
+      this.clientPointsService.awardRating(clientId, requestId, hasComment)
+        .catch((err) => this.logger.error('Error awarding rating points', err));
     }
 
     return {
@@ -474,6 +485,134 @@ export class RequestsService {
       status: updated.status,
       closedAt: updated.closedAt!.toISOString(),
     };
+  }
+
+  // ── Client: Rate a vendor on a closed request (separate from close) ──
+  async rateVendorOnClosedRequest(requestId: string, clientId: string, vendorId: string, rating: number, comment?: string) {
+    const request = await this.prisma.request.findUnique({ where: { id: requestId } });
+    if (!request) throw new NotFoundException('Request not found');
+    if (request.clientId !== clientId) throw new ForbiddenException();
+    if (request.status !== 'CERRADA') throw new BadRequestException('La solicitud debe estar cerrada para calificar');
+
+    // Check if already rated
+    const existing = await this.prisma.requestRating.findUnique({ where: { requestId } });
+    if (existing) throw new BadRequestException('Ya calificaste a un vendedor en esta solicitud');
+
+    // Verify vendor responded to this request
+    const response = await this.prisma.requestResponse.findUnique({
+      where: { requestId_vendorId: { requestId, vendorId } },
+    });
+    if (!response) throw new BadRequestException('Este vendedor no respondió a esta solicitud');
+
+    const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId }, select: { userId: true, businessName: true } });
+    if (!vendor) throw new NotFoundException('Vendor not found');
+
+    // Create rating
+    await this.prisma.requestRating.create({
+      data: {
+        requestId,
+        clientId,
+        vendorId,
+        rating,
+        comment: comment || null,
+      },
+    });
+
+    // Update vendor metrics
+    const allRatings = await this.prisma.requestRating.findMany({
+      where: { vendorId },
+      select: { rating: true },
+    });
+    const avgRating = allRatings.reduce((sum: any, r: any) => sum + r.rating, 0) / allRatings.length;
+    await this.prisma.vendorMetrics.upsert({
+      where: { vendorId },
+      update: { avgRating, totalRatings: allRatings.length },
+      create: { vendorId, avgRating, totalRatings: allRatings.length },
+    });
+
+    // Push notification to vendor
+    const client = await this.prisma.user.findUnique({ where: { id: clientId }, select: { firstName: true, lastName: true } });
+    const clientName = `${client?.firstName ?? ''} ${client?.lastName ?? ''}`.trim() || 'Un cliente';
+    this.notificationService.sendToUser(
+      vendor.userId,
+      `⭐ ${clientName} te calificó`,
+      `Recibiste una calificación de ${rating} estrella${rating > 1 ? 's' : ''}`,
+      { type: 'RATING_RECEIVED', requestId },
+    ).catch((err) => this.logger.error('Push error (rating)', err));
+
+    // Award client points
+    const hasComment = !!(comment && comment.trim().length >= 20);
+    const pointsResult = await this.clientPointsService.awardRating(clientId, requestId, hasComment);
+
+    return {
+      success: true,
+      pointsAwarded: pointsResult.pointsAwarded,
+      bonusFirstRating: pointsResult.bonusFirstRating,
+    };
+  }
+
+  // ── Client: Get closed requests that haven't been rated ──
+  async getPendingRatings(clientId: string) {
+    const closedRequests = await this.prisma.request.findMany({
+      where: {
+        clientId,
+        status: 'CERRADA',
+        requestRating: null, // no rating yet
+        requestResponses: { some: {} }, // has at least one response
+      },
+      select: {
+        id: true,
+        freeDescription: true,
+        closedAt: true,
+        vehicleBrand: { select: { name: true } },
+        vehicleModel: { select: { name: true } },
+        partCategory: { select: { name: true } },
+        requestResponses: {
+          select: {
+            vendor: {
+              select: {
+                id: true,
+                businessName: true,
+                logoUrl: true,
+                vendorMetrics: { select: { avgRating: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { closedAt: 'desc' },
+      take: 10,
+    });
+
+    // Resolve logo URLs
+    const items = await Promise.all(
+      closedRequests.map(async (r: any) => {
+        const vendors = await Promise.all(
+          (r.requestResponses ?? []).map(async (resp: any) => {
+            let logoUrl: string | null = null;
+            if (resp?.vendor?.logoUrl) {
+              try { logoUrl = await getFileUrl(resp.vendor.logoUrl, true); } catch { logoUrl = null; }
+            }
+            return {
+              id: resp?.vendor?.id,
+              businessName: resp?.vendor?.businessName,
+              logoUrl,
+              avgRating: resp?.vendor?.vendorMetrics?.avgRating ?? null,
+            };
+          }),
+        );
+        return {
+          requestId: r.id,
+          description: r.freeDescription,
+          closedAt: r.closedAt?.toISOString?.() ?? null,
+          vehicle: `${r.vehicleBrand?.name ?? ''} ${r.vehicleModel?.name ?? ''}`.trim(),
+          category: r.partCategory?.name ?? '',
+          vendors,
+        };
+      }),
+    );
+
+    return { items, total: items.length };
   }
 
   // ── Vendor: List matched requests ──
@@ -511,6 +650,17 @@ export class RequestsService {
       this.prisma.requestVendorMatch.count({ where }),
     ]);
 
+    // Resolve client levels for all unique clients
+    const clientIds = [...new Set(matches.map((m: any) => m.request?.clientId).filter(Boolean))];
+    const clientLevels: Record<string, { level: string; emoji: string; label: string }> = {};
+    await Promise.all(
+      clientIds.map(async (cid: string) => {
+        try {
+          clientLevels[cid] = await this.clientPointsService.getClientLevelForUser(cid);
+        } catch { clientLevels[cid] = { level: 'NUEVO', emoji: '🔵', label: 'Nuevo' }; }
+      }),
+    );
+
     return {
       items: matches.map((m: any) => ({
         matchId: m.id,
@@ -528,6 +678,7 @@ export class RequestsService {
           createdAt: m.request.createdAt.toISOString(),
           clientFirstName: m.request.client.firstName,
           clientLastName: m.request.client.lastName ?? '',
+          clientLevel: clientLevels[m.request?.clientId] ?? { level: 'NUEVO', emoji: '🔵', label: 'Nuevo' },
         },
         status: m.request.status === 'CERRADA' ? 'CERRADA' : m.declined ? 'DECLINED' : m.responded ? 'RESPONDED' : 'PENDING',
         respondedAt: m.respondedAt?.toISOString() ?? null,

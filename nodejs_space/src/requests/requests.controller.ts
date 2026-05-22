@@ -8,6 +8,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { CloseRequestDto } from './dto/close-request.dto';
 import { UpdateResponseTagsDto } from './dto/update-response-tags.dto';
+import { RateVendorDto } from './dto/rate-vendor.dto';
 
 @ApiTags('Requests (Client)')
 @ApiBearerAuth()
@@ -44,6 +45,13 @@ export class RequestsController {
     );
   }
 
+  @Get('pending-ratings')
+  @Roles('CLIENTE')
+  @ApiOperation({ summary: 'Get closed requests without a rating (pending ratings)' })
+  getPendingRatings(@CurrentUser('id') userId: string) {
+    return this.requestsService.getPendingRatings(userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get request detail' })
   getDetail(@CurrentUser('id') userId: string, @Param('id') id: string) {
@@ -66,6 +74,17 @@ export class RequestsController {
     @Body() dto: CloseRequestDto,
   ) {
     return this.requestsService.closeRequest(id, userId, dto);
+  }
+
+  @Post(':id/rate')
+  @Roles('CLIENTE')
+  @ApiOperation({ summary: 'Rate a vendor on a closed request (1 rating per request)' })
+  rateVendor(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() dto: RateVendorDto,
+  ) {
+    return this.requestsService.rateVendorOnClosedRequest(id, userId, dto.vendorId, dto.rating, dto.comment);
   }
 
   @Put('responses/:responseId/tags')

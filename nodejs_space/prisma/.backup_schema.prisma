@@ -38,6 +38,7 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   pushTokens          PushToken[]
   responseTags        ResponseTag[]
+  clientPointLogs     ClientPointLog[]
 
   @@map("users")
 }
@@ -284,6 +285,7 @@ model Request {
   requestResponses    RequestResponse[]
   chats               Chat[]
   requestRating       RequestRating?
+  clientPointLogs     ClientPointLog[]
 
   @@index([clientId])
   @@index([status])
@@ -546,4 +548,21 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model ClientPointLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  action    String   // RATE_VENDOR, RATE_COMMENT, CREATE_REQUEST, FIRST_RATING
+  points    Int
+  requestId String?  @map("request_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  request Request? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, action])
+  @@index([userId, createdAt])
+  @@map("client_point_logs")
 }

@@ -11,6 +11,7 @@ import { UploadModule } from './upload/upload.module';
 import { NotificationModule } from './notification/notification.module';
 import { IdentityModule } from './identity/identity.module';
 import { PlansModule } from './plans/plans.module';
+import { ClientPointsModule } from './client-points/client-points.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PlansModule } from './plans/plans.module';
     NotificationModule,
     IdentityModule,
     PlansModule,
+    ClientPointsModule,
   ],
 })
 export class AppModule {}

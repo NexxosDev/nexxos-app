@@ -225,6 +225,54 @@ export interface VendorPlanInfo {
   };
 }
 
+// Client Points System
+export interface ClientPointsSummary {
+  totalPoints: number;
+  currentLevel: {
+    level: string;
+    emoji: string;
+    label: string;
+  };
+  nextLevel: {
+    level: string;
+    emoji: string;
+    label: string;
+    pointsRequired: number;
+    pointsRemaining: number;
+  } | null;
+  stats: {
+    totalRatings: number;
+    totalRequests: number;
+  };
+  recentActivity: {
+    id: string;
+    action: string;
+    points: number;
+    requestId: string | null;
+    createdAt: string;
+  }[];
+}
+
+export interface PendingRatingItem {
+  requestId: string;
+  description: string;
+  closedAt: string | null;
+  vehicle: string;
+  category: string;
+  vendors: {
+    id: string;
+    businessName: string;
+    logoUrl: string | null;
+    avgRating: number | null;
+  }[];
+}
+
+export interface ClientLevel {
+  level: string;
+  emoji: string;
+  label: string;
+}
+
 export interface ChatMessageReplyTo {
   id: string;
   messageText: string;

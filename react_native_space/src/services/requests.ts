@@ -52,3 +52,21 @@ export async function updateResponseTags(responseId: string, tags: ResponseTagVa
   const res = await api.put(`/requests/responses/${encodeURIComponent(responseId)}/tags`, { tags });
   return res?.data;
 }
+
+export async function rateVendorOnRequest(
+  requestId: string,
+  data: { vendorId: string; rating: number; comment?: string },
+): Promise<{ success: boolean; pointsAwarded: number; bonusFirstRating: boolean }> {
+  const res = await api.post(`/requests/${encodeURIComponent(requestId)}/rate`, data);
+  return res?.data;
+}
+
+export async function getPendingRatings(): Promise<{ items: import('../types').PendingRatingItem[]; total: number }> {
+  const res = await api.get('/requests/pending-ratings');
+  return res?.data;
+}
+
+export async function getClientPoints(): Promise<import('../types').ClientPointsSummary> {
+  const res = await api.get('/client/points');
+  return res?.data;
+}
