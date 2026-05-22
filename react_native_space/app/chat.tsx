@@ -275,15 +275,20 @@ export default function ChatScreen() {
         const geocoded = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
         const g = geocoded?.[0];
         if (g) {
-          const parts = [g.street, g.name, g.district, g.city, g.region].filter(Boolean);
+          // Filter out Plus Codes (e.g. "H88F+RVP") and technical strings
+          const plusCodeRegex = /^[A-Z0-9]{4,}\+[A-Z0-9]{2,}/i;
+          const parts = [g.street, g.name, g.district, g.city, g.region]
+            .filter((p) => !!p && !plusCodeRegex.test(p?.trim?.() ?? ''));
           addr = parts.join(', ');
         }
       } catch { /* use empty address */ }
 
+      const displayAddr = addr || 'Mi ubicación actual';
+
       // Confirm
       Alert.alert(
         'Enviar ubicación',
-        addr || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+        displayAddr,
         [
           { text: 'Cancelar', style: 'cancel' },
           {
@@ -294,7 +299,7 @@ export default function ChatScreen() {
                 playSend();
                 const newMsg = await sendChatMessage(
                   chatId, 'Ubicación', 'location', undefined,
-                  replyingTo?.id, lat, lng, addr,
+                  replyingTo?.id, lat, lng, displayAddr,
                 );
                 if (newMsg) { setMessages((prev) => [newMsg, ...(prev ?? [])]); }
                 setReplyingTo(null);
