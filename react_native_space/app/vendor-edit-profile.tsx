@@ -12,6 +12,7 @@ import type { ThemeColors } from '../src/theme/colors';
 import { Spacing, BorderRadius } from '../src/theme/colors';
 import Button from '../src/components/Button';
 import LoadingSpinner from '../src/components/LoadingSpinner';
+import CollapsibleSection from '../src/components/CollapsibleSection';
 import VehicleAccordion from '../src/components/VehicleAccordion';
 import PartsAccordion from '../src/components/PartsAccordion';
 import QuickRepliesManager from '../src/components/QuickRepliesManager';
@@ -140,6 +141,9 @@ export default function VendorEditProfileScreen() {
     || [profile?.street, profile?.parish, profile?.municipality, profile?.state, profile?.country].filter(Boolean).join(', ')
     || 'No registrada';
 
+  const vehicleCount = selectedModels?.length ?? 0;
+  const partsCount = selectedSubcategories?.length ?? 0;
+
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -153,9 +157,14 @@ export default function VendorEditProfileScreen() {
 
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          {success ? <Text style={styles.success}>Perfil actualizado \u2713</Text> : null}
+          {success ? <Text style={styles.success}>Perfil actualizado ✓</Text> : null}
 
-          <View style={styles.readOnlySection}>
+          {/* Datos del negocio — siempre abierto */}
+          <CollapsibleSection
+            icon="business-outline"
+            title="Datos del negocio"
+            defaultOpen
+          >
             <View style={styles.readOnlyRow}>
               <Text style={styles.readOnlyLabel}>Razón Social</Text>
               <Text style={styles.readOnlyValue}>{profile?.businessName ?? '—'}</Text>
@@ -173,33 +182,54 @@ export default function VendorEditProfileScreen() {
                 <Text style={styles.readOnlyValueSmall}>{addressText}</Text>
               </View>
             </View>
-          </View>
+          </CollapsibleSection>
 
-          <Text style={styles.sectionLabel}>¿Qué vehículos manejas?</Text>
-          <Text style={styles.sectionDesc}>Toca una marca para ver sus modelos</Text>
-          <VehicleAccordion
-            brands={catalog?.brands ?? []}
-            modelsMap={modelsMap ?? {}}
-            selectedModels={selectedModels ?? []}
-            onToggleModel={toggleModel}
-            onSelectAllModels={selectAllModels}
-            onDeselectAllModels={deselectAllModels}
-            onExpandBrand={loadModelsForBrand}
-          />
+          {/* Vehículos — cerrado por defecto */}
+          <CollapsibleSection
+            icon="car-sport-outline"
+            iconColor="#3B82F6"
+            title="Vehículos"
+            badge={`${vehicleCount} modelo${vehicleCount !== 1 ? 's' : ''}`}
+          >
+            <Text style={styles.sectionHint}>Toca una marca para ver sus modelos</Text>
+            <VehicleAccordion
+              brands={catalog?.brands ?? []}
+              modelsMap={modelsMap ?? {}}
+              selectedModels={selectedModels ?? []}
+              onToggleModel={toggleModel}
+              onSelectAllModels={selectAllModels}
+              onDeselectAllModels={deselectAllModels}
+              onExpandBrand={loadModelsForBrand}
+            />
+          </CollapsibleSection>
 
-          <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>¿Qué repuestos ofreces?</Text>
-          <Text style={styles.sectionDesc}>Toca una categoría para ver subcategorías</Text>
-          <PartsAccordion
-            categories={catalog?.categories ?? []}
-            subcategoriesMap={subcategoriesMap ?? {}}
-            selectedSubcategories={selectedSubcategories ?? []}
-            onToggleSubcategory={toggleSubcategory}
-            onSelectAllSubs={selectAllSubs}
-            onDeselectAllSubs={deselectAllSubs}
-            onExpandCategory={loadSubsForCategory}
-          />
+          {/* Repuestos — cerrado por defecto */}
+          <CollapsibleSection
+            icon="construct-outline"
+            iconColor="#F59E0B"
+            title="Repuestos"
+            badge={`${partsCount} tipo${partsCount !== 1 ? 's' : ''}`}
+          >
+            <Text style={styles.sectionHint}>Toca una categoría para ver subcategorías</Text>
+            <PartsAccordion
+              categories={catalog?.categories ?? []}
+              subcategoriesMap={subcategoriesMap ?? {}}
+              selectedSubcategories={selectedSubcategories ?? []}
+              onToggleSubcategory={toggleSubcategory}
+              onSelectAllSubs={selectAllSubs}
+              onDeselectAllSubs={deselectAllSubs}
+              onExpandCategory={loadSubsForCategory}
+            />
+          </CollapsibleSection>
 
-          <QuickRepliesManager />
+          {/* Respuestas rápidas — cerrado por defecto */}
+          <CollapsibleSection
+            icon="flash-outline"
+            iconColor="#8B5CF6"
+            title="Respuestas rápidas"
+          >
+            <QuickRepliesManager embedded />
+          </CollapsibleSection>
 
           <Button title="Guardar Cambios" onPress={handleSave} loading={saving} style={styles.saveBtn} />
 
@@ -231,16 +261,13 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   scroll: { padding: Spacing.lg, paddingBottom: 60 },
   error: { backgroundColor: c.errorBg, color: c.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
   success: { backgroundColor: c.successBg, color: c.success, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md, textAlign: 'center' },
-  readOnlySection: { backgroundColor: c.cardBg, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: c.border, padding: Spacing.md, marginBottom: Spacing.lg },
-  readOnlyRow: { paddingVertical: 8 },
+  readOnlyRow: { paddingVertical: 6 },
   readOnlyLabel: { fontSize: 12, color: c.textSecondary, fontWeight: '500', marginBottom: 2 },
   readOnlyValue: { fontSize: 15, color: c.textPrimary, fontWeight: '600' },
   readOnlyValueSmall: { fontSize: 13, color: c.textSubtitle, lineHeight: 18, flex: 1 },
   addressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 2 },
   divider: { height: 1, backgroundColor: c.border, marginVertical: 4 },
-  sectionLabel: { fontSize: 16, fontWeight: '600', color: c.textPrimary, marginBottom: 4 },
-  sectionDesc: { fontSize: 13, color: c.textSecondary, marginBottom: Spacing.sm },
-
+  sectionHint: { fontSize: 13, color: c.textSecondary, marginBottom: Spacing.sm },
   saveBtn: { marginTop: Spacing.lg },
   deleteLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 40, marginBottom: 20, paddingVertical: 8 },
   deleteLinkText: { fontSize: 13, color: c.textSecondary },

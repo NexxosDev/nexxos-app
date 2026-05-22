@@ -23,7 +23,9 @@ import {
 } from '../services/vendor';
 import type { QuickReply } from '../types';
 
-export default function QuickRepliesManager() {
+const MAX_QUICK_REPLIES = 10;
+
+export default function QuickRepliesManager({ embedded = false }: { embedded?: boolean }) {
   const { colors } = useTheme();
   const [replies, setReplies] = useState<QuickReply[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,6 +114,83 @@ export default function QuickRepliesManager() {
 
   const s = React.useMemo(() => createStyles(colors), [colors]);
 
+  const replyCount = replies?.length ?? 0;
+  const atLimit = replyCount >= MAX_QUICK_REPLIES;
+
+  const content = loading ? (
+    <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
+  ) : (
+    <>
+      {(replies ?? []).map((r, idx) => (
+        <View key={r.id} style={s.replyRow}>
+          {editingId === r.id ? (
+            <View style={s.editRow}>
+              <TextInput
+                style={s.editInput}
+                value={editText}
+                onChangeText={setEditText}
+                autoFocus
+                maxLength={500}
+              />
+              <Pressable onPress={() => handleUpdate(r.id)} disabled={saving} hitSlop={8}>
+                <Ionicons name="checkmark-circle" size={26} color={colors.success} />
+              </Pressable>
+              <Pressable onPress={() => setEditingId(null)} hitSlop={8}>
+                <Ionicons name="close-circle" size={26} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              <Text style={s.replyText} numberOfLines={2}>{r.messageText}</Text>
+              <View style={s.replyActions}>
+                <Pressable onPress={() => handleMove(idx, 'up')} disabled={idx === 0} hitSlop={6} style={s.arrowBtn}>
+                  <Ionicons name="chevron-up" size={18} color={idx === 0 ? colors.border : colors.textSecondary} />
+                </Pressable>
+                <Pressable onPress={() => handleMove(idx, 'down')} disabled={idx === (replies?.length ?? 0) - 1} hitSlop={6} style={s.arrowBtn}>
+                  <Ionicons name="chevron-down" size={18} color={idx === (replies?.length ?? 0) - 1 ? colors.border : colors.textSecondary} />
+                </Pressable>
+                <Pressable onPress={() => startEdit(r)} hitSlop={6}>
+                  <Ionicons name="pencil" size={16} color={colors.primary} />
+                </Pressable>
+                <Pressable onPress={() => handleDelete(r.id)} hitSlop={6}>
+                  <Ionicons name="trash-outline" size={16} color={colors.error} />
+                </Pressable>
+              </View>
+            </>
+          )}
+        </View>
+      ))}
+
+      {atLimit ? (
+        <Text style={s.limitText}>Límite alcanzado ({MAX_QUICK_REPLIES}/{MAX_QUICK_REPLIES})</Text>
+      ) : (
+        <View style={s.addRow}>
+          <TextInput
+            style={s.addInput}
+            value={newText}
+            onChangeText={setNewText}
+            placeholder="Nueva respuesta rápida..."
+            placeholderTextColor={colors.textSecondary}
+            maxLength={500}
+          />
+          <Pressable
+            onPress={handleAdd}
+            disabled={!newText?.trim() || saving}
+            style={[s.addBtn, { opacity: newText?.trim() ? 1 : 0.4 }]}
+          >
+            <Ionicons name="add-circle" size={30} color={colors.primary} />
+          </Pressable>
+        </View>
+      )}
+
+      {!atLimit && replyCount > 0 ? (
+        <Text style={s.counterText}>{replyCount} / {MAX_QUICK_REPLIES}</Text>
+      ) : null}
+    </>
+  );
+
+  if (embedded) return <View>{content}</View>;
+
   return (
     <View style={s.container}>
       <View style={s.headerRow}>
@@ -121,70 +200,7 @@ export default function QuickRepliesManager() {
       <Text style={s.headerDesc}>
         Frases predefinidas que puedes insertar rápidamente al responder
       </Text>
-
-      {loading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
-      ) : (
-        <>
-          {(replies ?? []).map((r, idx) => (
-            <View key={r.id} style={s.replyRow}>
-              {editingId === r.id ? (
-                <View style={s.editRow}>
-                  <TextInput
-                    style={s.editInput}
-                    value={editText}
-                    onChangeText={setEditText}
-                    autoFocus
-                    maxLength={500}
-                  />
-                  <Pressable onPress={() => handleUpdate(r.id)} disabled={saving} hitSlop={8}>
-                    <Ionicons name="checkmark-circle" size={26} color={colors.success} />
-                  </Pressable>
-                  <Pressable onPress={() => setEditingId(null)} hitSlop={8}>
-                    <Ionicons name="close-circle" size={26} color={colors.textSecondary} />
-                  </Pressable>
-                </View>
-              ) : (
-                <>
-                  <Text style={s.replyText} numberOfLines={2}>{r.messageText}</Text>
-                  <View style={s.replyActions}>
-                    <Pressable onPress={() => handleMove(idx, 'up')} disabled={idx === 0} hitSlop={6} style={s.arrowBtn}>
-                      <Ionicons name="chevron-up" size={18} color={idx === 0 ? colors.border : colors.textSecondary} />
-                    </Pressable>
-                    <Pressable onPress={() => handleMove(idx, 'down')} disabled={idx === (replies?.length ?? 0) - 1} hitSlop={6} style={s.arrowBtn}>
-                      <Ionicons name="chevron-down" size={18} color={idx === (replies?.length ?? 0) - 1 ? colors.border : colors.textSecondary} />
-                    </Pressable>
-                    <Pressable onPress={() => startEdit(r)} hitSlop={6}>
-                      <Ionicons name="pencil" size={16} color={colors.primary} />
-                    </Pressable>
-                    <Pressable onPress={() => handleDelete(r.id)} hitSlop={6}>
-                      <Ionicons name="trash-outline" size={16} color={colors.error} />
-                    </Pressable>
-                  </View>
-                </>
-              )}
-            </View>
-          ))}
-
-          <View style={s.addRow}>
-            <TextInput
-              style={s.addInput}
-              value={newText}
-              onChangeText={setNewText}
-              placeholder="Nueva respuesta rápida..."
-              placeholderTextColor={colors.textSecondary}
-              maxLength={500}
-            />
-            <Pressable
-              onPress={handleAdd}
-              disabled={!newText?.trim() || saving}
-              style={[s.addBtn, { opacity: newText?.trim() ? 1 : 0.4 }]}
-            >
-              <Ionicons name="add-circle" size={30} color={colors.primary} />
-            </Pressable>
-          </View>
-        </>
-      )}
+      {content}
     </View>
   );
 }
@@ -271,5 +287,19 @@ const createStyles = (c: ThemeColors) =>
     },
     addBtn: {
       padding: 2,
+    },
+    limitText: {
+      fontSize: 13,
+      color: c.textSecondary,
+      fontStyle: 'italic',
+      textAlign: 'center',
+      marginTop: Spacing.sm,
+      paddingVertical: 8,
+    },
+    counterText: {
+      fontSize: 12,
+      color: c.textSecondary,
+      textAlign: 'right',
+      marginTop: 4,
     },
   });
