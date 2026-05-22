@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, Dimensions, Platform, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -17,6 +17,9 @@ interface ChatMessageProps {
   isVendorMessage?: boolean;
   messageType?: string;
   imageUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  addressText?: string | null;
   status?: 'sending' | 'sent' | 'delivered' | 'read';
   isEdited?: boolean;
   deletedForAll?: boolean;
@@ -52,7 +55,8 @@ function StatusTicks({ status, colors }: { status?: string; colors: ThemeColors 
 
 export default function ChatMessage({
   messageText, senderName, createdAt, isOwn, isVendorMessage = false,
-  messageType, imageUrl, status, isEdited, deletedForAll,
+  messageType, imageUrl, latitude, longitude, addressText,
+  status, isEdited, deletedForAll,
   replyTo, onReplyPress, onLongPress,
 }: ChatMessageProps) {
   const { colors } = useTheme();
@@ -67,7 +71,24 @@ export default function ChatMessage({
   const shouldBeYellow = isVendorMessage;
   const shouldBeOnRight = isOwn;
   const isImage = !deletedForAll && (messageType ?? 'text') === 'image' && !!imageUrl;
+  const isLocation = !deletedForAll && (messageType ?? 'text') === 'location' && latitude != null && longitude != null;
   const isDeleted = !!deletedForAll;
+
+  const openInMaps = useCallback(() => {
+    if (latitude == null || longitude == null) return;
+    const url = Platform.select({
+      ios: `maps:0,0?q=${latitude},${longitude}`,
+      default: `https://www.google.com/maps?q=${latitude},${longitude}`,
+    }) ?? `https://www.google.com/maps?q=${latitude},${longitude}`;
+    Linking.openURL(url).catch(() => {});
+  }, [latitude, longitude]);
+
+  const staticMapUrl = useMemo(() => {
+    if (latitude == null || longitude == null) return '';
+    const lat = latitude;
+    const lng = longitude;
+    return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=15&size=300x180&markers=${lat},${lng},red-pushpin`;
+  }, [latitude, longitude]);
 
   const replySnippet = (replyTo?.messageText ?? '').length > 60
     ? (replyTo?.messageText ?? '').substring(0, 57) + '...'
@@ -102,6 +123,23 @@ export default function ChatMessage({
             <Ionicons name="ban-outline" size={14} color={colors.textSecondary} />
             <Text style={styles.deletedText}>Mensaje eliminado</Text>
           </View>
+        ) : isLocation ? (
+          <Pressable onPress={openInMaps} style={styles.locationBubble}>
+            {staticMapUrl ? (
+              <Image source={{ uri: staticMapUrl }} style={styles.locationMap} contentFit="cover" transition={200} placeholder={{ color: colors.border } as any} />
+            ) : (
+              <View style={[styles.locationMap, styles.locationMapPlaceholder]}>
+                <Ionicons name="location" size={32} color="#E53935" />
+              </View>
+            )}
+            <View style={styles.locationInfo}>
+              <Ionicons name="location-sharp" size={16} color="#E53935" />
+              <Text style={[styles.locationAddress, shouldBeYellow ? styles.textVendor : styles.textClient]} numberOfLines={2}>
+                {addressText || 'Ubicación compartida'}
+              </Text>
+            </View>
+            <Text style={styles.locationTapHint}>Toca para abrir en mapas</Text>
+          </Pressable>
         ) : isImage ? (
           <Pressable onPress={() => setPreviewOpen(true)}>
             <Image source={{ uri: imageUrl ?? '' }} style={styles.image} contentFit="cover" transition={200} placeholder={{ color: colors.border } as any} />
@@ -273,4 +311,10 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   deletedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
   deletedText: { fontSize: 14, fontStyle: 'italic', color: c.textSecondary },
   image: { width: IMG_SIZE, height: IMG_SIZE, borderRadius: BorderRadius.md },
+  locationBubble: { width: IMG_SIZE, overflow: 'hidden' as const },
+  locationMap: { width: '100%' as const, height: 120, borderRadius: BorderRadius.sm, marginBottom: 6 },
+  locationMapPlaceholder: { backgroundColor: c.backgroundSection, justifyContent: 'center' as const, alignItems: 'center' as const },
+  locationInfo: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4, paddingHorizontal: 2 },
+  locationAddress: { flex: 1, fontSize: 13, lineHeight: 17 },
+  locationTapHint: { fontSize: 11, color: c.textSecondary, marginTop: 2, paddingHorizontal: 2, fontStyle: 'italic' as const },
 });

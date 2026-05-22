@@ -370,6 +370,9 @@ model ChatMessage {
   messageText   String   @map("message_text")
   messageType   String   @default("text") @map("message_type")
   imageUrl      String?  @map("image_url")
+  latitude      Float?
+  longitude     Float?
+  addressText   String?  @map("address_text")
   replyToId     String?  @map("reply_to_id") @db.Uuid
   status        String   @default("sent") @map("status") // sent | delivered | read
   isEdited      Boolean  @default(false) @map("is_edited")

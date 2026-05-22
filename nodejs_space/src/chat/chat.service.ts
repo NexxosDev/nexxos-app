@@ -9,6 +9,9 @@ const MESSAGE_SELECT = {
   messageText: true,
   messageType: true,
   imageUrl: true,
+  latitude: true,
+  longitude: true,
+  addressText: true,
   status: true,
   isEdited: true,
   deletedForAll: true,
@@ -53,6 +56,9 @@ function formatMessage(m: any, vendorUserId?: string, vendorBusinessName?: strin
     messageText: isDeleted ? 'Mensaje eliminado' : (m.messageText ?? ''),
     messageType: isDeleted ? 'text' : (m.messageType ?? 'text'),
     imageUrl: isDeleted ? null : (m.imageUrl ?? null),
+    latitude: isDeleted ? null : (m.latitude ?? null),
+    longitude: isDeleted ? null : (m.longitude ?? null),
+    addressText: isDeleted ? null : (m.addressText ?? null),
     status: m.status ?? 'sent',
     isEdited: m.isEdited ?? false,
     deletedForAll: isDeleted,
@@ -165,7 +171,7 @@ export class ChatService {
     };
   }
 
-  async sendMessage(chatId: string, userId: string, messageText: string, messageType = 'text', imageUrl?: string, replyToId?: string) {
+  async sendMessage(chatId: string, userId: string, messageText: string, messageType = 'text', imageUrl?: string, replyToId?: string, latitude?: number, longitude?: number, addressText?: string) {
     const { chat, isClient, isVendor, vendorRecord } = await this.verifyAccess(chatId, userId);
 
     const now = new Date();
@@ -174,6 +180,9 @@ export class ChatService {
         data: {
           chatId, senderId: userId, messageText, messageType,
           imageUrl: imageUrl ?? null,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
+          addressText: addressText ?? null,
           replyToId: replyToId ?? null,
           status: 'sent',
         },
@@ -193,7 +202,7 @@ export class ChatService {
       if (this.chatPresence.isUserInChat(recipientUserId, chatId)) {
         this.logger.debug(`Skipping push for user ${recipientUserId} — already viewing chat ${chatId}`);
       } else {
-        const preview = messageType === 'image' ? 'Imagen' : (messageText.length > 100 ? messageText.substring(0, 97) + '...' : messageText);
+        const preview = messageType === 'image' ? 'Imagen' : messageType === 'location' ? '📍 Ubicación' : (messageText.length > 100 ? messageText.substring(0, 97) + '...' : messageText);
         this.notificationService.sendToUser(
           recipientUserId,
           senderName,

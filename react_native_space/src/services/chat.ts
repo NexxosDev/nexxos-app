@@ -20,10 +20,16 @@ export async function sendChatMessage(
   messageType = 'text',
   imageUrl?: string,
   replyToId?: string,
+  latitude?: number,
+  longitude?: number,
+  addressText?: string,
 ): Promise<ChatMessageItem> {
-  const body: Record<string, string> = { messageText, messageType };
+  const body: Record<string, unknown> = { messageText, messageType };
   if (imageUrl) body.imageUrl = imageUrl;
   if (replyToId) body.replyToId = replyToId;
+  if (latitude != null) body.latitude = latitude;
+  if (longitude != null) body.longitude = longitude;
+  if (addressText) body.addressText = addressText;
   const res = await api.post(`/chats/${encodeURIComponent(chatId)}/messages`, body);
   return res?.data;
 }

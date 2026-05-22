@@ -46,7 +46,7 @@ export class ChatController {
     @Param('chatId') chatId: string,
     @Body() dto: SendMessageDto,
   ) {
-    return this.chatService.sendMessage(chatId, userId, dto.messageText, dto.messageType ?? 'text', dto.imageUrl, dto.replyToId);
+    return this.chatService.sendMessage(chatId, userId, dto.messageText, dto.messageType ?? 'text', dto.imageUrl, dto.replyToId, dto.latitude, dto.longitude, dto.addressText);
   }
 
   @Patch(':chatId/messages/:messageId')

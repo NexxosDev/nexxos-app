@@ -296,6 +296,9 @@ export interface ChatMessageItem {
   messageText: string;
   messageType?: string;
   imageUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  addressText?: string | null;
   status?: 'sending' | 'sent' | 'delivered' | 'read';
   isEdited?: boolean;
   deletedForAll?: boolean;

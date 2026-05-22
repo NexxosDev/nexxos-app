@@ -8,6 +8,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useTheme } from '../src/contexts/ThemeContext';
@@ -243,6 +244,67 @@ export default function ChatScreen() {
     setUploading(false);
   };
 
+  // ---------- Location ----------
+  const isClient = user?.id !== chatInfo?.vendorUserId;
+
+  const handleSendLocation = async () => {
+    setShowAttachMenu(false);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso necesario', 'Necesitas permitir el acceso a tu ubicación para compartirla.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const lat = loc?.coords?.latitude;
+      const lng = loc?.coords?.longitude;
+      if (lat == null || lng == null) {
+        Alert.alert('Error', 'No se pudo obtener tu ubicación.');
+        return;
+      }
+
+      // Reverse geocode for address
+      let addr = '';
+      try {
+        const geocoded = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+        const g = geocoded?.[0];
+        if (g) {
+          const parts = [g.street, g.name, g.district, g.city, g.region].filter(Boolean);
+          addr = parts.join(', ');
+        }
+      } catch { /* use empty address */ }
+
+      // Confirm
+      Alert.alert(
+        'Enviar ubicación',
+        addr || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Enviar',
+            onPress: async () => {
+              setSending(true);
+              try {
+                playSend();
+                const newMsg = await sendChatMessage(
+                  chatId, 'Ubicación', 'location', undefined,
+                  replyingTo?.id, lat, lng, addr,
+                );
+                if (newMsg) { setMessages((prev) => [newMsg, ...(prev ?? [])]); }
+                setReplyingTo(null);
+              } catch {
+                Alert.alert('Error', 'No se pudo enviar la ubicación.');
+              }
+              setSending(false);
+            },
+          },
+        ],
+      );
+    } catch {
+      Alert.alert('Error', 'No se pudo acceder a la ubicación.');
+    }
+  };
+
   // ---------- Context menu ----------
   const openContextMenu = useCallback((msg: ChatMessageItem) => {
     setContextMenuMsg(msg);
@@ -320,6 +382,9 @@ export default function ChatScreen() {
             isVendorMessage={item?.senderId === chatInfo?.vendorUserId}
             messageType={item?.messageType}
             imageUrl={item?.imageUrl}
+            latitude={item?.latitude}
+            longitude={item?.longitude}
+            addressText={item?.addressText}
             status={item?.status}
             isEdited={item?.isEdited}
             deletedForAll={item?.deletedForAll}
@@ -342,7 +407,7 @@ export default function ChatScreen() {
   if (loading) return <LoadingSpinner />;
 
   const replyPreviewText = replyingTo
-    ? ((replyingTo?.messageType ?? 'text') === 'image' ? 'Imagen' : (replyingTo?.messageText ?? ''))
+    ? ((replyingTo?.messageType ?? 'text') === 'image' ? 'Imagen' : (replyingTo?.messageType ?? 'text') === 'location' ? '📍 Ubicación' : (replyingTo?.messageText ?? ''))
     : '';
   const replyPreviewSnippet = replyPreviewText.length > 50 ? replyPreviewText.substring(0, 47) + '...' : replyPreviewText;
 
@@ -398,14 +463,28 @@ export default function ChatScreen() {
           <>
             {showAttachMenu ? (
               <View style={styles.attachMenu}>
-                <Pressable style={styles.attachOption} onPress={() => pickAndSendImage('gallery')}>
-                  <Ionicons name="images" size={24} color={colors.primary} />
-                  <Text style={styles.attachOptionText}>Galería</Text>
-                </Pressable>
-                <Pressable style={styles.attachOption} onPress={() => pickAndSendImage('camera')}>
-                  <Ionicons name="camera" size={24} color={colors.primary} />
-                  <Text style={styles.attachOptionText}>Cámara</Text>
-                </Pressable>
+                <View style={styles.attachGrid}>
+                  <Pressable style={styles.attachOption} onPress={() => pickAndSendImage('camera')}>
+                    <View style={[styles.attachCircle, { backgroundColor: '#E91E63' }]}>
+                      <Ionicons name="camera" size={24} color="#fff" />
+                    </View>
+                    <Text style={styles.attachOptionText}>Cámara</Text>
+                  </Pressable>
+                  <Pressable style={styles.attachOption} onPress={() => pickAndSendImage('gallery')}>
+                    <View style={[styles.attachCircle, { backgroundColor: '#7C3AED' }]}>
+                      <Ionicons name="images" size={24} color="#fff" />
+                    </View>
+                    <Text style={styles.attachOptionText}>Galería</Text>
+                  </Pressable>
+                  {isClient ? (
+                    <Pressable style={styles.attachOption} onPress={handleSendLocation}>
+                      <View style={[styles.attachCircle, { backgroundColor: '#4CAF50' }]}>
+                        <Ionicons name="location" size={24} color="#fff" />
+                      </View>
+                      <Text style={styles.attachOptionText}>Ubicación</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
             ) : null}
 
@@ -475,7 +554,7 @@ export default function ChatScreen() {
         <Pressable style={styles.menuOverlay} onPress={() => setContextMenuMsg(null)}>
           <View style={styles.menuCard}>
             <Text style={styles.menuTitle} numberOfLines={1}>
-              {(contextMenuMsg?.messageType === 'image' ? 'Imagen' : (contextMenuMsg?.messageText ?? '')).substring(0, 40)}
+              {(contextMenuMsg?.messageType === 'image' ? 'Imagen' : contextMenuMsg?.messageType === 'location' ? 'Ubicación' : (contextMenuMsg?.messageText ?? '')).substring(0, 40)}
             </Text>
             {(contextMenuMsg?.messageType ?? 'text') !== 'image' ? (
               <Pressable style={styles.menuOption} onPress={handleEdit}>
@@ -557,12 +636,23 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   },
   uploadingText: { marginLeft: 8, fontSize: 13, color: c.textSecondary },
   attachMenu: {
-    flexDirection: 'row', justifyContent: 'space-evenly',
-    paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg,
     backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.border,
   },
-  attachOption: { alignItems: 'center', paddingVertical: 8, paddingHorizontal: 24 },
-  attachOptionText: { fontSize: 12, color: c.textPrimary, marginTop: 4 },
+  attachGrid: {
+    flexDirection: 'row', justifyContent: 'flex-start', gap: 28,
+  },
+  attachOption: { alignItems: 'center', width: 64 },
+  attachCircle: {
+    width: 52, height: 52, borderRadius: 26,
+    justifyContent: 'center', alignItems: 'center',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
+      android: { elevation: 3 },
+      default: {},
+    }),
+  },
+  attachOptionText: { fontSize: 11, color: c.textPrimary, marginTop: 6, textAlign: 'center' },
   swipeReplyAction: { width: 60, justifyContent: 'center', alignItems: 'center' },
   editBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
