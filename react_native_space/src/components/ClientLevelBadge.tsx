@@ -11,16 +11,16 @@ interface ClientLevelBadgeProps {
 }
 
 const LEVEL_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  NUEVO: { bg: 'rgba(33,150,243,0.12)', border: 'rgba(33,150,243,0.3)', text: '#2196F3' },
-  ACTIVO: { bg: 'rgba(76,175,80,0.12)', border: 'rgba(76,175,80,0.3)', text: '#4CAF50' },
-  CONFIABLE: { bg: 'rgba(255,193,7,0.14)', border: 'rgba(255,193,7,0.4)', text: '#F9A825' },
-  VIP: { bg: 'rgba(156,39,176,0.12)', border: 'rgba(156,39,176,0.3)', text: '#9C27B0' },
+  EXPLORADOR: { bg: 'rgba(33,150,243,0.12)', border: 'rgba(33,150,243,0.3)', text: '#2196F3' },
+  RODANTE: { bg: 'rgba(76,175,80,0.12)', border: 'rgba(76,175,80,0.3)', text: '#4CAF50' },
+  AFINADOR: { bg: 'rgba(255,193,7,0.14)', border: 'rgba(255,193,7,0.4)', text: '#F9A825' },
+  MAESTRO: { bg: 'rgba(156,39,176,0.12)', border: 'rgba(156,39,176,0.3)', text: '#9C27B0' },
 };
 
 export default function ClientLevelBadge({ level, emoji, label, size = 'small', style }: ClientLevelBadgeProps) {
   const { isDark } = useTheme();
-  const lvl = level ?? 'NUEVO';
-  const colorSet = LEVEL_COLORS[lvl] ?? LEVEL_COLORS.NUEVO;
+  const lvl = level ?? 'EXPLORADOR';
+  const colorSet = LEVEL_COLORS[lvl] ?? LEVEL_COLORS.EXPLORADOR;
   const isSmall = size === 'small';
 
   return (
@@ -34,12 +34,12 @@ export default function ClientLevelBadge({ level, emoji, label, size = 'small', 
       },
       style,
     ]}>
-      <Text style={[styles.emoji, { fontSize: isSmall ? 10 : 13 }]}>{emoji ?? '🔵'}</Text>
+      <Text style={[styles.emoji, { fontSize: isSmall ? 10 : 13 }]}>{emoji ?? '🧭'}</Text>
       <Text style={[
         styles.label,
         { color: colorSet.text, fontSize: isSmall ? 10 : 12 },
       ]}>
-        {label ?? 'Nuevo'}
+        {label ?? 'Explorador'}
       </Text>
     </View>
   );

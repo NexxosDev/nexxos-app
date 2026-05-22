@@ -53,10 +53,10 @@ export default function ClientPointsCard() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.emoji}>{current?.emoji ?? '🔵'}</Text>
+          <Text style={styles.emoji}>{current?.emoji ?? '🧭'}</Text>
           <View>
             <Text style={styles.levelLabel}>Nivel de Cliente</Text>
-            <Text style={styles.levelName}>{current?.label ?? 'Nuevo'}</Text>
+            <Text style={styles.levelName}>{current?.label ?? 'Explorador'}</Text>
           </View>
         </View>
         <View style={styles.pointsBadge}>

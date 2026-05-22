@@ -19,7 +19,7 @@ const POINTS_MAP: Record<string, number> = {
 const MAX_DAILY_REQUEST_POINTS = 5; // max 5 requests per day give points
 
 export interface ClientLevel {
-  level: 'NUEVO' | 'ACTIVO' | 'CONFIABLE' | 'VIP';
+  level: 'EXPLORADOR' | 'RODANTE' | 'AFINADOR' | 'MAESTRO';
   emoji: string;
   label: string;
   minPoints: number;
@@ -27,10 +27,10 @@ export interface ClientLevel {
 }
 
 const LEVELS: ClientLevel[] = [
-  { level: 'NUEVO', emoji: '🔵', label: 'Nuevo', minPoints: 0, maxPoints: 99 },
-  { level: 'ACTIVO', emoji: '🟢', label: 'Activo', minPoints: 100, maxPoints: 499 },
-  { level: 'CONFIABLE', emoji: '⭐', label: 'Confiable', minPoints: 500, maxPoints: 999 },
-  { level: 'VIP', emoji: '👑', label: 'VIP', minPoints: 1000, maxPoints: null },
+  { level: 'EXPLORADOR', emoji: '🧭', label: 'Explorador', minPoints: 0, maxPoints: 99 },
+  { level: 'RODANTE', emoji: '🛞', label: 'Rodante', minPoints: 100, maxPoints: 499 },
+  { level: 'AFINADOR', emoji: '🔧', label: 'Afinador', minPoints: 500, maxPoints: 999 },
+  { level: 'MAESTRO', emoji: '🏆', label: 'Maestro', minPoints: 1000, maxPoints: null },
 ];
 
 @Injectable()
