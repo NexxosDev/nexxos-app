@@ -15,6 +15,7 @@ interface RequestCardProps {
   partCategory: string;
   status: string;
   responseCount?: number;
+  hasRating?: boolean | null;
   municipality?: string;
   state?: string;
   createdAt: string;
@@ -28,7 +29,7 @@ interface RequestCardProps {
 
 export default function RequestCard({
   vehicleBrand, vehicleModel, partCategory, status,
-  responseCount, municipality, state, createdAt, timeLabel, timeLabelColor, unreadCount, clientName, clientLevel, onPress,
+  responseCount, hasRating, municipality, state, createdAt, timeLabel, timeLabelColor, unreadCount, clientName, clientLevel, onPress,
 }: RequestCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -73,6 +74,17 @@ export default function RequestCard({
           </View>
           <View style={styles.right}>
             <Badge status={status ?? ''} size="small" />
+            {status === 'CERRADA' && hasRating === true ? (
+              <View style={styles.ratingBadgeGreen}>
+                <Ionicons name="checkmark-circle" size={11} color="#16A34A" />
+                <Text style={styles.ratingBadgeGreenText}>Calificada</Text>
+              </View>
+            ) : status === 'CERRADA' && hasRating === false && (responseCount ?? 0) > 0 ? (
+              <View style={styles.ratingBadgeOrange}>
+                <Ionicons name="star" size={11} color="#EA580C" />
+                <Text style={styles.ratingBadgeOrangeText}>Sin calificar</Text>
+              </View>
+            ) : null}
             {typeof responseCount === 'number' ? (
               <Text style={styles.responses}>{responseCount} resp.</Text>
             ) : null}
@@ -129,6 +141,18 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 2, marginTop: 2,
   },
   unreadBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  ratingBadgeGreen: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(22, 163, 74, 0.12)', borderRadius: 8,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  ratingBadgeGreenText: { fontSize: 10, fontWeight: '600', color: '#16A34A' },
+  ratingBadgeOrange: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(234, 88, 12, 0.12)', borderRadius: 8,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  ratingBadgeOrangeText: { fontSize: 10, fontWeight: '600', color: '#EA580C' },
   timeRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.border },
   timeText: { fontSize: 12, marginLeft: 4, flex: 1 },
 });

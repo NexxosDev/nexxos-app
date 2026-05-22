@@ -108,6 +108,7 @@ export default function ClientHome() {
             partCategory={item?.partCategory ?? ''}
             status={item?.status ?? ''}
             responseCount={item?.responseCount ?? 0}
+            hasRating={item?.hasRating ?? null}
             createdAt={item?.createdAt ?? ''}
             unreadCount={byRequestId?.[item?.id ?? ''] ?? 0}
             onPress={() => router.push(`/request-detail?id=${item?.id ?? ''}`)}

@@ -39,6 +39,7 @@ export interface RequestListItem {
   partSubcategory: string | null;
   status: string;
   responseCount: number;
+  hasRating?: boolean | null;
   state: string;
   municipality: string;
   lastMessageAt: string | null;
