@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
-import { getRequests } from '../../src/services/requests';
+import { getRequests, getPendingRatings } from '../../src/services/requests';
 import { Spacing, BorderRadius } from '../../src/theme/colors';
 import type { ThemeColors } from '../../src/theme/colors';
 import RequestCard from '../../src/components/RequestCard';
@@ -24,12 +24,17 @@ export default function ClientHome() {
   const [requests, setRequests] = useState<RequestListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [pendingRatingsCount, setPendingRatingsCount] = useState(0);
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const data = await getRequests({ limit: 5 });
+      const [data, pendingData] = await Promise.all([
+        getRequests({ limit: 5 }),
+        getPendingRatings().catch(() => ({ items: [], total: 0 })),
+      ]);
       setRequests(data?.items ?? []);
+      setPendingRatingsCount(pendingData?.total ?? 0);
     } catch { }
     if (isRefresh) setRefreshing(false); else setLoading(false);
   }, []);
@@ -59,6 +64,18 @@ export default function ClientHome() {
       </View>
       <Text style={styles.greeting}>¡Hola, {user?.firstName ?? 'Usuario'}!</Text>
       <Text style={styles.subtitle}>¿Qué necesitas hoy?</Text>
+      {pendingRatingsCount > 0 ? (
+        <Pressable style={styles.ratingBanner} onPress={() => router.push('/client/requests?status=CERRADA')}>
+          <Ionicons name="star-outline" size={22} color={colors.primary} />
+          <View style={styles.bannerContent}>
+            <Text style={styles.ratingBannerTitle}>
+              {pendingRatingsCount === 1 ? 'Tienes 1 calificación pendiente' : `Tienes ${pendingRatingsCount} calificaciones pendientes`}
+            </Text>
+            <Text style={styles.ratingBannerText}>¡Califica y gana puntos! ⭐</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+        </Pressable>
+      ) : null}
       <View style={styles.banner}>
         <Ionicons name="megaphone-outline" size={28} color={colors.textPrimary} />
         <View style={styles.bannerContent}>
@@ -124,6 +141,14 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   logo: { fontSize: 22, fontWeight: '800', color: c.primary, letterSpacing: 2 },
   greeting: { fontSize: 22, fontWeight: '700', color: c.textPrimary },
   subtitle: { fontSize: 15, color: c.textSecondary, marginTop: 2, marginBottom: Spacing.md },
+  ratingBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: `${c.primary}12`, borderRadius: BorderRadius.md,
+    padding: Spacing.md, marginBottom: Spacing.sm,
+    borderWidth: 1, borderColor: `${c.primary}30`,
+  },
+  ratingBannerTitle: { fontSize: 14, fontWeight: '600', color: c.primary },
+  ratingBannerText: { fontSize: 12, color: c.textSecondary, marginTop: 1 },
   banner: {
     flexDirection: 'row', backgroundColor: c.backgroundSection, borderRadius: BorderRadius.md,
     padding: Spacing.md, marginBottom: Spacing.lg, alignItems: 'center', gap: Spacing.md,

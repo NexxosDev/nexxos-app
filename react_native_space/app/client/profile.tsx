@@ -11,6 +11,7 @@ import ProfileAvatar from '../../src/components/ProfileAvatar';
 import LoadingSpinner from '../../src/components/LoadingSpinner';
 import DeleteAccountModal from '../../src/components/DeleteAccountModal';
 import ProfileActionButton from '../../src/components/ProfileActionButton';
+import ClientPointsCard from '../../src/components/ClientPointsCard';
 
 export default function ClientProfile() {
   const router = useRouter();
@@ -66,6 +67,9 @@ export default function ClientProfile() {
           <InfoRow icon="call-outline" label="Teléfono" value={user?.phone ?? '-'} c={colors} />
           <InfoRow icon="mail-outline" label="Email" value={user?.email ?? '-'} c={colors} />
         </View>
+
+        {/* ── Client Points ── */}
+        <ClientPointsCard />
 
         {/* ── Action Buttons ── */}
         <View style={styles.actionsCard}>

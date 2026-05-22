@@ -90,6 +90,7 @@ export interface VendorRequestListItem {
     createdAt: string;
     clientFirstName: string;
     clientLastName?: string;
+    clientLevel?: ClientLevel;
   };
   status: string;
   respondedAt: string | null;
@@ -137,6 +138,9 @@ export interface VendorDashboard {
       municipality: string;
       state: string;
       createdAt: string;
+      clientFirstName: string;
+      clientLastName?: string;
+      clientLevel?: ClientLevel;
     };
     status: string;
     deliveredAt: string | null;

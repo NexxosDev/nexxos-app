@@ -2,12 +2,16 @@ import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nest
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { getFileUrl } from '../lib/s3';
+import { ClientPointsService } from '../client-points/client-points.service';
 
 @Injectable()
 export class VendorService {
   private readonly logger = new Logger(VendorService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clientPointsService: ClientPointsService,
+  ) {}
 
   async getVendorProfile(userId: string) {
     const vendor = await this.prisma.vendor.findUnique({
@@ -177,6 +181,7 @@ export class VendorService {
                 partSubcategory: true,
                 municipality: true,
                 state: true,
+                client: { select: { id: true, firstName: true, lastName: true } },
               },
             },
           },
@@ -196,7 +201,7 @@ export class VendorService {
             totalRatings: vendor.vendorMetrics.totalRatings,
           }
         : { totalRequestsReceived: 0, totalRequestsAnswered: 0, avgRating: null, totalRatings: 0 },
-      recentRequests: vendor.requestVendorMatches.map((m: any) => {
+      recentRequests: await Promise.all(vendor.requestVendorMatches.map(async (m: any) => {
         const deliveredAt = m.deliveredAt ? m.deliveredAt.toISOString() : null;
         const respondedAt = m.respondedAt ? m.respondedAt.toISOString() : null;
         const declinedAt = m.declinedAt ? m.declinedAt.toISOString() : null;
@@ -205,6 +210,13 @@ export class VendorService {
         if (m.request.status === 'CERRADA') status = 'CERRADA';
         else if (m.declined) status = 'DECLINED';
         else if (m.responded) status = 'RESPONDED';
+
+        let clientLevel = { level: 'NUEVO', emoji: '🔵', label: 'Nuevo' };
+        try {
+          if (m.request.client?.id) {
+            clientLevel = await this.clientPointsService.getClientLevelForUser(m.request.client.id);
+          }
+        } catch { /* fallback to default */ }
 
         return {
           matchId: m.id,
@@ -217,6 +229,9 @@ export class VendorService {
             municipality: m.request.municipality?.name ?? null,
             state: m.request.state?.name ?? null,
             createdAt: m.request.createdAt.toISOString(),
+            clientFirstName: m.request.client?.firstName ?? '',
+            clientLastName: m.request.client?.lastName ?? '',
+            clientLevel,
           },
           status,
           deliveredAt,
@@ -225,7 +240,7 @@ export class VendorService {
           responded: !!m.responded,
           declined: !!m.declined,
         };
-      }),
+      })),
     };
   }
 

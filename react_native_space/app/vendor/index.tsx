@@ -281,6 +281,8 @@ export default function VendorHome() {
               unreadCount={byRequestId?.[item?.request?.id ?? ''] ?? 0}
               timeLabel={timeInfo?.label}
               timeLabelColor={timeInfo?.color}
+              clientName={`${item?.request?.clientFirstName ?? ''}${item?.request?.clientLastName ? ` ${item.request.clientLastName}` : ''}`}
+              clientLevel={item?.request?.clientLevel}
               onPress={() => router.push(`/vendor-request-detail?matchId=${item?.matchId ?? ''}`)}
             />
           );

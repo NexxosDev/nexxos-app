@@ -6,6 +6,8 @@ import { Spacing, BorderRadius } from '../theme/colors';
 import type { ThemeColors } from '../theme/colors';
 import Badge from './Badge';
 import BrandLogo from './BrandLogo';
+import ClientLevelBadge from './ClientLevelBadge';
+import type { ClientLevel } from '../types';
 
 interface RequestCardProps {
   vehicleBrand: string;
@@ -19,12 +21,14 @@ interface RequestCardProps {
   timeLabel?: string;
   timeLabelColor?: string;
   unreadCount?: number;
+  clientName?: string;
+  clientLevel?: ClientLevel;
   onPress?: () => void;
 }
 
 export default function RequestCard({
   vehicleBrand, vehicleModel, partCategory, status,
-  responseCount, municipality, state, createdAt, timeLabel, timeLabelColor, unreadCount, onPress,
+  responseCount, municipality, state, createdAt, timeLabel, timeLabelColor, unreadCount, clientName, clientLevel, onPress,
 }: RequestCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -58,6 +62,13 @@ export default function RequestCard({
                 <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
                 {' '}{municipality ?? ''}{state ? `, ${state}` : ''}
               </Text>
+            ) : null}
+            {clientName ? (
+              <View style={styles.clientRow}>
+                <Ionicons name="person-outline" size={11} color={colors.textSecondary} />
+                <Text style={styles.clientName} numberOfLines={1}>{clientName}</Text>
+                {clientLevel ? <ClientLevelBadge level={clientLevel.level} emoji={clientLevel.emoji} label={clientLevel.label} size="small" /> : null}
+              </View>
             ) : null}
           </View>
           <View style={styles.right}>
@@ -107,6 +118,8 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   title: { fontSize: 15, fontWeight: '600', color: c.textPrimary },
   subtitle: { fontSize: 13, color: c.textSubtitle, marginTop: 2 },
   location: { fontSize: 12, color: c.textSecondary, marginTop: 2 },
+  clientRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  clientName: { fontSize: 11, color: c.textSecondary },
   right: { alignItems: 'flex-end', gap: 4 },
   responses: { fontSize: 11, color: c.textSecondary },
   date: { fontSize: 11, color: c.textSecondary },

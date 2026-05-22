@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal, TextInput, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,10 +13,10 @@ import type { ThemeColors } from '../src/theme/colors';
 import Badge from '../src/components/Badge';
 import ResponseCard from '../src/components/ResponseCard';
 import Button from '../src/components/Button';
-import StarRating from '../src/components/StarRating';
 import LoadingSpinner from '../src/components/LoadingSpinner';
 import BrandLogo from '../src/components/BrandLogo';
 import TagSelectorSheet from '../src/components/TagSelectorSheet';
+import RateVendorModal from '../src/components/RateVendorModal';
 import { TAG_DEFINITIONS } from '../src/utils/responseTags';
 import type { RequestDetail, RequestResponseItem, ResponseTagValue } from '../src/types';
 
@@ -35,11 +35,9 @@ export default function RequestDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [closeModal, setCloseModal] = useState(false);
   const [resolved, setResolved] = useState(true);
-  const [selectedVendorId, setSelectedVendorId] = useState('');
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState('');
+  const [rateModal, setRateModal] = useState(false);
 
   // Tag state
   const [tagFilter, setTagFilter] = useState<TagFilter>('ALL');
@@ -66,19 +64,15 @@ export default function RequestDetailScreen() {
 
   const handleClose = async () => {
     setCloseError('');
-    if (resolved && !selectedVendorId) { setCloseError('Selecciona el vendedor que te ayudó'); return; }
-    if (resolved && rating < 1) { setCloseError('Debes seleccionar una calificación'); return; }
     setClosing(true);
     try {
-      const body: Parameters<typeof closeRequest>[1] = { resolved };
-      if (resolved) {
-        body.vendorId = selectedVendorId;
-        body.rating = rating;
-        if (comment?.trim?.()) body.comment = comment.trim();
-      }
-      await closeRequest(id, body);
+      await closeRequest(id, { resolved });
       setCloseModal(false);
-      fetchData(true);
+      await fetchData(true);
+      // Show rating modal if resolved and there are responses to rate
+      if (resolved && (responses?.length ?? 0) > 0) {
+        setRateModal(true);
+      }
     } catch (err) { setCloseError(getErrorMessage(err)); } finally { setClosing(false); }
   };
 
@@ -224,25 +218,10 @@ export default function RequestDetailScreen() {
               <Text style={[styles.radioText, !resolved && styles.radioTextActive]}>No</Text>
             </Pressable>
           </View>
-          {resolved ? (
-            <View>
-              <Text style={styles.sheetLabel}>¿Quién te ayudó?</Text>
-              {(responses ?? []).map((resp) => (
-                <Pressable key={resp?.id} style={[styles.vendorOption, selectedVendorId === resp?.vendor?.id && styles.vendorOptionActive]} onPress={() => setSelectedVendorId(resp?.vendor?.id ?? '')}>
-                  <Text style={styles.vendorName}>{resp?.vendor?.businessName ?? ''}</Text>
-                  {selectedVendorId === resp?.vendor?.id ? <Ionicons name="checkmark-circle" size={20} color={colors.primary} /> : null}
-                </Pressable>
-              ))}
-              <Text style={styles.sheetLabel}>Calificación</Text>
-              <StarRating rating={rating} onChange={setRating} />
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Comentario (opcional)"
-                placeholderTextColor={colors.textSecondary}
-                value={comment}
-                onChangeText={setComment}
-                multiline
-              />
+          {resolved && (responses?.length ?? 0) > 0 ? (
+            <View style={styles.rateHint}>
+              <Ionicons name="star-outline" size={16} color={colors.primary} />
+              <Text style={styles.rateHintText}>Después podrás calificar al vendedor y ganar puntos ⭐</Text>
             </View>
           ) : null}
           <Button title="Confirmar Cierre" onPress={handleClose} loading={closing} style={styles.confirmBtn} />
@@ -251,6 +230,22 @@ export default function RequestDetailScreen() {
           </Pressable>
         </View>
       </Modal>
+
+      <RateVendorModal
+        visible={rateModal}
+        requestId={id}
+        vendors={(responses ?? []).map((r) => ({
+          id: r?.vendor?.id ?? '',
+          businessName: r?.vendor?.businessName ?? '',
+          logoUrl: r?.vendor?.logoUrl,
+          avgRating: r?.vendor?.avgRating,
+        }))}
+        onClose={() => setRateModal(false)}
+        onRated={() => {
+          setRateModal(false);
+          fetchData(true);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -302,10 +297,8 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   radioActive: { borderColor: c.primary, backgroundColor: `${c.primary}15` },
   radioText: { fontSize: 14, color: c.textSubtitle },
   radioTextActive: { color: c.primary, fontWeight: '600' },
-  vendorOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: Spacing.md, borderRadius: BorderRadius.sm, backgroundColor: c.backgroundSection, marginBottom: 4 },
-  vendorOptionActive: { backgroundColor: `${c.primary}15` },
-  vendorName: { fontSize: 14, color: c.textPrimary },
-  commentInput: { borderWidth: 1, borderColor: c.border, borderRadius: BorderRadius.md, padding: Spacing.md, marginTop: Spacing.sm, fontSize: 14, color: c.textPrimary, minHeight: 60, backgroundColor: c.inputBg },
+  rateHint: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: Spacing.md, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, backgroundColor: `${c.primary}10`, borderRadius: BorderRadius.sm },
+  rateHintText: { flex: 1, fontSize: 13, color: c.primary, fontWeight: '500' },
   confirmBtn: { marginTop: Spacing.lg },
   cancelBtn: { alignItems: 'center', paddingVertical: Spacing.md },
   cancelText: { fontSize: 15, color: c.textSecondary },
