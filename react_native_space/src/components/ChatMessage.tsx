@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Spacing, BorderRadius } from '../theme/colors';
 import type { ThemeColors } from '../theme/colors';
 import type { ChatMessageReplyTo } from '../types';
+import VoiceNotePlayer from './VoiceNotePlayer';
 
 interface ChatMessageProps {
   messageText: string;
@@ -20,6 +21,8 @@ interface ChatMessageProps {
   latitude?: number | null;
   longitude?: number | null;
   addressText?: string | null;
+  audioUrl?: string | null;
+  audioDuration?: number | null;
   status?: 'sending' | 'sent' | 'delivered' | 'read';
   isEdited?: boolean;
   deletedForAll?: boolean;
@@ -56,7 +59,7 @@ function StatusTicks({ status, colors }: { status?: string; colors: ThemeColors 
 export default function ChatMessage({
   messageText, senderName, createdAt, isOwn, isVendorMessage = false,
   messageType, imageUrl, latitude, longitude, addressText,
-  status, isEdited, deletedForAll,
+  audioUrl, audioDuration, status, isEdited, deletedForAll,
   replyTo, onReplyPress, onLongPress,
 }: ChatMessageProps) {
   const { colors } = useTheme();
@@ -72,6 +75,7 @@ export default function ChatMessage({
   const shouldBeOnRight = isOwn;
   const isImage = !deletedForAll && (messageType ?? 'text') === 'image' && !!imageUrl;
   const isLocation = !deletedForAll && (messageType ?? 'text') === 'location' && latitude != null && longitude != null;
+  const isAudio = !deletedForAll && (messageType ?? 'text') === 'audio' && !!audioUrl;
   const isDeleted = !!deletedForAll;
 
   const openInMaps = useCallback(() => {
@@ -140,6 +144,13 @@ export default function ChatMessage({
             </View>
             <Text style={styles.locationTapHint}>Toca para abrir en mapas</Text>
           </Pressable>
+        ) : isAudio ? (
+          <VoiceNotePlayer
+            audioUrl={audioUrl ?? ''}
+            duration={audioDuration ?? 0}
+            isOwn={isOwn}
+            isVendorMessage={isVendorMessage}
+          />
         ) : isImage ? (
           <Pressable onPress={() => setPreviewOpen(true)}>
             <Image source={{ uri: imageUrl ?? '' }} style={styles.image} contentFit="cover" transition={200} placeholder={{ color: colors.border } as any} />

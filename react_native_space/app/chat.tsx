@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { Audio } from 'expo-av';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useTheme } from '../src/contexts/ThemeContext';
@@ -56,6 +57,11 @@ export default function ChatScreen() {
   const [contextMenuMsg, setContextMenuMsg] = useState<ChatMessageItem | null>(null);
   // Delete confirmation
   const [deleteConfirmMsg, setDeleteConfirmMsg] = useState<ChatMessageItem | null>(null);
+  // Voice recording
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const flatListRef = useRef<FlatList>(null);
@@ -305,6 +311,104 @@ export default function ChatScreen() {
     }
   };
 
+  // ---------- Voice recording ----------
+  const formatRecTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${r < 10 ? '0' : ''}${r}`;
+  };
+
+  const startRecording = async () => {
+    try {
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm?.granted) {
+        Alert.alert('Permiso necesario', 'Necesitas permitir el acceso al micrófono para grabar notas de voz.');
+        return;
+      }
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+      recordingRef.current = recording;
+      setIsRecording(true);
+      setRecordingDuration(0);
+      setShowAttachMenu(false);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration((d) => d + 1);
+      }, 1000);
+    } catch {
+      Alert.alert('Error', 'No se pudo iniciar la grabación.');
+    }
+  };
+
+  const cancelRecording = async () => {
+    try {
+      if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+      await recordingRef.current?.stopAndUnloadAsync?.().catch(() => {});
+      recordingRef.current = null;
+      setIsRecording(false);
+      setRecordingDuration(0);
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+    } catch { /* ignore */ }
+  };
+
+  const stopAndSendRecording = async () => {
+    if (!recordingRef.current) return;
+    try {
+      if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI() ?? '';
+      const status = await recordingRef.current.getStatusAsync();
+      const durationSec = Math.round((status?.durationMillis ?? 0) / 1000);
+      recordingRef.current = null;
+      setIsRecording(false);
+      setRecordingDuration(0);
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+
+      if (!uri || durationSec < 1) {
+        Alert.alert('Muy corto', 'La nota de voz es muy corta.');
+        return;
+      }
+
+      // Upload to S3
+      setUploading(true);
+      try {
+        const fileName = `voice_${Date.now()}.m4a`;
+        const contentType = 'audio/mp4';
+        const uploadRes = await uploadFileWithUrl(uri, fileName, contentType);
+        const audioUrlResult = uploadRes?.url ?? '';
+        if (audioUrlResult) {
+          playSend();
+          const newMsg = await sendChatMessage(
+            chatId, 'Nota de voz', 'audio', undefined,
+            replyingTo?.id, undefined, undefined, undefined,
+            audioUrlResult, durationSec,
+          );
+          if (newMsg) { setMessages((prev) => [newMsg, ...(prev ?? [])]); }
+          setReplyingTo(null);
+        }
+      } catch {
+        Alert.alert('Error', 'No se pudo enviar la nota de voz.');
+      }
+      setUploading(false);
+    } catch {
+      setIsRecording(false);
+      setRecordingDuration(0);
+      Alert.alert('Error', 'Error al procesar la grabación.');
+    }
+  };
+
+  // Cleanup recording on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      recordingRef.current?.stopAndUnloadAsync?.().catch(() => {});
+    };
+  }, []);
+
   // ---------- Context menu ----------
   const openContextMenu = useCallback((msg: ChatMessageItem) => {
     setContextMenuMsg(msg);
@@ -385,6 +489,8 @@ export default function ChatScreen() {
             latitude={item?.latitude}
             longitude={item?.longitude}
             addressText={item?.addressText}
+            audioUrl={item?.audioUrl}
+            audioDuration={item?.audioDuration}
             status={item?.status}
             isEdited={item?.isEdited}
             deletedForAll={item?.deletedForAll}
@@ -407,7 +513,7 @@ export default function ChatScreen() {
   if (loading) return <LoadingSpinner />;
 
   const replyPreviewText = replyingTo
-    ? ((replyingTo?.messageType ?? 'text') === 'image' ? 'Imagen' : (replyingTo?.messageType ?? 'text') === 'location' ? '📍 Ubicación' : (replyingTo?.messageText ?? ''))
+    ? ((replyingTo?.messageType ?? 'text') === 'image' ? 'Imagen' : (replyingTo?.messageType ?? 'text') === 'location' ? '📍 Ubicación' : (replyingTo?.messageType ?? 'text') === 'audio' ? '🎤 Nota de voz' : (replyingTo?.messageText ?? ''))
     : '';
   const replyPreviewSnippet = replyPreviewText.length > 50 ? replyPreviewText.substring(0, 47) + '...' : replyPreviewText;
 
@@ -450,7 +556,7 @@ export default function ChatScreen() {
         {uploading ? (
           <View style={styles.uploadingBar}>
             <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.uploadingText}>Subiendo imagen...</Text>
+            <Text style={styles.uploadingText}>Subiendo archivo...</Text>
           </View>
         ) : null}
 
@@ -515,36 +621,61 @@ export default function ChatScreen() {
               </View>
             ) : null}
 
-            <View style={styles.inputBar}>
-              {!isEditMode ? (
-                <Pressable style={styles.attachBtn} onPress={() => setShowAttachMenu((v) => !v)} disabled={uploading}>
-                  <Ionicons name={showAttachMenu ? 'close' : 'attach'} size={24} color={uploading ? colors.textSecondary : colors.primary} />
+            {isRecording ? (
+              <View style={styles.recordingBar}>
+                <Pressable style={styles.recordCancelBtn} onPress={cancelRecording}>
+                  <Ionicons name="trash-outline" size={22} color="#E53935" />
                 </Pressable>
-              ) : null}
-              {!isEditMode && user?.id === chatInfo?.vendorUserId ? (
-                <QuickReplyPicker
-                  onSelect={(t) => setText((prev) => (prev ? prev + ' ' + t : t))}
+                <View style={styles.recordingIndicator}>
+                  <View style={styles.recordingDot} />
+                  <Text style={styles.recordingTime}>{formatRecTime(recordingDuration)}</Text>
+                </View>
+                <Pressable style={[styles.sendBtn, { backgroundColor: colors.primary }]} onPress={stopAndSendRecording}>
+                  <Ionicons name="send" size={20} color={colors.accent} />
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.inputBar}>
+                {!isEditMode ? (
+                  <Pressable style={styles.attachBtn} onPress={() => setShowAttachMenu((v) => !v)} disabled={uploading}>
+                    <Ionicons name={showAttachMenu ? 'close' : 'attach'} size={24} color={uploading ? colors.textSecondary : colors.primary} />
+                  </Pressable>
+                ) : null}
+                {!isEditMode && user?.id === chatInfo?.vendorUserId ? (
+                  <QuickReplyPicker
+                    onSelect={(t) => setText((prev) => (prev ? prev + ' ' + t : t))}
+                  />
+                ) : null}
+                <TextInput
+                  ref={inputRef}
+                  style={[styles.input, isEditMode && { marginLeft: Spacing.sm }]}
+                  value={text}
+                  onChangeText={setText}
+                  placeholder={isEditMode ? 'Editar mensaje...' : 'Escribe un mensaje...'}
+                  placeholderTextColor={colors.textSecondary}
+                  multiline
+                  maxLength={1000}
+                  onFocus={() => setShowAttachMenu(false)}
                 />
-              ) : null}
-              <TextInput
-                ref={inputRef}
-                style={[styles.input, isEditMode && { marginLeft: Spacing.sm }]}
-                value={text}
-                onChangeText={setText}
-                placeholder={isEditMode ? 'Editar mensaje...' : 'Escribe un mensaje...'}
-                placeholderTextColor={colors.textSecondary}
-                multiline
-                maxLength={1000}
-                onFocus={() => setShowAttachMenu(false)}
-              />
-              <Pressable
-                style={[styles.sendBtn, (!canSend || sending) && styles.sendBtnDisabled]}
-                onPress={handleSend}
-                disabled={!canSend || sending}
-              >
-                <Ionicons name={isEditMode ? 'checkmark' : 'send'} size={20} color={canSend ? colors.accent : colors.textSecondary} />
-              </Pressable>
-            </View>
+                {canSend || isEditMode ? (
+                  <Pressable
+                    style={[styles.sendBtn, (!canSend || sending) && styles.sendBtnDisabled]}
+                    onPress={handleSend}
+                    disabled={!canSend || sending}
+                  >
+                    <Ionicons name={isEditMode ? 'checkmark' : 'send'} size={20} color={canSend ? colors.accent : colors.textSecondary} />
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    style={[styles.sendBtn, { backgroundColor: colors.primary }]}
+                    onPress={startRecording}
+                    disabled={uploading}
+                  >
+                    <Ionicons name="mic" size={22} color={colors.accent} />
+                  </Pressable>
+                )}
+              </View>
+            )}
           </>
         )}
       </KeyboardAvoidingView>
@@ -554,9 +685,9 @@ export default function ChatScreen() {
         <Pressable style={styles.menuOverlay} onPress={() => setContextMenuMsg(null)}>
           <View style={styles.menuCard}>
             <Text style={styles.menuTitle} numberOfLines={1}>
-              {(contextMenuMsg?.messageType === 'image' ? 'Imagen' : contextMenuMsg?.messageType === 'location' ? 'Ubicación' : (contextMenuMsg?.messageText ?? '')).substring(0, 40)}
+              {(contextMenuMsg?.messageType === 'image' ? 'Imagen' : contextMenuMsg?.messageType === 'location' ? 'Ubicación' : contextMenuMsg?.messageType === 'audio' ? 'Nota de voz' : (contextMenuMsg?.messageText ?? '')).substring(0, 40)}
             </Text>
-            {(contextMenuMsg?.messageType ?? 'text') !== 'image' ? (
+            {(contextMenuMsg?.messageType ?? 'text') === 'text' ? (
               <Pressable style={styles.menuOption} onPress={handleEdit}>
                 <Ionicons name="pencil-outline" size={20} color={colors.primary} />
                 <Text style={styles.menuOptionText}>Editar</Text>
@@ -687,6 +818,22 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', marginLeft: Spacing.sm,
   },
   sendBtnDisabled: { backgroundColor: c.border },
+  recordingBar: {
+    flexDirection: 'row', alignItems: 'center', padding: Spacing.sm,
+    borderTopWidth: 1, borderTopColor: c.border, backgroundColor: c.surface,
+  },
+  recordCancelBtn: {
+    width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
+  },
+  recordingIndicator: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  recordingDot: {
+    width: 10, height: 10, borderRadius: 5, backgroundColor: '#E53935',
+  },
+  recordingTime: {
+    fontSize: 18, fontWeight: '600', color: c.textPrimary, fontVariant: ['tabular-nums'],
+  },
   menuOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center',
   },

@@ -12,6 +12,8 @@ const MESSAGE_SELECT = {
   latitude: true,
   longitude: true,
   addressText: true,
+  audioUrl: true,
+  audioDuration: true,
   status: true,
   isEdited: true,
   deletedForAll: true,
@@ -59,12 +61,14 @@ function formatMessage(m: any, vendorUserId?: string, vendorBusinessName?: strin
     latitude: isDeleted ? null : (m.latitude ?? null),
     longitude: isDeleted ? null : (m.longitude ?? null),
     addressText: isDeleted ? null : (m.addressText ?? null),
+    audioUrl: isDeleted ? null : (m.audioUrl ?? null),
+    audioDuration: isDeleted ? null : (m.audioDuration ?? null),
     status: m.status ?? 'sent',
     isEdited: m.isEdited ?? false,
     deletedForAll: isDeleted,
     replyTo: rt ? {
       id: rt.id,
-      messageText: replyToDeleted ? 'Mensaje eliminado' : (rt.messageType === 'image' ? 'Imagen' : rt.messageText),
+      messageText: replyToDeleted ? 'Mensaje eliminado' : (rt.messageType === 'image' ? 'Imagen' : rt.messageType === 'audio' ? '🎤 Nota de voz' : rt.messageText),
       senderName: replySenderName,
     } : null,
     createdAt: m.createdAt?.toISOString?.() ?? '',
@@ -171,7 +175,7 @@ export class ChatService {
     };
   }
 
-  async sendMessage(chatId: string, userId: string, messageText: string, messageType = 'text', imageUrl?: string, replyToId?: string, latitude?: number, longitude?: number, addressText?: string) {
+  async sendMessage(chatId: string, userId: string, messageText: string, messageType = 'text', imageUrl?: string, replyToId?: string, latitude?: number, longitude?: number, addressText?: string, audioUrl?: string, audioDuration?: number) {
     const { chat, isClient, isVendor, vendorRecord } = await this.verifyAccess(chatId, userId);
 
     const now = new Date();
@@ -183,6 +187,8 @@ export class ChatService {
           latitude: latitude ?? null,
           longitude: longitude ?? null,
           addressText: addressText ?? null,
+          audioUrl: audioUrl ?? null,
+          audioDuration: audioDuration ?? null,
           replyToId: replyToId ?? null,
           status: 'sent',
         },
@@ -202,7 +208,7 @@ export class ChatService {
       if (this.chatPresence.isUserInChat(recipientUserId, chatId)) {
         this.logger.debug(`Skipping push for user ${recipientUserId} — already viewing chat ${chatId}`);
       } else {
-        const preview = messageType === 'image' ? 'Imagen' : messageType === 'location' ? '📍 Ubicación' : (messageText.length > 100 ? messageText.substring(0, 97) + '...' : messageText);
+        const preview = messageType === 'image' ? 'Imagen' : messageType === 'location' ? '📍 Ubicación' : messageType === 'audio' ? '🎤 Nota de voz' : (messageText.length > 100 ? messageText.substring(0, 97) + '...' : messageText);
         this.notificationService.sendToUser(
           recipientUserId,
           senderName,

@@ -373,6 +373,8 @@ model ChatMessage {
   latitude      Float?
   longitude     Float?
   addressText   String?  @map("address_text")
+  audioUrl      String?  @map("audio_url")
+  audioDuration Float?   @map("audio_duration")
   replyToId     String?  @map("reply_to_id") @db.Uuid
   status        String   @default("sent") @map("status") // sent | delivered | read
   isEdited      Boolean  @default(false) @map("is_edited")

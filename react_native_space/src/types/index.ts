@@ -299,6 +299,8 @@ export interface ChatMessageItem {
   latitude?: number | null;
   longitude?: number | null;
   addressText?: string | null;
+  audioUrl?: string | null;
+  audioDuration?: number | null;
   status?: 'sending' | 'sent' | 'delivered' | 'read';
   isEdited?: boolean;
   deletedForAll?: boolean;

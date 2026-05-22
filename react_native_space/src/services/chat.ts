@@ -23,6 +23,8 @@ export async function sendChatMessage(
   latitude?: number,
   longitude?: number,
   addressText?: string,
+  audioUrl?: string,
+  audioDuration?: number,
 ): Promise<ChatMessageItem> {
   const body: Record<string, unknown> = { messageText, messageType };
   if (imageUrl) body.imageUrl = imageUrl;
@@ -30,6 +32,8 @@ export async function sendChatMessage(
   if (latitude != null) body.latitude = latitude;
   if (longitude != null) body.longitude = longitude;
   if (addressText) body.addressText = addressText;
+  if (audioUrl) body.audioUrl = audioUrl;
+  if (audioDuration != null) body.audioDuration = audioDuration;
   const res = await api.post(`/chats/${encodeURIComponent(chatId)}/messages`, body);
   return res?.data;
 }

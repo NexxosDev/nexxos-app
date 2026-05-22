@@ -4,8 +4,8 @@ import { IsString, IsNotEmpty, IsOptional, IsIn, IsNumber } from 'class-validato
 export class SendMessageDto {
   @ApiProperty() @IsString() @IsNotEmpty() messageText: string;
 
-  @ApiPropertyOptional({ enum: ['text', 'image', 'location'], default: 'text' })
-  @IsOptional() @IsString() @IsIn(['text', 'image', 'location'])
+  @ApiPropertyOptional({ enum: ['text', 'image', 'location', 'audio'], default: 'text' })
+  @IsOptional() @IsString() @IsIn(['text', 'image', 'location', 'audio'])
   messageType?: string;
 
   @ApiPropertyOptional({ description: 'S3 image URL (required when messageType=image)' })
@@ -23,6 +23,14 @@ export class SendMessageDto {
   @ApiPropertyOptional({ description: 'Address text (optional when messageType=location)' })
   @IsOptional() @IsString()
   addressText?: string;
+
+  @ApiPropertyOptional({ description: 'S3 audio URL (required when messageType=audio)' })
+  @IsOptional() @IsString()
+  audioUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Audio duration in seconds' })
+  @IsOptional() @IsNumber()
+  audioDuration?: number;
 
   @ApiPropertyOptional({ description: 'ID of message being replied to' })
   @IsOptional() @IsString()
