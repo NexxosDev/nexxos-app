@@ -396,22 +396,19 @@ export class RequestsService {
   // ── Client: Close request ──
   async closeRequest(requestId: string, clientId: string, dto: CloseRequestDto) {
     const request = await this.prisma.request.findUnique({ where: { id: requestId } });
-    if (!request) throw new NotFoundException('Request not found');
+    if (!request) throw new NotFoundException('Solicitud no encontrada');
     if (request.clientId !== clientId) throw new ForbiddenException();
-    if (request.status === 'CERRADA') throw new BadRequestException('Request already closed');
+    if (request.status === 'CERRADA') throw new BadRequestException('Esta solicitud ya fue cerrada');
 
-    if (dto.resolved) {
-      if (!dto.vendorId) throw new BadRequestException('vendorId required when resolved=true');
-      if (!dto.rating) throw new BadRequestException('rating required when resolved=true');
-
+    if (dto.resolved && dto.vendorId && dto.rating) {
       // Verify vendor responded
       const vendor = await this.prisma.vendor.findUnique({ where: { id: dto.vendorId } });
-      if (!vendor) throw new NotFoundException('Vendor not found');
+      if (!vendor) throw new NotFoundException('Vendedor no encontrado');
 
       const response = await this.prisma.requestResponse.findUnique({
         where: { requestId_vendorId: { requestId, vendorId: dto.vendorId } },
       });
-      if (!response) throw new BadRequestException('Vendor did not respond to this request');
+      if (!response) throw new BadRequestException('Este vendedor no respondió a tu solicitud');
 
       // Create rating
       await this.prisma.requestRating.create({

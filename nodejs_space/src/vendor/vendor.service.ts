@@ -349,7 +349,7 @@ export class VendorService {
       });
     }
 
-    return replies.map((r) => ({
+    return replies.map((r: any) => ({
       id: r.id,
       messageText: r.messageText,
       order: r.order,

@@ -83,7 +83,7 @@ export class PlansService {
   // ── List all plans (admin) — includes legacy fields for panel v1 ──
   async listAllPlans() {
     const plans = await this.prisma.plan.findMany({ orderBy: { prioridad: 'asc' } });
-    return plans.map((p) => this.withLegacyFields(p));
+    return plans.map((p: any) => this.withLegacyFields(p));
   }
 
   // ── List visible plans (app) ──
