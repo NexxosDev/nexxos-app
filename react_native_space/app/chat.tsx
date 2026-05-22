@@ -667,11 +667,11 @@ export default function ChatScreen() {
                   </Pressable>
                 ) : (
                   <Pressable
-                    style={[styles.sendBtn, { backgroundColor: colors.primary }]}
+                    style={[styles.sendBtn, styles.micBtn]}
                     onPress={startRecording}
                     disabled={uploading}
                   >
-                    <Ionicons name="mic" size={22} color={colors.accent} />
+                    <Ionicons name="mic" size={22} color="#fff" />
                   </Pressable>
                 )}
               </View>
@@ -818,6 +818,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', marginLeft: Spacing.sm,
   },
   sendBtnDisabled: { backgroundColor: c.border },
+  micBtn: { backgroundColor: '#3B82F6' },
   recordingBar: {
     flexDirection: 'row', alignItems: 'center', padding: Spacing.sm,
     borderTopWidth: 1, borderTopColor: c.border, backgroundColor: c.surface,

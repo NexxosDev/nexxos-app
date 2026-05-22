@@ -62,11 +62,11 @@ export default function QuickReplyPicker({ onSelect, style }: Props) {
     <>
       <Pressable
         onPress={handleOpen}
-        style={[styles.triggerBtn, { backgroundColor: colors.primary + '20' }, style]}
+        style={[styles.triggerBtn, style]}
         accessibilityLabel="Respuestas rápidas"
         accessibilityHint="Abre la lista de respuestas rápidas"
       >
-        <Ionicons name="flash" size={20} color={colors.primary} />
+        <Ionicons name="flash-outline" size={22} color={colors.textSecondary} />
       </Pressable>
 
       <Modal
@@ -133,9 +133,8 @@ export default function QuickReplyPicker({ onSelect, style }: Props) {
 
 const styles = StyleSheet.create({
   triggerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
