@@ -63,8 +63,8 @@ export default function QuickReplyPicker({ onSelect, style }: Props) {
       <Pressable
         onPress={handleOpen}
         style={[styles.triggerBtn, { backgroundColor: colors.primary + '20' }, style]}
-        accessibilityLabel="Respuestas r\u00e1pidas"
-        accessibilityHint="Abre la lista de respuestas r\u00e1pidas"
+        accessibilityLabel="Respuestas rápidas"
+        accessibilityHint="Abre la lista de respuestas rápidas"
       >
         <Ionicons name="flash" size={20} color={colors.primary} />
       </Pressable>
@@ -88,7 +88,7 @@ export default function QuickReplyPicker({ onSelect, style }: Props) {
           >
             <View style={styles.sheetHeader}>
               <Ionicons name="flash" size={18} color={colors.primary} />
-              <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Respuestas r\u00e1pidas</Text>
+              <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Respuestas rápidas</Text>
               <Pressable onPress={() => setVisible(false)} hitSlop={12}>
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </Pressable>
@@ -98,7 +98,7 @@ export default function QuickReplyPicker({ onSelect, style }: Props) {
               <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
             ) : replies.length === 0 ? (
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                No tienes respuestas r\u00e1pidas configuradas
+                No tienes respuestas rápidas configuradas
               </Text>
             ) : (
               <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
