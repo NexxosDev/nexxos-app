@@ -231,7 +231,7 @@ export default function CreateRequestScreen() {
               <Ionicons name="checkmark-circle" size={56} color={colors.success} />
             </View>
             <Text style={styles.modalTitle}>¡Solicitud enviada!</Text>
-            <Text style={styles.modalText}>Se ha enviado a {successModal?.count ?? 0} vendedores compatibles</Text>
+            <Text style={styles.modalText}>Estamos buscando vendedores para ti.{'\n'}Te notificaremos cuando respondan</Text>
             <Button title="Ir al Inicio" onPress={() => { setSuccessModal(null); router.back(); }} />
           </View>
         </View>
