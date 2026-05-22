@@ -18,6 +18,7 @@ import {
   markMessagesDelivered, markMessagesRead,
 } from '../src/services/chat';
 import { dismissNotificationsForContext, setActiveChatId, clearActiveChatId } from '../src/services/pushNotifications';
+import QuickReplyPicker from '../src/components/QuickReplyPicker';
 import { Spacing, BorderRadius } from '../src/theme/colors';
 import type { ThemeColors } from '../src/theme/colors';
 import ChatMessageComp from '../src/components/ChatMessage';
@@ -440,6 +441,11 @@ export default function ChatScreen() {
                 <Pressable style={styles.attachBtn} onPress={() => setShowAttachMenu((v) => !v)} disabled={uploading}>
                   <Ionicons name={showAttachMenu ? 'close' : 'attach'} size={24} color={uploading ? colors.textSecondary : colors.primary} />
                 </Pressable>
+              ) : null}
+              {!isEditMode && user?.id === chatInfo?.vendorUserId ? (
+                <QuickReplyPicker
+                  onSelect={(t) => setText((prev) => (prev ? prev + ' ' + t : t))}
+                />
               ) : null}
               <TextInput
                 ref={inputRef}

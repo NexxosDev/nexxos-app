@@ -17,6 +17,12 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface QuickReply {
+  id: string;
+  messageText: string;
+  order: number;
+}
+
 export interface CatalogItem {
   id: string;
   name: string;

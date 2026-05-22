@@ -307,4 +307,114 @@ export class VendorService {
       slowestResponseTimeMs: deltas.length > 0 ? deltas[deltas.length - 1] : null,
     };
   }
+
+  // ── Quick Replies ──────────────────────────────────────
+
+  private readonly DEFAULT_QUICK_REPLIES = [
+    'Sí, lo tengo disponible',
+    '¿Cuántas unidades necesitas?',
+    'El precio es $[ ]',
+    'Tengo envío gratis',
+    'Lo tengo original',
+    '¿Dónde te encuentras?',
+    'Perfecto, quedamos así entonces',
+  ];
+
+  private async getVendorId(userId: string): Promise<string> {
+    const vendor = await this.prisma.vendor.findUnique({ where: { userId }, select: { id: true } });
+    if (!vendor) throw new NotFoundException('Vendor profile not found');
+    return vendor.id;
+  }
+
+  async getQuickReplies(userId: string) {
+    const vendorId = await this.getVendorId(userId);
+
+    let replies = await this.prisma.quickReply.findMany({
+      where: { vendorId },
+      orderBy: { order: 'asc' },
+    });
+
+    // Seed defaults if none exist
+    if (replies.length === 0) {
+      await this.prisma.quickReply.createMany({
+        data: this.DEFAULT_QUICK_REPLIES.map((text, idx) => ({
+          vendorId,
+          messageText: text,
+          order: idx,
+        })),
+      });
+      replies = await this.prisma.quickReply.findMany({
+        where: { vendorId },
+        orderBy: { order: 'asc' },
+      });
+    }
+
+    return replies.map((r) => ({
+      id: r.id,
+      messageText: r.messageText,
+      order: r.order,
+    }));
+  }
+
+  async createQuickReply(userId: string, messageText: string) {
+    const vendorId = await this.getVendorId(userId);
+
+    const maxOrder = await this.prisma.quickReply.aggregate({
+      where: { vendorId },
+      _max: { order: true },
+    });
+
+    const reply = await this.prisma.quickReply.create({
+      data: {
+        vendorId,
+        messageText,
+        order: (maxOrder._max.order ?? -1) + 1,
+      },
+    });
+
+    return { id: reply.id, messageText: reply.messageText, order: reply.order };
+  }
+
+  async updateQuickReply(userId: string, replyId: string, messageText: string) {
+    const vendorId = await this.getVendorId(userId);
+
+    const reply = await this.prisma.quickReply.findFirst({
+      where: { id: replyId, vendorId },
+    });
+    if (!reply) throw new NotFoundException('Quick reply not found');
+
+    const updated = await this.prisma.quickReply.update({
+      where: { id: replyId },
+      data: { messageText },
+    });
+
+    return { id: updated.id, messageText: updated.messageText, order: updated.order };
+  }
+
+  async deleteQuickReply(userId: string, replyId: string) {
+    const vendorId = await this.getVendorId(userId);
+
+    const reply = await this.prisma.quickReply.findFirst({
+      where: { id: replyId, vendorId },
+    });
+    if (!reply) throw new NotFoundException('Quick reply not found');
+
+    await this.prisma.quickReply.delete({ where: { id: replyId } });
+    return { success: true };
+  }
+
+  async reorderQuickReplies(userId: string, items: { id: string; order: number }[]) {
+    const vendorId = await this.getVendorId(userId);
+
+    await this.prisma.$transaction(
+      items.map((item) =>
+        this.prisma.quickReply.updateMany({
+          where: { id: item.id, vendorId },
+          data: { order: item.order },
+        }),
+      ),
+    );
+
+    return this.getQuickReplies(userId);
+  }
 }

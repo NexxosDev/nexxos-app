@@ -1,5 +1,5 @@
 import api from './api';
-import type { VendorProfile, VendorDashboard, VendorRequestListItem, VendorRequestDetailType, VendorResponseMetrics, VendorPlanInfo } from '../types';
+import type { VendorProfile, VendorDashboard, VendorRequestListItem, VendorRequestDetailType, VendorResponseMetrics, VendorPlanInfo, QuickReply } from '../types';
 
 export async function getVendorProfile(): Promise<VendorProfile> {
   const res = await api.get('/vendor/profile');
@@ -53,4 +53,31 @@ export async function getVendorResponseMetrics(): Promise<VendorResponseMetrics>
 export async function getVendorPlan(): Promise<VendorPlanInfo> {
   const res = await api.get('/vendors/my-plan');
   return res?.data;
+}
+
+// ── Quick Replies ──────────────────────────────────────
+
+export async function getQuickReplies(): Promise<QuickReply[]> {
+  const res = await api.get('/vendor/quick-replies');
+  return res?.data ?? [];
+}
+
+export async function createQuickReply(messageText: string): Promise<QuickReply> {
+  const res = await api.post('/vendor/quick-replies', { messageText });
+  return res?.data;
+}
+
+export async function updateQuickReply(id: string, messageText: string): Promise<QuickReply> {
+  const res = await api.put(`/vendor/quick-replies/${encodeURIComponent(id)}`, { messageText });
+  return res?.data;
+}
+
+export async function deleteQuickReply(id: string): Promise<{ success: boolean }> {
+  const res = await api.delete(`/vendor/quick-replies/${encodeURIComponent(id)}`);
+  return res?.data;
+}
+
+export async function reorderQuickReplies(items: { id: string; order: number }[]): Promise<QuickReply[]> {
+  const res = await api.put('/vendor/quick-replies/reorder', { items });
+  return res?.data ?? [];
 }

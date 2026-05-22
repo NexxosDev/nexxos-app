@@ -13,6 +13,7 @@ import type { ThemeColors } from '../src/theme/colors';
 import Badge from '../src/components/Badge';
 import Button from '../src/components/Button';
 import LoadingSpinner from '../src/components/LoadingSpinner';
+import QuickReplyPicker from '../src/components/QuickReplyPicker';
 import BrandLogo from '../src/components/BrandLogo';
 import type { VendorRequestDetailType } from '../src/types';
 
@@ -149,14 +150,20 @@ export default function VendorRequestDetailScreen() {
               </Pressable>
             </View>
             {error ? <Text style={styles.errorBox}>{error}</Text> : null}
-            <TextInput
-              style={styles.messageInput}
-              value={message}
-              onChangeText={setMessage}
-              placeholder="Escribe un mensaje para el cliente..."
-              placeholderTextColor={colors.textSecondary}
-              multiline numberOfLines={4} textAlignVertical="top" autoFocus
-            />
+            <View style={styles.inputWithQuick}>
+              <TextInput
+                style={[styles.messageInput, { flex: 1 }]}
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Escribe un mensaje para el cliente..."
+                placeholderTextColor={colors.textSecondary}
+                multiline numberOfLines={4} textAlignVertical="top" autoFocus
+              />
+              <QuickReplyPicker
+                onSelect={(text) => setMessage((prev) => (prev ? prev + ' ' + text : text))}
+                style={{ position: 'absolute', right: 8, top: 8 }}
+              />
+            </View>
             <Button title="Enviar Respuesta" onPress={handleRespond} loading={responding} />
           </View>
           <Pressable style={styles.overlayBottom} onPress={() => setRespondModal(false)} />
@@ -204,8 +211,12 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   sheetTitle: { fontSize: 20, fontWeight: '700', color: c.textPrimary },
   overlayBottom: { flex: 1 },
   errorBox: { backgroundColor: c.errorBg, color: c.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
+  inputWithQuick: {
+    position: 'relative' as const,
+    marginBottom: Spacing.md,
+  },
   messageInput: {
     borderWidth: 1, borderColor: c.border, borderRadius: BorderRadius.md,
-    padding: Spacing.md, fontSize: 15, color: c.textPrimary, minHeight: 100, marginBottom: Spacing.md, backgroundColor: c.inputBg,
+    padding: Spacing.md, paddingRight: 48, fontSize: 15, color: c.textPrimary, minHeight: 100, backgroundColor: c.inputBg,
   },
 });

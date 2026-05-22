@@ -13,6 +13,7 @@ import Button from '../src/components/Button';
 import LoadingSpinner from '../src/components/LoadingSpinner';
 import VehicleAccordion from '../src/components/VehicleAccordion';
 import PartsAccordion from '../src/components/PartsAccordion';
+import QuickRepliesManager from '../src/components/QuickRepliesManager';
 import type { VendorProfile, CatalogItem } from '../src/types';
 
 export default function VendorEditProfileScreen() {
@@ -193,6 +194,8 @@ export default function VendorEditProfileScreen() {
             onDeselectAllSubs={deselectAllSubs}
             onExpandCategory={loadSubsForCategory}
           />
+
+          <QuickRepliesManager />
 
           <Button title="Guardar Cambios" onPress={handleSave} loading={saving} style={styles.saveBtn} />
         </ScrollView>

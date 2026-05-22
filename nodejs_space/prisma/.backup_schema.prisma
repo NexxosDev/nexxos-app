@@ -114,6 +114,7 @@ model Vendor {
   requestRatingsReceived  RequestRating[]         @relation("RatingVendor")
   vendorSubscriptions     VendorSubscription[]
   vendorMonthlyRequests   VendorMonthlyRequests[]
+  quickReplies            QuickReply[]
 
   @@map("vendors")
 }
@@ -566,4 +567,18 @@ model ClientPointLog {
   @@index([userId, action])
   @@index([userId, createdAt])
   @@map("client_point_logs")
+}
+
+model QuickReply {
+  id          String   @id @default(uuid()) @db.Uuid
+  vendorId    String   @map("vendor_id") @db.Uuid
+  messageText String   @map("message_text")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@map("quick_replies")
 }
