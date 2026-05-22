@@ -12,8 +12,8 @@ interface CapturedSelfies { neutral?: string; smile?: string; turn?: string; }
 interface LivenessSelfieCaptureProps { onComplete: (selfies: { neutral: string; smile: string; turn: string }) => void; onCancel: () => void; }
 
 const STEPS: { key: LivenessStep; icon: string; title: string; instruction: string }[] = [
-  { key: 'neutral', icon: 'person-outline', title: 'Paso 1 de 3', instruction: 'Mira directamente a la c\u00e1mara\ncon expresi\u00f3n neutra' },
-  { key: 'smile', icon: 'happy-outline', title: 'Paso 2 de 3', instruction: '\u00a1Ahora sonr\u00ede!\nMuestra una sonrisa natural' },
+  { key: 'neutral', icon: 'person-outline', title: 'Paso 1 de 3', instruction: 'Mira directamente a la cámara\ncon expresión neutra' },
+  { key: 'smile', icon: 'happy-outline', title: 'Paso 2 de 3', instruction: '¡Ahora sonríe!\nMuestra una sonrisa natural' },
   { key: 'turn', icon: 'arrow-redo-outline', title: 'Paso 3 de 3', instruction: 'Gira tu cabeza ligeramente\nhacia la derecha' },
 ];
 
@@ -57,9 +57,9 @@ export default function LivenessSelfieCapture({ onComplete, onCancel }: Liveness
     return (
       <View style={styles.permContainer}>
         <Ionicons name="camera-outline" size={48} color={colors.textSecondary} />
-        <Text style={styles.permTitle}>Permiso de C\u00e1mara</Text>
-        <Text style={styles.permText}>Necesitamos acceso a tu c\u00e1mara frontal para la verificaci\u00f3n de identidad.</Text>
-        <Pressable style={styles.permBtn} onPress={requestPermission}><Text style={styles.permBtnText}>Permitir C\u00e1mara</Text></Pressable>
+        <Text style={styles.permTitle}>Permiso de Cámara</Text>
+        <Text style={styles.permText}>Necesitamos acceso a tu cámara frontal para la verificación de identidad.</Text>
+        <Pressable style={styles.permBtn} onPress={requestPermission}><Text style={styles.permBtnText}>Permitir Cámara</Text></Pressable>
         <Pressable onPress={onCancel} style={{ marginTop: Spacing.md }}><Text style={styles.cancelText}>Cancelar</Text></Pressable>
       </View>
     );
