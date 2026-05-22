@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service';
 
 export const POINT_ACTIONS = {
   RATE_VENDOR: 'RATE_VENDOR',
@@ -36,7 +37,10 @@ const LEVELS: ClientLevel[] = [
 export class ClientPointsService {
   private readonly logger = new Logger(ClientPointsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
+  ) {}
 
   getLevel(totalPoints: number): ClientLevel {
     for (let i = LEVELS.length - 1; i >= 0; i--) {
@@ -192,5 +196,63 @@ export class ClientPointsService {
     }
 
     return { pointsAwarded: totalAwarded, bonusFirstRating };
+  }
+
+  /** Send push reminders to clients who closed requests 24h+ ago without rating */
+  async sendRatingReminders(): Promise<{ sent: number }> {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24h ago
+
+    // Find closed requests without rating, with responses, closed >24h ago, no reminder sent yet
+    const requests = await this.prisma.request.findMany({
+      where: {
+        status: 'CERRADA',
+        closedAt: { lte: cutoff },
+        ratingReminderSentAt: null,
+        requestRating: null, // no rating exists
+        requestVendorMatches: { some: { responded: true } }, // at least one vendor responded
+      },
+      select: {
+        id: true,
+        clientId: true,
+        vehicleBrand: { select: { name: true } },
+        partCategory: { select: { name: true } },
+      },
+      take: 50, // batch limit
+    });
+
+    if (requests.length === 0) {
+      this.logger.debug('No pending rating reminders to send');
+      return { sent: 0 };
+    }
+
+    let sent = 0;
+    for (const req of requests) {
+      try {
+        const brandName = req.vehicleBrand?.name ?? '';
+        const partName = req.partCategory?.name ?? '';
+
+        await this.notificationService.sendToUser(
+          req.clientId,
+          '⭐ ¡Califica al vendedor!',
+          `Tu solicitud de ${brandName} - ${partName} fue cerrada hace más de 24h. ¡Califica y gana puntos!`,
+          {
+            type: 'RATING_REMINDER',
+            requestId: req.id,
+          },
+        );
+
+        await this.prisma.request.update({
+          where: { id: req.id },
+          data: { ratingReminderSentAt: new Date() },
+        });
+
+        sent++;
+      } catch (err) {
+        this.logger.error(`Failed to send rating reminder for request ${req.id}`, err);
+      }
+    }
+
+    this.logger.log(`Sent ${sent} rating reminder push notifications`);
+    return { sent };
   }
 }

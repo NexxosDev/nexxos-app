@@ -271,7 +271,8 @@ model Request {
   status            String    @default("ABIERTA")
   lastMessageAt     DateTime? @map("last_message_at")
   createdAt         DateTime  @default(now()) @map("created_at")
-  closedAt          DateTime? @map("closed_at")
+  closedAt                DateTime? @map("closed_at")
+  ratingReminderSentAt   DateTime? @map("rating_reminder_sent_at")
 
   client              User                 @relation(fields: [clientId], references: [id])
   vehicleBrand        VehicleBrand         @relation(fields: [vehicleBrandId], references: [id])

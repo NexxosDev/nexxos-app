@@ -44,6 +44,10 @@ function NotificationNavigator() {
           case 'RATING_RECEIVED':
             router.push('/vendor');
             break;
+          case 'RATING_REMINDER':
+            if (data.requestId) router.push(`/request-detail?id=${data.requestId}`);
+            else router.push('/client/requests');
+            break;
         }
       } catch (err) {
         console.error('Error navigating from notification:', err);
