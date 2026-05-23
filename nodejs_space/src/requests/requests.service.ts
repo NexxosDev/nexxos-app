@@ -395,6 +395,22 @@ export class RequestsService {
     return { items };
   }
 
+  // ── Helper: recalculate vendor metrics excluding rating=0 ──
+  private async recalcVendorMetrics(vendorId: string) {
+    const realRatings = await this.prisma.requestRating.findMany({
+      where: { vendorId, rating: { gt: 0 } },
+      select: { rating: true },
+    });
+    const avgRating = realRatings.length > 0
+      ? realRatings.reduce((sum: number, r: any) => sum + r.rating, 0) / realRatings.length
+      : 0;
+    await this.prisma.vendorMetrics.upsert({
+      where: { vendorId },
+      update: { avgRating, totalRatings: realRatings.length },
+      create: { vendorId, avgRating, totalRatings: realRatings.length },
+    });
+  }
+
   // ── Client: Close request ──
   async closeRequest(requestId: string, clientId: string, dto: CloseRequestDto) {
     const request = await this.prisma.request.findUnique({ where: { id: requestId } });
@@ -403,7 +419,7 @@ export class RequestsService {
     if (request.status === 'CERRADA') throw new BadRequestException('Esta solicitud ya fue cerrada');
 
     if (dto.resolved && dto.vendorId && dto.rating) {
-      // Verify vendor responded
+      // Resolved + rated with stars
       const vendor = await this.prisma.vendor.findUnique({ where: { id: dto.vendorId } });
       if (!vendor) throw new NotFoundException('Vendedor no encontrado');
 
@@ -412,29 +428,24 @@ export class RequestsService {
       });
       if (!response) throw new BadRequestException('Este vendedor no respondió a tu solicitud');
 
-      // Create rating
       await this.prisma.requestRating.create({
-        data: {
-          requestId,
-          clientId,
-          vendorId: dto.vendorId,
-          rating: dto.rating,
-          comment: dto.comment || null,
-        },
+        data: { requestId, clientId, vendorId: dto.vendorId, rating: dto.rating, comment: dto.comment || null },
       });
-
-      // Update vendor metrics
-      const allRatings = await this.prisma.requestRating.findMany({
-        where: { vendorId: dto.vendorId },
-        select: { rating: true },
+      await this.recalcVendorMetrics(dto.vendorId);
+    } else if (!dto.resolved) {
+      // Not resolved → create rating=0 to mark as "handled" (won't affect vendor avg)
+      const firstResponse = await this.prisma.requestResponse.findFirst({
+        where: { requestId },
+        select: { vendorId: true },
+        orderBy: { createdAt: 'asc' },
       });
-      const avgRating = allRatings.reduce((sum: any, r: any) => sum + r.rating, 0) / allRatings.length;
-      await this.prisma.vendorMetrics.upsert({
-        where: { vendorId: dto.vendorId },
-        update: { avgRating, totalRatings: allRatings.length },
-        create: { vendorId: dto.vendorId, avgRating, totalRatings: allRatings.length },
-      });
+      if (firstResponse) {
+        await this.prisma.requestRating.create({
+          data: { requestId, clientId, vendorId: firstResponse.vendorId, rating: 0, comment: 'No resuelto' },
+        });
+      }
     }
+    // Note: resolved=true without rating → no RequestRating created, stays as "pending" so client can rate later
 
     const updated = await this.prisma.request.update({
       where: { id: requestId },
@@ -458,7 +469,7 @@ export class RequestsService {
       ).catch((err) => this.logger.error('Push error (request closed)', err));
     }
 
-    // 🔔 Push: Notificar al vendedor calificado
+    // 🔔 Push: Notificar al vendedor calificado (solo si dio estrellas reales)
     if (dto.resolved && dto.vendorId && dto.rating) {
       const ratedVendor = await this.prisma.vendor.findUnique({
         where: { id: dto.vendorId },
@@ -493,9 +504,11 @@ export class RequestsService {
     if (request.clientId !== clientId) throw new ForbiddenException();
     if (request.status !== 'CERRADA') throw new BadRequestException('La solicitud debe estar cerrada para calificar');
 
-    // Check if already rated
+    // Check if already rated (allow overwriting a rating=0 placeholder from "No me ayudaron")
     const existing = await this.prisma.requestRating.findUnique({ where: { requestId } });
-    if (existing) throw new BadRequestException('Ya calificaste a un vendedor en esta solicitud');
+    if (existing && existing.rating > 0) {
+      throw new BadRequestException('Ya calificaste a un vendedor en esta solicitud');
+    }
 
     // Verify vendor responded to this request
     const response = await this.prisma.requestResponse.findUnique({
@@ -506,9 +519,15 @@ export class RequestsService {
     const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId }, select: { userId: true, businessName: true } });
     if (!vendor) throw new NotFoundException('Vendor not found');
 
-    // Create rating
-    await this.prisma.requestRating.create({
-      data: {
+    // Create or update rating (upsert to handle rating=0 → real rating)
+    await this.prisma.requestRating.upsert({
+      where: { requestId },
+      update: {
+        vendorId,
+        rating,
+        comment: comment || null,
+      },
+      create: {
         requestId,
         clientId,
         vendorId,
@@ -517,17 +536,12 @@ export class RequestsService {
       },
     });
 
-    // Update vendor metrics
-    const allRatings = await this.prisma.requestRating.findMany({
-      where: { vendorId },
-      select: { rating: true },
-    });
-    const avgRating = allRatings.reduce((sum: any, r: any) => sum + r.rating, 0) / allRatings.length;
-    await this.prisma.vendorMetrics.upsert({
-      where: { vendorId },
-      update: { avgRating, totalRatings: allRatings.length },
-      create: { vendorId, avgRating, totalRatings: allRatings.length },
-    });
+    // Update vendor metrics (excludes rating=0 from avg)
+    await this.recalcVendorMetrics(vendorId);
+    // Also recalc old vendor if the rating=0 was for a different vendor
+    if (existing && existing.vendorId !== vendorId) {
+      await this.recalcVendorMetrics(existing.vendorId);
+    }
 
     // Push notification to vendor
     const client = await this.prisma.user.findUnique({ where: { id: clientId }, select: { firstName: true, lastName: true } });
