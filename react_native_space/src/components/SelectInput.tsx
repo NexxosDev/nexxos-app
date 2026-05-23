@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, FlatList, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { Spacing, BorderRadius } from '../theme/colors';
 import type { ThemeColors } from '../theme/colors';
@@ -20,6 +21,7 @@ interface SelectInputProps {
 
 export default function SelectInput({ label, items, selectedId, onSelect, error, placeholder, searchable = false, renderItemIcon }: SelectInputProps) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -43,7 +45,7 @@ export default function SelectInput({ label, items, selectedId, onSelect, error,
       <Modal visible={open} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalWrapper} behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
           <Pressable style={styles.overlay} onPress={() => { setOpen(false); setSearch(''); }} />
-          <View style={styles.modal}>
+          <View style={[styles.modal, { paddingBottom: Math.max(insets.bottom, 20) + 10 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{label ?? ''}</Text>
               <Pressable onPress={() => { setOpen(false); setSearch(''); }} hitSlop={8}>
@@ -100,7 +102,7 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   errorText: { color: c.error, fontSize: 12, marginTop: 4 },
   modalWrapper: { flex: 1, justifyContent: 'flex-end' },
   overlay: { flex: 1, backgroundColor: c.overlay },
-  modal: { backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%', paddingBottom: 20 },
+  modal: { backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: c.border },
   modalTitle: { fontSize: 17, fontWeight: '600', color: c.textPrimary },
   searchInput: { marginHorizontal: Spacing.md, marginVertical: Spacing.sm, borderWidth: 1, borderColor: c.border, borderRadius: BorderRadius.sm, paddingHorizontal: Spacing.md, paddingVertical: 10, fontSize: 15, color: c.textPrimary, backgroundColor: c.inputBg },
