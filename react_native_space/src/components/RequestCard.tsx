@@ -74,12 +74,12 @@ export default function RequestCard({
           </View>
           <View style={styles.right}>
             <Badge status={status ?? ''} size="small" />
-            {status === 'CERRADA' && hasRating === true ? (
+            {hasRating === true ? (
               <View style={styles.ratingBadgeGreen}>
                 <Ionicons name="checkmark-circle" size={11} color="#16A34A" />
                 <Text style={styles.ratingBadgeGreenText}>Calificada</Text>
               </View>
-            ) : status === 'CERRADA' && hasRating === false && (responseCount ?? 0) > 0 ? (
+            ) : hasRating === false ? (
               <View style={styles.ratingBadgeOrange}>
                 <Ionicons name="star" size={11} color="#EA580C" />
                 <Text style={styles.ratingBadgeOrangeText}>Sin calificar</Text>

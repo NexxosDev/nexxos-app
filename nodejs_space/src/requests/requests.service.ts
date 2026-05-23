@@ -253,7 +253,7 @@ export class RequestsService {
           partSubcategory: true,
           state: true,
           municipality: true,
-          requestRating: { select: { id: true } },
+          requestRating: { select: { id: true, rating: true } },
           _count: { select: { requestResponses: true } },
         },
       }),
@@ -269,7 +269,9 @@ export class RequestsService {
         partSubcategory: r.partSubcategory?.name ?? null,
         status: r.status,
         responseCount: r._count.requestResponses,
-        hasRating: r.status === 'CERRADA' ? !!r.requestRating : null,
+        hasRating: r._count.requestResponses > 0
+          ? !!(r.requestRating && r.requestRating.rating > 0)
+          : null,
         state: r.state?.name ?? null,
         municipality: r.municipality?.name ?? null,
         lastMessageAt: r.lastMessageAt?.toISOString?.() ?? null,
