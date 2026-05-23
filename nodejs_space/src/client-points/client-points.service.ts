@@ -73,8 +73,8 @@ export class ClientPointsService {
       this.prisma.clientPointLog.count({
         where: { userId, action: POINT_ACTIONS.RATE_VENDOR },
       }),
-      this.prisma.clientPointLog.count({
-        where: { userId, action: POINT_ACTIONS.CREATE_REQUEST },
+      this.prisma.request.count({
+        where: { clientId: userId },
       }),
       this.prisma.clientPointLog.findMany({
         where: { userId },
