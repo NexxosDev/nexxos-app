@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.abacusai.nexxosmvp.t1776194339",
       "buildNumber": "1",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "NEXXOS necesita acceso a tu ubicación para mostrarte vendedores cercanos y actualizar tu dirección automáticamente."
+        "NSLocationWhenInUseUsageDescription": "NEXXOS necesita acceso a tu ubicación para mostrarte vendedores cercanos y actualizar tu dirección automáticamente.",
+        "UIBackgroundModes": ["audio"]
       }
     },
     "android": {

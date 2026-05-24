@@ -70,6 +70,8 @@ export class NotificationService implements OnModuleInit {
       title,
       body,
       data: data ?? {},
+      priority: 'high' as const,
+      channelId: 'default',
     }));
 
     await this.sendMessages(messages);
@@ -97,6 +99,8 @@ export class NotificationService implements OnModuleInit {
       title,
       body,
       data: data ?? {},
+      priority: 'high' as const,
+      channelId: 'default',
     }));
 
     await this.sendMessages(messages);

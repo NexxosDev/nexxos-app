@@ -101,7 +101,7 @@ export default function VoiceNotePlayer({ audioUrl, duration, isOwn, isVendorMes
     try {
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
+        staysActiveInBackground: true,
       });
       const { sound } = await Audio.Sound.createAsync(
         { uri: audioUrl },
