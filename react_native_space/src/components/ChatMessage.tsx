@@ -91,7 +91,7 @@ export default function ChatMessage({
     if (latitude == null || longitude == null) return '';
     const lat = latitude;
     const lng = longitude;
-    return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=15&size=300x180&markers=${lat},${lng},red-pushpin`;
+    return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=600x300&markers=color:red%7C${lat},${lng}&key=AIzaSyBt0bUnhx5dz8uqiNgB3NKEoANQ-264j_M`;
   }, [latitude, longitude]);
 
   const replySnippet = (replyTo?.messageText ?? '').length > 60
@@ -129,20 +129,24 @@ export default function ChatMessage({
           </View>
         ) : isLocation ? (
           <Pressable onPress={openInMaps} style={styles.locationBubble}>
-            {staticMapUrl ? (
-              <Image source={{ uri: staticMapUrl }} style={styles.locationMap} contentFit="cover" transition={200} placeholder={{ color: colors.border } as any} />
-            ) : (
-              <View style={[styles.locationMap, styles.locationMapPlaceholder]}>
-                <Ionicons name="location" size={32} color="#E53935" />
+            <View style={styles.locationMapWrapper}>
+              {staticMapUrl ? (
+                <Image source={{ uri: staticMapUrl }} style={styles.locationMap} contentFit="cover" transition={200} placeholder={{ color: colors.border } as any} />
+              ) : (
+                <View style={[styles.locationMap, styles.locationMapPlaceholder]}>
+                  <Ionicons name="location" size={32} color="#E53935" />
+                </View>
+              )}
+              <View style={styles.locationNavIcon}>
+                <Ionicons name="navigate" size={14} color="#fff" />
               </View>
-            )}
+            </View>
             <View style={styles.locationInfo}>
               <Ionicons name="location-sharp" size={16} color="#E53935" />
               <Text style={[styles.locationAddress, shouldBeYellow ? styles.textVendor : styles.textClient]} numberOfLines={2}>
                 {addressText || 'Ubicación compartida'}
               </Text>
             </View>
-            <Text style={styles.locationTapHint}>Toca para abrir en mapas</Text>
           </Pressable>
         ) : isAudio ? (
           <VoiceNotePlayer
@@ -323,9 +327,10 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   deletedText: { fontSize: 14, fontStyle: 'italic', color: c.textSecondary },
   image: { width: IMG_SIZE, height: IMG_SIZE, borderRadius: BorderRadius.md },
   locationBubble: { width: IMG_SIZE, overflow: 'hidden' as const },
-  locationMap: { width: '100%' as const, height: 120, borderRadius: BorderRadius.sm, marginBottom: 6 },
+  locationMapWrapper: { position: 'relative' as const },
+  locationMap: { width: '100%' as const, height: 150, borderRadius: BorderRadius.md, marginBottom: 6 },
   locationMapPlaceholder: { backgroundColor: c.backgroundSection, justifyContent: 'center' as const, alignItems: 'center' as const },
-  locationInfo: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4, paddingHorizontal: 2 },
+  locationNavIcon: { position: 'absolute' as const, bottom: 14, right: 8, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 14, width: 28, height: 28, justifyContent: 'center' as const, alignItems: 'center' as const },
+  locationInfo: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4, paddingHorizontal: 2, marginTop: 2 },
   locationAddress: { flex: 1, fontSize: 13, lineHeight: 17 },
-  locationTapHint: { fontSize: 11, color: c.textSecondary, marginTop: 2, paddingHorizontal: 2, fontStyle: 'italic' as const },
 });
