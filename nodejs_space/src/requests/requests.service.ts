@@ -1060,14 +1060,14 @@ export class RequestsService {
           this.notificationService.sendToUser(
             request.clientId,
             '🔍 Ampliamos tu búsqueda',
-            `No encontramos vendedores en ${currentRadius} km. Ahora buscamos en ${newRadius} km para ayudarte.`,
+            `No encontramos vendedores en ${currentRadius} km. Ampliamos la búsqueda a ${newRadius} km para ayudarte.`,
             { type: 'RADIUS_EXPANDED', requestId: request.id },
           ).catch((err) => this.logger.error('Push error (expansion client)', err));
         } else {
           this.notificationService.sendToUser(
             request.clientId,
-            '🌍 Última ampliación de búsqueda',
-            `Ahora buscamos en ${newRadius} km a la redonda. Si no hay respuestas, te sugerimos crear otra solicitud.`,
+            '🌍 Última ampliación',
+            `Ahora buscamos en ${newRadius} km (máximo). Si no hay respuestas, te sugerimos crear otra solicitud.`,
             { type: 'RADIUS_MAX_REACHED', requestId: request.id },
           ).catch((err) => this.logger.error('Push error (expansion max)', err));
           maxReached++;
