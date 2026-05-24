@@ -117,7 +117,24 @@ export default function VendorRequestDetailScreen() {
           </View>
           <InfoRow icon="construct-outline" label="Repuesto" value={`${req?.partCategory ?? ''}${req?.partSubcategory ? ` - ${req.partSubcategory}` : ''}`} c={colors} />
           <InfoRow icon="document-text-outline" label="Descripción" value={req?.freeDescription ?? ''} c={colors} />
-          <InfoRow icon="location-outline" label="Radio" value={`${req?.searchRadiusKm ?? 0} km`} c={colors} />
+          {(req?.searchRadiusKm ?? 0) > 0 ? (
+            <InfoRow icon="navigate-outline" label="Área de búsqueda" value={`${req?.searchRadiusKm} km a la redonda`} c={colors} />
+          ) : (
+            <>
+              {(req?.municipality || req?.state) ? (
+                <InfoRow icon="location-outline" label="Ubicación" value={[req?.municipality, req?.state].filter(Boolean).join(', ')} c={colors} />
+              ) : null}
+              <InfoRow icon="search-outline" label="Búsqueda en" value={
+                req?.parish
+                  ? `${req.parish}, ${req?.municipality ?? ''}`
+                  : req?.municipality
+                    ? `Municipio ${req.municipality}`
+                    : req?.state
+                      ? `Todo el estado ${req.state}`
+                      : 'No especificada'
+              } c={colors} />
+            </>
+          )}
           <InfoRow icon="calendar-outline" label="Fecha" value={formatDate(req?.createdAt ?? '')} c={colors} />
         </View>
 

@@ -126,8 +126,22 @@ export default function RequestDetailScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={colors.primary} />}>
         <View style={styles.infoCard}>
-          <InfoRow icon="location-outline" label="Ubicación" value={[detail?.municipality?.name, detail?.state?.name].filter(Boolean).join(', ') || 'No especificada'} c={colors} />
-          <InfoRow icon="navigate-outline" label="Distancia de Búsqueda" value={`${detail?.searchRadiusKm ?? 0} km`} c={colors} />
+          {(detail?.searchRadiusKm ?? 0) > 0 ? (
+            <InfoRow icon="navigate-outline" label="Área de búsqueda" value={`${detail?.searchRadiusKm} km a la redonda`} c={colors} />
+          ) : (
+            <>
+              <InfoRow icon="location-outline" label="Ubicación" value={[detail?.municipality?.name, detail?.state?.name].filter(Boolean).join(', ') || 'No especificada'} c={colors} />
+              <InfoRow icon="search-outline" label="Búsqueda en" value={
+                detail?.parish?.name
+                  ? `${detail.parish.name}, ${detail?.municipality?.name ?? ''}`
+                  : detail?.municipality?.name
+                    ? `Municipio ${detail.municipality.name}`
+                    : detail?.state?.name
+                      ? `Todo el estado ${detail.state.name}`
+                      : 'No especificada'
+              } c={colors} />
+            </>
+          )}
           <View style={iStyles.row}>
             <BrandLogo brandName={detail?.vehicleBrand?.name ?? ''} size={20} />
             <View style={iStyles.col}>

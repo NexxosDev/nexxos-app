@@ -52,9 +52,10 @@ export interface RequestDetail {
   vehicleModel: { id: string; name: string };
   partCategory: { id: string; name: string };
   partSubcategory: { id: string; name: string } | null;
-  state: { id: string; name: string };
-  municipality: { id: string; name: string };
-  searchRadiusKm: number;
+  state: { id: string; name: string } | null;
+  municipality: { id: string; name: string } | null;
+  parish: { id: string; name: string } | null;
+  searchRadiusKm: number | null;
   freeDescription: string;
   status: string;
   responseCount: number;
@@ -115,7 +116,8 @@ export interface VendorRequestDetailType {
     freeDescription: string;
     municipality: string;
     state: string;
-    searchRadiusKm: number;
+    parish: string | null;
+    searchRadiusKm: number | null;
     createdAt: string;
     clientFirstName: string;
     clientLastName?: string;

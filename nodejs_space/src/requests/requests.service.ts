@@ -294,6 +294,7 @@ export class RequestsService {
         partSubcategory: true,
         state: true,
         municipality: true,
+        parish: true,
         _count: { select: { requestResponses: true } },
       },
     });
@@ -318,6 +319,7 @@ export class RequestsService {
         : null,
       state: request.state ? { id: request.state.id, name: request.state.name } : null,
       municipality: request.municipality ? { id: request.municipality.id, name: request.municipality.name } : null,
+      parish: request.parish ? { id: request.parish.id, name: request.parish.name } : null,
       searchRadiusKm: request.searchRadiusKm ?? null,
       freeDescription: request.freeDescription,
       status: request.status,
@@ -730,7 +732,7 @@ export class RequestsService {
           include: {
             vehicleBrand: true, vehicleModel: true,
             partCategory: true, partSubcategory: true,
-            municipality: true, state: true,
+            municipality: true, state: true, parish: true,
             client: { select: { firstName: true, lastName: true } },
           },
         },
@@ -753,6 +755,7 @@ export class RequestsService {
         freeDescription: match.request.freeDescription,
         municipality: match.request.municipality?.name ?? null,
         state: match.request.state?.name ?? null,
+        parish: match.request.parish?.name ?? null,
         searchRadiusKm: match.request.searchRadiusKm ?? null,
         createdAt: match.request.createdAt.toISOString(),
         clientFirstName: match.request.client.firstName,
