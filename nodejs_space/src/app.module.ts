@@ -12,6 +12,7 @@ import { NotificationModule } from './notification/notification.module';
 import { IdentityModule } from './identity/identity.module';
 import { PlansModule } from './plans/plans.module';
 import { ClientPointsModule } from './client-points/client-points.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ClientPointsModule } from './client-points/client-points.module';
     IdentityModule,
     PlansModule,
     ClientPointsModule,
+    VehiclesModule,
   ],
 })
 export class AppModule {}

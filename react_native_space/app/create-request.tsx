@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Modal, TextInput } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,8 @@ import RequestLocationMap from '../src/components/RequestLocationMap';
 import PartSearchInput from '../src/components/PartSearchInput';
 import BrandLogo from '../src/components/BrandLogo';
 import { getCategoryIcon } from '../src/utils/categoryIcons';
-import type { PartSearchResult } from '../src/services/catalog';
+import { decodeVin } from '../src/services/catalog';
+import type { PartSearchResult, VinDecodeResult } from '../src/services/catalog';
 import type { CatalogItem } from '../src/types';
 
 const TOTAL_STEPS = 4;
@@ -42,6 +43,9 @@ export default function CreateRequestScreen() {
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
   const [description, setDescription] = useState('');
+  const [vinInput, setVinInput] = useState('');
+  const [vinLoading, setVinLoading] = useState(false);
+  const [vinResult, setVinResult] = useState<VinDecodeResult | null>(null);
   const [municipalities, setMunicipalities] = useState<CatalogItem[]>([]);
   const [parishes, setParishes] = useState<CatalogItem[]>([]);
   const [models, setModels] = useState<CatalogItem[]>([]);
@@ -74,6 +78,32 @@ export default function CreateRequestScreen() {
       setSubcategories(items ?? []);
     }
   }, [catalog]);
+
+  const handleDecodeVin = useCallback(async () => {
+    const clean = (vinInput ?? '').trim().toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/gi, '');
+    if (clean.length !== 17) return;
+    setVinLoading(true);
+    setVinResult(null);
+    try {
+      const result = await decodeVin(clean);
+      setVinResult(result);
+      if (result?.matched?.brandId) {
+        setBrandId(result.matched.brandId);
+        // Load models for the matched brand, then set model if matched
+        const loadedModels = await catalog?.loadModels?.(result.matched.brandId) ?? [];
+        setModels(loadedModels);
+        if (result?.matched?.modelId) {
+          setModelId(result.matched.modelId);
+        }
+      }
+    } catch (err) {
+      setVinResult({
+        success: false, vin: clean, message: 'Error al decodificar VIN. Intenta de nuevo.',
+        nhtsa: { make: null, model: null, year: null, engineModel: null, engineCylinders: null, displacementL: null, fuelType: null, bodyClass: null },
+        matched: { brandId: null, brandName: null, modelId: null, modelName: null },
+      });
+    } finally { setVinLoading(false); }
+  }, [vinInput, catalog]);
 
   const canNext = (): boolean => {
     if (step === 1) {
@@ -150,8 +180,62 @@ export default function CreateRequestScreen() {
         return (
           <View>
             <Text style={styles.stepTitle}>¿Para qué vehículo?</Text>
-            <SelectInput label="Marca" items={catalog?.brands ?? []} selectedId={brandId} onSelect={(i) => { setBrandId(i?.id ?? ''); setModelId(''); }} searchable renderItemIcon={renderBrandIcon} />
-            <SelectInput label="Modelo" items={models} selectedId={modelId} onSelect={(i) => setModelId(i?.id ?? '')} searchable />
+
+            {/* VIN Input */}
+            <Text style={styles.fieldLabel}>Código VIN (opcional)</Text>
+            <View style={styles.vinRow}>
+              <TextInput
+                style={styles.vinInput}
+                value={vinInput}
+                onChangeText={(t) => { setVinInput((t ?? '').toUpperCase()); setVinResult(null); }}
+                placeholder="Ej: 8XXXXXXXXXXX12345"
+                placeholderTextColor={colors.textSecondary}
+                autoCapitalize="characters"
+                maxLength={17}
+                editable={!vinLoading}
+              />
+              <Pressable
+                style={[styles.vinBtn, ((vinInput ?? '').trim().length !== 17 || vinLoading) && styles.vinBtnDisabled]}
+                onPress={handleDecodeVin}
+                disabled={(vinInput ?? '').trim().length !== 17 || vinLoading}
+              >
+                {vinLoading
+                  ? <ActivityIndicator size="small" color={colors.accent} />
+                  : <Ionicons name="search" size={20} color={(vinInput ?? '').trim().length === 17 ? colors.accent : colors.textSecondary} />
+                }
+              </Pressable>
+            </View>
+            <Text style={styles.vinHint}>17 caracteres — lo encuentras en el tablero o la puerta del conductor</Text>
+
+            {/* VIN Result Feedback */}
+            {vinResult ? (
+              <View style={[styles.vinFeedback, vinResult.success ? styles.vinFeedbackSuccess : styles.vinFeedbackWarn]}>
+                <Ionicons
+                  name={vinResult.success ? 'checkmark-circle' : 'information-circle'}
+                  size={18}
+                  color={vinResult.success ? colors.success : colors.warning}
+                />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={[styles.vinFeedbackText, { color: vinResult.success ? colors.success : colors.warning }]}>
+                    {vinResult.message}
+                  </Text>
+                  {vinResult.nhtsa?.year || vinResult.nhtsa?.engineCylinders || vinResult.nhtsa?.fuelType ? (
+                    <Text style={styles.vinMeta}>
+                      {[vinResult.nhtsa.year ? `Año: ${vinResult.nhtsa.year}` : null, vinResult.nhtsa.displacementL ? `Motor: ${vinResult.nhtsa.displacementL}L` : null, vinResult.nhtsa.fuelType ?? null].filter(Boolean).join(' · ')}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>o selecciona manualmente</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <SelectInput label="Marca" items={catalog?.brands ?? []} selectedId={brandId} onSelect={(i) => { setBrandId(i?.id ?? ''); setModelId(''); setVinResult(null); }} searchable renderItemIcon={renderBrandIcon} />
+            <SelectInput label="Modelo" items={models} selectedId={modelId} onSelect={(i) => { setModelId(i?.id ?? ''); }} searchable />
           </View>
         );
       case 3:
@@ -271,6 +355,27 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     padding: Spacing.md, fontSize: 15, color: c.textPrimary, minHeight: 100, backgroundColor: c.inputBg,
   },
   charCount: { fontSize: 12, color: c.textSecondary, textAlign: 'right', marginTop: 4 },
+  vinRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  vinInput: {
+    flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: BorderRadius.md,
+    padding: Spacing.md, fontSize: 15, color: c.textPrimary, backgroundColor: c.inputBg,
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+    letterSpacing: 1,
+  },
+  vinBtn: {
+    width: 44, height: 44, borderRadius: BorderRadius.md, backgroundColor: c.primary,
+    justifyContent: 'center' as const, alignItems: 'center' as const,
+  },
+  vinBtnDisabled: { backgroundColor: c.backgroundSection, opacity: 0.6 },
+  vinHint: { fontSize: 11, color: c.textSecondary, marginTop: 4, marginBottom: Spacing.sm },
+  vinFeedback: {
+    flexDirection: 'row' as const, alignItems: 'flex-start' as const,
+    padding: Spacing.sm, borderRadius: BorderRadius.sm, marginBottom: Spacing.md,
+  },
+  vinFeedbackSuccess: { backgroundColor: 'rgba(16,185,129,0.12)' },
+  vinFeedbackWarn: { backgroundColor: 'rgba(245,158,11,0.12)' },
+  vinFeedbackText: { fontSize: 13, fontWeight: '600' as const, lineHeight: 18 },
+  vinMeta: { fontSize: 12, color: c.textSecondary, marginTop: 2 },
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md },
   dividerLine: { flex: 1, height: 1, backgroundColor: c.border },
   dividerText: { fontSize: 12, color: c.textSecondary, marginHorizontal: Spacing.sm },

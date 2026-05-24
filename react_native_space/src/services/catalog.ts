@@ -43,6 +43,33 @@ export interface PartSearchResult {
   categoryName: string;
 }
 
+export interface VinDecodeResult {
+  success: boolean;
+  vin: string;
+  nhtsa: {
+    make: string | null;
+    model: string | null;
+    year: string | null;
+    engineModel: string | null;
+    engineCylinders: string | null;
+    displacementL: string | null;
+    fuelType: string | null;
+    bodyClass: string | null;
+  };
+  matched: {
+    brandId: string | null;
+    brandName: string | null;
+    modelId: string | null;
+    modelName: string | null;
+  };
+  message: string;
+}
+
+export async function decodeVin(vin: string): Promise<VinDecodeResult> {
+  const res = await api.post('/vehicles/decode-vin', { vin });
+  return res?.data ?? { success: false, vin, nhtsa: {}, matched: {}, message: 'Error desconocido' };
+}
+
 export async function searchParts(query: string): Promise<PartSearchResult[]> {
   const q = (query ?? '').trim();
   if (q.length < 2) return [];
