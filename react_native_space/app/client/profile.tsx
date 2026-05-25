@@ -83,6 +83,15 @@ export default function ClientProfile() {
           />
         </View>
 
+        {/* ── Suggestions ── */}
+        <View style={styles.actionsCard}>
+          <ProfileActionButton
+            label="Ayúdanos a crecer"
+            icon="bulb-outline"
+            onPress={() => router.push('/suggestions')}
+          />
+        </View>
+
         {/* ── About / Legal ── */}
         <View style={styles.actionsCard}>
           <ProfileActionButton
