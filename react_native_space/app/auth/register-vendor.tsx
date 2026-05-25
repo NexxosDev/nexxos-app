@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Alert, Image, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Alert, Image, Modal, ActivityIndicator, Linking } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -613,7 +613,15 @@ export default function RegisterVendorScreen() {
           {step < TOTAL_STEPS ? (
             <Button title="Siguiente" onPress={() => setStep((s) => s + 1)} disabled={!canNext()} />
           ) : (
-            <Button title="Crear Cuenta" onPress={handleSubmit} loading={loading} disabled={!canNext()} />
+            <>
+              <Button title="Crear Cuenta" onPress={handleSubmit} loading={loading} disabled={!canNext()} />
+              <Text style={styles.legalText}>
+                Al crear tu cuenta, aceptas los{' '}
+                <Text style={styles.legalLink} onPress={() => Linking.openURL('https://nexxos-api.abacusai.app/terminos')}>Términos y Condiciones</Text>
+                {' '}y la{' '}
+                <Text style={styles.legalLink} onPress={() => Linking.openURL('https://nexxos-api.abacusai.app/privacidad')}>Política de Privacidad</Text>.
+              </Text>
+            </>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -633,6 +641,8 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   topTitle: { fontSize: 17, fontWeight: '600', color: c.textPrimary },
   scroll: { padding: Spacing.lg, paddingBottom: 100 },
   footer: { padding: Spacing.lg, borderTopWidth: 1, borderTopColor: c.border, backgroundColor: c.surface },
+  legalText: { fontSize: 12, color: c.textSecondary, textAlign: 'center', marginTop: Spacing.sm, lineHeight: 18 },
+  legalLink: { color: c.primary, fontWeight: '600', textDecorationLine: 'underline' } as any,
   error: { backgroundColor: c.errorBg, color: c.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
   stepTitle: { fontSize: 20, fontWeight: '700', color: c.textPrimary, marginBottom: Spacing.md },
   stepDesc: { fontSize: 14, color: c.textSecondary, marginBottom: Spacing.md },

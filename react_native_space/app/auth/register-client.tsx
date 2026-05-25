@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -98,6 +98,13 @@ export default function RegisterClientScreen() {
 
           <Button title="Registrarme como Cliente" onPress={handleRegister} loading={loading} disabled={!emailVerified} />
 
+          <Text style={styles.legalText}>
+            Al crear tu cuenta, aceptas los{' '}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL('https://nexxos-api.abacusai.app/terminos')}>Términos y Condiciones</Text>
+            {' '}y la{' '}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL('https://nexxos-api.abacusai.app/privacidad')}>Política de Privacidad</Text>.
+          </Text>
+
           <Pressable onPress={() => router.push('/auth/login')} style={styles.loginLink}>
             <Text style={styles.loginText}>¿Ya tienes cuenta? <Text style={styles.loginBold}>Inicia Sesión</Text></Text>
           </Pressable>
@@ -113,7 +120,9 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   back: { width: 44, height: 44, justifyContent: 'center', marginBottom: Spacing.sm },
   title: { fontSize: 24, fontWeight: '700', color: c.textPrimary, marginBottom: Spacing.lg },
   error: { backgroundColor: c.errorBg, color: c.error, padding: Spacing.md, borderRadius: 8, fontSize: 14, marginBottom: Spacing.md },
-  loginLink: { alignItems: 'center', marginTop: Spacing.lg, marginBottom: Spacing.xl },
+  legalText: { fontSize: 12, color: c.textSecondary, textAlign: 'center', marginTop: Spacing.md, lineHeight: 18 },
+  legalLink: { color: c.primary, fontWeight: '600', textDecorationLine: 'underline' },
+  loginLink: { alignItems: 'center', marginTop: Spacing.md, marginBottom: Spacing.xl },
   loginText: { fontSize: 15, color: c.textSecondary },
   loginBold: { color: c.primary, fontWeight: '600' },
 });

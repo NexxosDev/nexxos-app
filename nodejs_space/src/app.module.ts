@@ -13,6 +13,7 @@ import { IdentityModule } from './identity/identity.module';
 import { PlansModule } from './plans/plans.module';
 import { ClientPointsModule } from './client-points/client-points.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
+import { LegalModule } from './legal/legal.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { VehiclesModule } from './vehicles/vehicles.module';
     PlansModule,
     ClientPointsModule,
     VehiclesModule,
+    LegalModule,
   ],
 })
 export class AppModule {}
