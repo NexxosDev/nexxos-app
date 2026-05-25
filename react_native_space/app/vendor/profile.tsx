@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, RefreshControl, Pressable, LayoutAnimation, Platform, UIManager, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, RefreshControl, Pressable, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -309,19 +309,19 @@ export default function VendorProfileScreen() {
           <ProfileActionButton
             label="Sobre NEXXOS"
             icon="information-circle-outline"
-            onPress={() => Linking.openURL('https://nexxos-api.abacusai.app/sobre-nosotros')}
+            onPress={() => router.push('/about')}
           />
           <View style={styles.actionDivider} />
           <ProfileActionButton
             label="Términos y Condiciones"
             icon="document-text-outline"
-            onPress={() => Linking.openURL('https://nexxos-api.abacusai.app/terminos')}
+            onPress={() => router.push('/legal-document?key=terminos')}
           />
           <View style={styles.actionDivider} />
           <ProfileActionButton
             label="Política de Privacidad"
             icon="shield-checkmark-outline"
-            onPress={() => Linking.openURL('https://nexxos-api.abacusai.app/privacidad')}
+            onPress={() => router.push('/legal-document?key=privacidad')}
           />
         </View>
 

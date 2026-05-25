@@ -125,6 +125,8 @@ function InnerLayout() {
         <Stack.Screen name="chat" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="vendor-edit-profile" />
+        <Stack.Screen name="about" />
+        <Stack.Screen name="legal-document" />
         <Stack.Screen name="+not-found" />
       </Stack>
       {showSplash && (

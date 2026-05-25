@@ -577,6 +577,17 @@ model ClientPointLog {
   @@map("client_point_logs")
 }
 
+model LegalDocument {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique
+  title     String
+  content   String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("legal_documents")
+}
+
 model QuickReply {
   id          String   @id @default(uuid()) @db.Uuid
   vendorId    String   @map("vendor_id") @db.Uuid

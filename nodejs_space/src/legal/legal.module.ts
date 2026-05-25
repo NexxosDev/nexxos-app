@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
-import { LegalController } from './legal.controller';
+import { PrismaModule } from '../prisma/prisma.module';
+import { LegalService } from './legal.service';
+import { LegalApiController } from './legal-api.controller';
+import { LegalHtmlController } from './legal.controller';
 
 @Module({
-  controllers: [LegalController],
+  imports: [PrismaModule],
+  controllers: [LegalApiController, LegalHtmlController],
+  providers: [LegalService],
+  exports: [LegalService],
 })
 export class LegalModule {}
