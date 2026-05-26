@@ -11,6 +11,7 @@ import { AuthProvider } from '../src/contexts/AuthContext';
 import { CatalogProvider } from '../src/contexts/CatalogContext';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 import { UnreadProvider } from '../src/contexts/UnreadContext';
+import { NetworkProvider } from '../src/contexts/NetworkContext';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import AnimatedSplash from '../src/components/AnimatedSplash';
 
@@ -142,13 +143,15 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ErrorBoundary>
           <ThemeProvider>
-            <AuthProvider>
-              <CatalogProvider>
-                <UnreadProvider>
-                  <InnerLayout />
-                </UnreadProvider>
-              </CatalogProvider>
-            </AuthProvider>
+            <NetworkProvider>
+              <AuthProvider>
+                <CatalogProvider>
+                  <UnreadProvider>
+                    <InnerLayout />
+                  </UnreadProvider>
+                </CatalogProvider>
+              </AuthProvider>
+            </NetworkProvider>
           </ThemeProvider>
         </ErrorBoundary>
       </SafeAreaProvider>
