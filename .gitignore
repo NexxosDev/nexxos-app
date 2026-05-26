@@ -18,3 +18,8 @@ out
 .deploy
 .logs
 *.tsbuildinfo
+
+# Firebase credentials
+.abacusai/fcm-service-account.json
+.abacusai/google-services.json
+react_native_space/fcm-service-account.json
