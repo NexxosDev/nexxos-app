@@ -339,7 +339,7 @@ export class AuthService {
     await this.prisma.user.update({
       where: { id: userId },
       data: {
-        email: `deleted_${anonSuffix}@anon.nexxos.com`,
+        email: `deleted_${anonSuffix}@anon.nexxos.app`,
         firstName: 'Usuario',
         lastName: 'Eliminado',
         name: 'Usuario Eliminado',

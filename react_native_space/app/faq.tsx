@@ -154,7 +154,7 @@ export default function FAQScreen() {
         <View style={styles.contactCard}>
           <Ionicons name="mail-outline" size={24} color={colors.primary} />
           <Text style={styles.contactTitle}>¿No encontraste tu respuesta?</Text>
-          <Text style={styles.contactText}>Escríbenos a soporte@nexxos.com</Text>
+          <Text style={styles.contactText}>Escríbenos a soporte@nexxos.app</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
