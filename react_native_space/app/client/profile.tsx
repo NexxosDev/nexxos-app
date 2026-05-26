@@ -114,6 +114,12 @@ export default function ClientProfile() {
             icon="shield-checkmark-outline"
             onPress={() => router.push('/legal-document?key=privacidad')}
           />
+          <View style={styles.actionDivider} />
+          <ProfileActionButton
+            label="Preguntas Frecuentes"
+            icon="help-circle-outline"
+            onPress={() => router.push('/faq')}
+          />
         </View>
 
         <View style={styles.dangerCard}>
