@@ -5,6 +5,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +49,36 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
+  const draftKey = chatId ? `chat_draft_${chatId}` : '';
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load draft on mount
+  useEffect(() => {
+    if (!draftKey) return;
+    AsyncStorage.getItem(draftKey).then((saved) => {
+      if (saved) setText(saved);
+    }).catch(() => {});
+  }, [draftKey]);
+
+  // Save draft with debounce (500ms)
+  const setTextWithDraft = useCallback((val: string) => {
+    setText(val);
+    if (!draftKey) return;
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      if (val) {
+        AsyncStorage.setItem(draftKey, val).catch(() => {});
+      } else {
+        AsyncStorage.removeItem(draftKey).catch(() => {});
+      }
+    }, 500);
+  }, [draftKey]);
+
+  // Clear draft helper
+  const clearDraft = useCallback(() => {
+    if (draftKey) AsyncStorage.removeItem(draftKey).catch(() => {});
+  }, [draftKey]);
+
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -204,6 +235,7 @@ export default function ChatScreen() {
       };
       setMessages((prev) => [optimistic, ...(prev ?? [])]);
       setText('');
+      clearDraft();
       setReplyingTo(null);
       playSend();
 
@@ -688,14 +720,14 @@ export default function ChatScreen() {
                 ) : null}
                 {!isEditMode && user?.id === chatInfo?.vendorUserId ? (
                   <QuickReplyPicker
-                    onSelect={(t) => setText((prev) => (prev ? prev + ' ' + t : t))}
+                    onSelect={(t) => setTextWithDraft((text ? text + ' ' + t : t))}
                   />
                 ) : null}
                 <TextInput
                   ref={inputRef}
                   style={[styles.input, isEditMode && { marginLeft: Spacing.sm }]}
                   value={text}
-                  onChangeText={setText}
+                  onChangeText={setTextWithDraft}
                   placeholder={isEditMode ? 'Editar mensaje...' : 'Escribe un mensaje...'}
                   placeholderTextColor={colors.textSecondary}
                   multiline
