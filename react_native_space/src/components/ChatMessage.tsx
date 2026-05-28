@@ -107,7 +107,7 @@ export default function ChatMessage({
           isImage && styles.bubbleImage,
           isDeleted && styles.bubbleDeleted,
         ]}
-        onLongPress={isOwn && !isDeleted ? onLongPress : undefined}
+        onLongPress={!isDeleted ? onLongPress : undefined}
         delayLongPress={400}
       >
         {!isOwn ? <Text style={styles.sender}>{senderName ?? ''}</Text> : null}

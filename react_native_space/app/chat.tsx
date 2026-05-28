@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Animated, Modal,
   ImageBackground,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -414,10 +415,39 @@ export default function ChatScreen() {
     };
   }, []);
 
+  // ---------- Toast ----------
+  const [toastMsg, setToastMsg] = useState('');
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = useCallback((msg: string) => {
+    setToastMsg(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastMsg(''), 2000);
+  }, []);
+
   // ---------- Context menu ----------
   const openContextMenu = useCallback((msg: ChatMessageItem) => {
     setContextMenuMsg(msg);
   }, []);
+
+  const handleCopy = useCallback(async () => {
+    if (!contextMenuMsg) return;
+    const type = contextMenuMsg?.messageType ?? 'text';
+    let textToCopy = contextMenuMsg?.messageText ?? '';
+    if (type === 'image') textToCopy = contextMenuMsg?.imageUrl ?? 'Imagen';
+    else if (type === 'location') textToCopy = contextMenuMsg?.addressText ?? `${contextMenuMsg?.latitude ?? ''},${contextMenuMsg?.longitude ?? ''}`;
+    else if (type === 'audio') textToCopy = contextMenuMsg?.audioUrl ?? 'Nota de voz';
+    try {
+      await Clipboard.setStringAsync(textToCopy);
+      showToast('Mensaje copiado');
+    } catch { }
+    setContextMenuMsg(null);
+  }, [contextMenuMsg, showToast]);
+
+  const handleReplyFromMenu = useCallback(() => {
+    if (!contextMenuMsg) return;
+    activateReply(contextMenuMsg);
+    setContextMenuMsg(null);
+  }, [contextMenuMsg, activateReply]);
 
   const handleEdit = useCallback(() => {
     if (!contextMenuMsg) return;
@@ -501,7 +531,7 @@ export default function ChatScreen() {
             deletedForAll={item?.deletedForAll}
             replyTo={item?.replyTo}
             onReplyPress={scrollToMessage}
-            onLongPress={!isReadOnly && isOwn && !item?.deletedForAll ? () => openContextMenu(item) : undefined}
+            onLongPress={!isReadOnly && !item?.deletedForAll ? () => openContextMenu(item) : undefined}
           />
         </Swipeable>
         {showSeparator ? (
@@ -692,19 +722,39 @@ export default function ChatScreen() {
             <Text style={styles.menuTitle} numberOfLines={1}>
               {(contextMenuMsg?.messageType === 'image' ? 'Imagen' : contextMenuMsg?.messageType === 'location' ? 'Ubicación' : contextMenuMsg?.messageType === 'audio' ? 'Nota de voz' : (contextMenuMsg?.messageText ?? '')).substring(0, 40)}
             </Text>
-            {(contextMenuMsg?.messageType ?? 'text') === 'text' ? (
+            <Pressable style={styles.menuOption} onPress={handleCopy}>
+              <Ionicons name="copy-outline" size={20} color={colors.primary} />
+              <Text style={styles.menuOptionText}>Copiar</Text>
+            </Pressable>
+            <Pressable style={styles.menuOption} onPress={handleReplyFromMenu}>
+              <Ionicons name="arrow-undo-outline" size={20} color={colors.primary} />
+              <Text style={styles.menuOptionText}>Responder</Text>
+            </Pressable>
+            {contextMenuMsg?.senderId === user?.id && (contextMenuMsg?.messageType ?? 'text') === 'text' ? (
               <Pressable style={styles.menuOption} onPress={handleEdit}>
                 <Ionicons name="pencil-outline" size={20} color={colors.primary} />
                 <Text style={styles.menuOptionText}>Editar</Text>
               </Pressable>
             ) : null}
-            <Pressable style={[styles.menuOption, styles.menuOptionDanger]} onPress={handleDeletePrompt}>
-              <Ionicons name="trash-outline" size={20} color="#E53935" />
-              <Text style={[styles.menuOptionText, { color: '#E53935' }]}>Eliminar</Text>
-            </Pressable>
+            {contextMenuMsg?.senderId === user?.id ? (
+              <Pressable style={[styles.menuOption, styles.menuOptionDanger]} onPress={handleDeletePrompt}>
+                <Ionicons name="trash-outline" size={20} color="#E53935" />
+                <Text style={[styles.menuOptionText, { color: '#E53935' }]}>Eliminar</Text>
+              </Pressable>
+            ) : null}
           </View>
         </Pressable>
       </Modal>
+
+      {/* Toast */}
+      {toastMsg ? (
+        <View style={styles.toastContainer} pointerEvents="none">
+          <View style={styles.toastPill}>
+            <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+            <Text style={styles.toastText}>{toastMsg}</Text>
+          </View>
+        </View>
+      ) : null}
 
       {/* Delete confirmation */}
       <Modal visible={!!deleteConfirmMsg} transparent animationType="fade" onRequestClose={() => setDeleteConfirmMsg(null)}>
@@ -873,4 +923,8 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: '#E53935', alignItems: 'center',
   },
   deleteConfirmText: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  // Toast
+  toastContainer: { position: 'absolute', bottom: 100, left: 0, right: 0, alignItems: 'center', zIndex: 999 },
+  toastPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: BorderRadius.full },
+  toastText: { fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
 });
