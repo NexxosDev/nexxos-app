@@ -25,6 +25,7 @@ export class VendorSignupDto {
   @ApiPropertyOptional() @IsOptional() @IsString() logoPath?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() personalDocPath?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() selfiePath?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() facadeImagePath?: string;
   @ApiPropertyOptional() @IsOptional() identityVerified?: boolean;
 }
 

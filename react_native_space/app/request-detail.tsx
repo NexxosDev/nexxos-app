@@ -189,6 +189,7 @@ export default function RequestDetailScreen() {
               key={resp?.id}
               businessName={resp?.vendor?.businessName ?? ''}
               logoUrl={resp?.vendor?.logoUrl}
+              facadeImageUrl={resp?.vendor?.facadeImageUrl}
               avgRating={resp?.vendor?.avgRating}
               initialMessage={resp?.initialMessage ?? ''}
               distanceKm={resp?.distanceKm}

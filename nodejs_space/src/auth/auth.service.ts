@@ -106,6 +106,7 @@ export class AuthService {
           documentImageUrl: v.documentImagePath || null,
           personalDocUrl: v.personalDocPath || null,
           selfieUrl: v.selfiePath || null,
+          facadeImageUrl: v.facadeImagePath || null,
           identityVerified: !!v.identityVerified,
           identityVerifiedAt: v.identityVerified ? new Date() : null,
           vendorVehicleModels: {

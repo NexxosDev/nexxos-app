@@ -36,7 +36,7 @@ const DRAFT_KEY = 'nexxos_vendor_registration_draft';
 interface RegistrationDraft {
   step: number;
   personal: { firstName: string; lastName: string; phone: string; documentId: string; email: string; password: string; confirmPassword: string };
-  business: { businessName: string; rif: string; docImageUri: string; docImagePath: string; logoUri: string; logoPath: string };
+  business: { businessName: string; rif: string; docImageUri: string; docImagePath: string; logoUri: string; logoPath: string; facadeUri: string; facadePath: string };
   location: { latitude?: number; longitude?: number; country: string; city: string; state: string; municipality: string; parish: string; street: string; postalCode: string; referencePoint: string; fullAddress: string };
   selectedModels: string[];
   selectedSubcategories: string[];
@@ -60,7 +60,7 @@ export default function RegisterVendorScreen() {
   const pendingDraftRef = useRef<RegistrationDraft | null>(null);
 
   const [personal, setPersonal] = useState({ firstName: '', lastName: '', phone: '', documentId: '', email: '', password: '', confirmPassword: '' });
-  const [business, setBusiness] = useState({ businessName: '', rif: '', docImageUri: '', docImagePath: '', logoUri: '', logoPath: '' });
+  const [business, setBusiness] = useState({ businessName: '', rif: '', docImageUri: '', docImagePath: '', logoUri: '', logoPath: '', facadeUri: '', facadePath: '' });
   const [location, setLocation] = useState({
     latitude: undefined as number | undefined,
     longitude: undefined as number | undefined,
@@ -101,7 +101,7 @@ export default function RegisterVendorScreen() {
       const draft: RegistrationDraft = {
         step: currentStep,
         personal: { ...personal, password: '', confirmPassword: '' }, // Never persist passwords
-        business: { ...business, docImageUri: '', logoUri: '' }, // Image URIs are temporary
+        business: { ...business, docImageUri: '', logoUri: '', facadeUri: '' }, // Image URIs are temporary
         location,
         selectedModels,
         selectedSubcategories,
@@ -139,6 +139,8 @@ export default function RegisterVendorScreen() {
         docImagePath: '',
         logoUri: '',
         logoPath: '',
+        facadeUri: '',
+        facadePath: '',
       }));
     }
     if (draft?.location) setLocation({
@@ -221,7 +223,7 @@ export default function RegisterVendorScreen() {
     }
   }, [subcategoriesMap, catalog]);
 
-  const pickImageFromLibrary = async (type: 'doc' | 'logo' | 'personalDoc') => {
+  const pickImageFromLibrary = async (type: 'doc' | 'logo' | 'personalDoc' | 'facade') => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -232,12 +234,13 @@ export default function RegisterVendorScreen() {
       if (!result?.canceled && result?.assets?.[0]?.uri) {
         if (type === 'personalDoc') { setPersonalDocUri(result.assets[0].uri); setIdentityVerified(false); setVerifyError(''); }
         else if (type === 'doc') setBusiness((p) => ({ ...(p ?? {}), docImageUri: result.assets[0].uri }));
+        else if (type === 'facade') setBusiness((p) => ({ ...(p ?? {}), facadeUri: result.assets[0].uri }));
         else setBusiness((p) => ({ ...(p ?? {}), logoUri: result.assets[0].uri }));
       }
     } catch { }
   };
 
-  const takePhoto = async (type: 'doc' | 'logo' | 'personalDoc') => {
+  const takePhoto = async (type: 'doc' | 'logo' | 'personalDoc' | 'facade') => {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (permission?.status !== 'granted') {
@@ -252,13 +255,14 @@ export default function RegisterVendorScreen() {
       if (!result?.canceled && result?.assets?.[0]?.uri) {
         if (type === 'personalDoc') { setPersonalDocUri(result.assets[0].uri); setIdentityVerified(false); setVerifyError(''); }
         else if (type === 'doc') setBusiness((p) => ({ ...(p ?? {}), docImageUri: result.assets[0].uri }));
+        else if (type === 'facade') setBusiness((p) => ({ ...(p ?? {}), facadeUri: result.assets[0].uri }));
         else setBusiness((p) => ({ ...(p ?? {}), logoUri: result.assets[0].uri }));
       }
     } catch { }
   };
 
-  const showImageOptions = (type: 'doc' | 'logo' | 'personalDoc') => {
-    const titles: Record<string, string> = { personalDoc: 'Documento de Identidad', doc: 'Documento de la Empresa', logo: 'Logo del Negocio' };
+  const showImageOptions = (type: 'doc' | 'logo' | 'personalDoc' | 'facade') => {
+    const titles: Record<string, string> = { personalDoc: 'Documento de Identidad', doc: 'Documento de la Empresa', logo: 'Logo del Negocio', facade: 'Foto de Fachada' };
     Alert.alert(
       titles[type] ?? 'Imagen',
       'Selecciona una opción',
@@ -431,10 +435,15 @@ export default function RegisterVendorScreen() {
         if (business?.logoUri) {
           logoPathVal = await uploadFile(business.logoUri, 'logo.jpg', 'image/jpeg', true);
         }
-        if (docPath || logoPathVal) {
+        let facadePathVal = '';
+        if (business?.facadeUri) {
+          facadePathVal = await uploadFile(business.facadeUri, 'facade.jpg', 'image/jpeg', true);
+        }
+        if (docPath || logoPathVal || facadePathVal) {
           const updateData: Record<string, unknown> = {};
           if (docPath) updateData.documentImagePath = docPath;
           if (logoPathVal) updateData.logoPath = logoPathVal;
+          if (facadePathVal) updateData.facadeImagePath = facadePathVal;
           await updateVendorProfile(updateData);
         }
       } catch (imgErr) {
@@ -623,6 +632,29 @@ export default function RegisterVendorScreen() {
               <Pressable style={styles.imagePicker} onPress={() => showImageOptions('logo')}>
                 <Ionicons name="image-outline" size={40} color={colors.textSecondary} />
                 <Text style={styles.imagePickerTitle}>Cargar Logo del Negocio</Text>
+                <Text style={styles.imagePickerSubtitle}>Tomar foto o seleccionar del dispositivo</Text>
+              </Pressable>
+            )}
+
+            <Text style={styles.fieldLabel}>
+              Foto de Fachada <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '400' }}>(opcional)</Text>
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 8, lineHeight: 16 }}>
+              Muestra el frente de tu negocio para generar más confianza con los compradores.
+            </Text>
+            {business?.facadeUri ? (
+              <Pressable style={styles.imagePreviewContainer} onPress={() => setPreviewImageUri(business.facadeUri)}>
+                <Image source={{ uri: business.facadeUri }} style={styles.imagePreviewFull} />
+                <View style={styles.zoomHint}><Ionicons name="expand-outline" size={14} color="#FFF" /></View>
+                <Pressable style={styles.changeImageButton} onPress={() => showImageOptions('facade')}>
+                  <Ionicons name="business-outline" size={20} color={colors.white} />
+                  <Text style={styles.changeImageText}>Cambiar</Text>
+                </Pressable>
+              </Pressable>
+            ) : (
+              <Pressable style={styles.imagePicker} onPress={() => showImageOptions('facade')}>
+                <Ionicons name="business-outline" size={40} color={colors.textSecondary} />
+                <Text style={styles.imagePickerTitle}>Foto de la Fachada</Text>
                 <Text style={styles.imagePickerSubtitle}>Tomar foto o seleccionar del dispositivo</Text>
               </Pressable>
             )}

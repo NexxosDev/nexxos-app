@@ -100,6 +100,7 @@ model Vendor {
   identityVerifiedAt      DateTime?               @map("identity_verified_at")
   personalDocUrl          String?                 @map("personal_doc_url")
   selfieUrl               String?                 @map("selfie_url")
+  facadeImageUrl          String?                 @map("facade_image_url")
   chats                   Chat[]
   quickReplies            QuickReply[]
   requestRatingsReceived  RequestRating[]         @relation("RatingVendor")

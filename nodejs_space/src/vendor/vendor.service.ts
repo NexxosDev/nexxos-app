@@ -28,6 +28,10 @@ export class VendorService {
     if (vendor.logoUrl) {
       try { logoUrl = await getFileUrl(vendor.logoUrl, true); } catch { logoUrl = null; }
     }
+    let facadeImageUrl: string | null = null;
+    if (vendor.facadeImageUrl) {
+      try { facadeImageUrl = await getFileUrl(vendor.facadeImageUrl, true); } catch { facadeImageUrl = null; }
+    }
 
     return {
       id: vendor.id,
@@ -35,6 +39,7 @@ export class VendorService {
       businessName: vendor.businessName,
       rif: vendor.rif,
       logoUrl,
+      facadeImageUrl,
       country: vendor.country,
       city: vendor.city,
       state: vendor.state,
@@ -80,11 +85,16 @@ export class VendorService {
     if (vendor.logoUrl) {
       try { logoUrl = await getFileUrl(vendor.logoUrl, true); } catch { logoUrl = null; }
     }
+    let facadeImageUrl: string | null = null;
+    if (vendor.facadeImageUrl) {
+      try { facadeImageUrl = await getFileUrl(vendor.facadeImageUrl, true); } catch { facadeImageUrl = null; }
+    }
     return {
       id: vendor.id,
       businessName: vendor.businessName,
       rif: vendor.rif,
       logoUrl,
+      facadeImageUrl,
       country: vendor.country,
       city: vendor.city,
       state: vendor.state,
@@ -113,6 +123,7 @@ export class VendorService {
     if (dto.documentImagePath !== undefined) data.documentImageUrl = dto.documentImagePath;
     if (dto.personalDocPath !== undefined) data.personalDocUrl = dto.personalDocPath;
     if (dto.selfiePath !== undefined) data.selfieUrl = dto.selfiePath;
+    if (dto.facadeImagePath !== undefined) data.facadeImageUrl = dto.facadeImagePath;
     if (dto.country !== undefined) data.country = dto.country;
     if (dto.city !== undefined) data.city = dto.city;
     if (dto.state !== undefined) data.state = dto.state;
@@ -144,12 +155,17 @@ export class VendorService {
     if (updated.logoUrl) {
       try { logoUrl = await getFileUrl(updated.logoUrl, true); } catch { logoUrl = null; }
     }
+    let facadeImageUrl: string | null = null;
+    if (updated.facadeImageUrl) {
+      try { facadeImageUrl = await getFileUrl(updated.facadeImageUrl, true); } catch { facadeImageUrl = null; }
+    }
 
     return {
       id: updated.id,
       businessName: updated.businessName,
       rif: updated.rif,
       logoUrl,
+      facadeImageUrl,
       updatedAt: updated.updatedAt.toISOString(),
     };
   }

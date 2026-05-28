@@ -72,6 +72,7 @@ export interface RequestResponseItem {
     id: string;
     businessName: string;
     logoUrl: string | null;
+    facadeImageUrl?: string | null;
     avgRating: number | null;
     latitude: number | null;
     longitude: number | null;
@@ -168,6 +169,7 @@ export interface VendorProfile {
   businessName: string;
   rif: string;
   logoUrl: string | null;
+  facadeImageUrl?: string | null;
   country: string | null;
   city: string | null;
   state: string | null;

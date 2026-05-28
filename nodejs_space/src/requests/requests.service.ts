@@ -364,6 +364,10 @@ export class RequestsService {
         if (r.vendor.logoUrl) {
           try { logoUrl = await getFileUrl(r.vendor.logoUrl, true); } catch { logoUrl = null; }
         }
+        let facadeImageUrl: string | null = null;
+        if (r.vendor.facadeImageUrl) {
+          try { facadeImageUrl = await getFileUrl(r.vendor.facadeImageUrl, true); } catch { facadeImageUrl = null; }
+        }
         const chat = await this.prisma.chat.findFirst({
           where: { requestId, vendorId: r.vendorId },
         });
@@ -395,6 +399,7 @@ export class RequestsService {
             id: r.vendor.id,
             businessName: r.vendor.businessName,
             logoUrl,
+            facadeImageUrl,
             avgRating: r.vendor.vendorMetrics?.avgRating ?? null,
             latitude: r.vendor.latitude ?? null,
             longitude: r.vendor.longitude ?? null,

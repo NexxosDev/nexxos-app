@@ -14,6 +14,7 @@ const LINK_COLOR = '#07a0ff';
 interface ResponseCardProps {
   businessName: string;
   logoUrl?: string | null;
+  facadeImageUrl?: string | null;
   avgRating?: number | null;
   initialMessage: string;
   distanceKm?: number | null;
@@ -40,7 +41,7 @@ function openGoogleMaps(lat: number, lng: number) {
   }
 }
 
-export default function ResponseCard({ businessName, logoUrl, avgRating, initialMessage, distanceKm, vendorLatitude, vendorLongitude, onOpenChat, unreadCount, tags, onTagPress }: ResponseCardProps) {
+export default function ResponseCard({ businessName, logoUrl, facadeImageUrl, avgRating, initialMessage, distanceKm, vendorLatitude, vendorLongitude, onOpenChat, unreadCount, tags, onTagPress }: ResponseCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const hasDistance = typeof distanceKm === 'number' && isFinite(distanceKm);
@@ -50,7 +51,10 @@ export default function ResponseCard({ businessName, logoUrl, avgRating, initial
   const activeTags = (tags ?? []).filter(Boolean);
   const [logoError, setLogoError] = useState(false);
   const [logoModal, setLogoModal] = useState(false);
+  const [facadeError, setFacadeError] = useState(false);
+  const [facadeModal, setFacadeModal] = useState(false);
   const hasLogo = !!logoUrl && !logoError;
+  const hasFacade = !!facadeImageUrl && !facadeError;
 
   return (
     <View style={[styles.card, unread > 0 && { borderColor: colors.primary, borderWidth: 1.5 }]}>
@@ -117,8 +121,32 @@ export default function ResponseCard({ businessName, logoUrl, avgRating, initial
         </View>
       ) : null}
 
+      {hasFacade ? (
+        <Pressable style={styles.facadeRow} onPress={() => setFacadeModal(true)}>
+          <Image source={{ uri: facadeImageUrl! }} style={styles.facadeThumb} contentFit="cover" onError={() => setFacadeError(true)} />
+          <View style={styles.facadeLabelRow}>
+            <Ionicons name="business-outline" size={12} color={colors.textSecondary} />
+            <Text style={styles.facadeLabel}>Fachada del negocio</Text>
+          </View>
+        </Pressable>
+      ) : null}
+
       <Text style={styles.message} numberOfLines={2}>{initialMessage ?? ''}</Text>
       {onOpenChat ? <Button title="Abrir Chat" variant="secondary" onPress={onOpenChat} style={styles.chatBtn} /> : null}
+
+      {hasFacade ? (
+        <Modal visible={facadeModal} transparent animationType="fade" onRequestClose={() => setFacadeModal(false)}>
+          <Pressable style={styles.logoModalOverlay} onPress={() => setFacadeModal(false)}>
+            <View style={styles.logoModalContent}>
+              <Image source={{ uri: facadeImageUrl! }} style={styles.facadeModalImg} contentFit="contain" />
+              <Text style={styles.logoModalName}>{businessName ?? ''} — Fachada</Text>
+            </View>
+            <Pressable style={styles.logoModalClose} onPress={() => setFacadeModal(false)} hitSlop={12}>
+              <Ionicons name="close-circle" size={32} color="#fff" />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      ) : null}
 
       {hasLogo ? (
         <Modal visible={logoModal} transparent animationType="fade" onRequestClose={() => setLogoModal(false)}>
@@ -163,6 +191,11 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   tagChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full, gap: 4 },
   tagChipEmoji: { fontSize: 12 },
   tagChipText: { fontSize: 11, fontWeight: '600' },
+  facadeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm, backgroundColor: c.backgroundSection, borderRadius: BorderRadius.sm, padding: 6, overflow: 'hidden' },
+  facadeThumb: { width: 56, height: 42, borderRadius: 6, backgroundColor: c.border },
+  facadeLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
+  facadeLabel: { fontSize: 12, color: c.textSecondary },
+  facadeModalImg: { width: 320, height: 240, borderRadius: 12 },
   logoModalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center',
   },

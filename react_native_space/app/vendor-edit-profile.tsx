@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Alert, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadFile } from '../src/services/upload';
 import { getVendorProfile, updateVendorProfile } from '../src/services/vendor';
 import { getErrorMessage } from '../src/services/api';
 import { useCatalog } from '../src/contexts/CatalogContext';
@@ -35,6 +38,11 @@ export default function VendorEditProfileScreen() {
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
 
+  // Facade image
+  const [facadeUri, setFacadeUri] = useState<string | null>(null); // local pick URI
+  const [facadeRemoteUrl, setFacadeRemoteUrl] = useState<string | null>(null); // existing server URL
+  const [facadePreview, setFacadePreview] = useState(false);
+
   const [modelsMap, setModelsMap] = useState<Record<string, CatalogItem[]>>({});
   const [subcategoriesMap, setSubcategoriesMap] = useState<Record<string, CatalogItem[]>>({});
 
@@ -48,6 +56,7 @@ export default function VendorEditProfileScreen() {
       try {
         const p = await getVendorProfile();
         setProfile(p ?? null);
+        if (p?.facadeImageUrl) setFacadeRemoteUrl(p.facadeImageUrl);
         const models = p?.vehicleModels ?? [];
         const brandIds = [...new Set(models.map((m) => m?.brand?.id).filter(Boolean))] as string[];
         setSelectedModels(models.map((m) => m?.id).filter(Boolean) as string[]);
@@ -117,15 +126,47 @@ export default function VendorEditProfileScreen() {
     setSelectedSubcategories((prev) => (prev ?? []).filter((id) => !catSubIds.has(id)));
   }, [subcategoriesMap]);
 
+  const pickFacadeImage = async (source: 'camera' | 'library') => {
+    try {
+      let result: ImagePicker.ImagePickerResult;
+      if (source === 'camera') {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (perm?.status !== 'granted') {
+          Alert.alert('Permiso Denegado', 'Necesitamos acceso a la cámara.');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true, aspect: [4, 3] });
+      } else {
+        result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: true, aspect: [4, 3] });
+      }
+      if (!result?.canceled && result?.assets?.[0]?.uri) {
+        setFacadeUri(result.assets[0].uri);
+      }
+    } catch { }
+  };
+
+  const showFacadeOptions = () => {
+    Alert.alert('Foto de Fachada', 'Selecciona una opción', [
+      { text: 'Tomar Foto', onPress: () => pickFacadeImage('camera') },
+      { text: 'Seleccionar del Dispositivo', onPress: () => pickFacadeImage('library') },
+      { text: 'Cancelar', style: 'cancel' },
+    ], { cancelable: true });
+  };
+
   const handleSave = async () => {
     setError('');
     setSuccess(false);
     setSaving(true);
     try {
-      await updateVendorProfile({
+      const updateData: Record<string, unknown> = {
         vehicleModelIds: selectedModels ?? [],
         partSubcategoryIds: selectedSubcategories ?? [],
-      });
+      };
+      if (facadeUri) {
+        const facadePath = await uploadFile(facadeUri, 'facade.jpg', 'image/jpeg', true);
+        if (facadePath) updateData.facadeImagePath = facadePath;
+      }
+      await updateVendorProfile(updateData);
       setSuccess(true);
       setTimeout(() => router.back(), 1000);
     } catch (err) {
@@ -181,6 +222,29 @@ export default function VendorEditProfileScreen() {
                 <Ionicons name="location" size={14} color={colors.primary} />
                 <Text style={styles.readOnlyValueSmall}>{addressText}</Text>
               </View>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.readOnlyRow}>
+              <Text style={styles.readOnlyLabel}>Foto de Fachada</Text>
+              {(facadeUri || facadeRemoteUrl) ? (
+                <View style={{ marginTop: 6 }}>
+                  <Pressable onPress={() => setFacadePreview(true)}>
+                    <Image source={{ uri: facadeUri ?? facadeRemoteUrl ?? '' }} style={{ width: '100%', height: 140, borderRadius: 10 }} contentFit="cover" />
+                    <View style={{ position: 'absolute', bottom: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, padding: 4 }}>
+                      <Ionicons name="expand-outline" size={14} color="#fff" />
+                    </View>
+                  </Pressable>
+                  <Pressable onPress={showFacadeOptions} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                    <Ionicons name="camera-outline" size={14} color={colors.primary} />
+                    <Text style={{ fontSize: 13, color: colors.primary, fontWeight: '500' }}>Cambiar foto</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable onPress={showFacadeOptions} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: colors.backgroundSection, borderRadius: 8, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' }}>
+                  <Ionicons name="business-outline" size={20} color={colors.textSecondary} />
+                  <Text style={{ fontSize: 13, color: colors.textSecondary }}>Agregar foto de fachada</Text>
+                </Pressable>
+              )}
             </View>
           </CollapsibleSection>
 
@@ -239,6 +303,18 @@ export default function VendorEditProfileScreen() {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {(facadeUri || facadeRemoteUrl) ? (
+        <Modal visible={facadePreview} transparent animationType="fade" onRequestClose={() => setFacadePreview(false)}>
+          <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }} onPress={() => setFacadePreview(false)}>
+            <Image source={{ uri: facadeUri ?? facadeRemoteUrl ?? '' }} style={{ width: 320, height: 240, borderRadius: 12 }} contentFit="contain" />
+            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600', marginTop: 12 }}>Fachada del negocio</Text>
+            <Pressable style={{ position: 'absolute', top: Platform.OS === 'ios' ? 56 : 36, right: 20 }} onPress={() => setFacadePreview(false)} hitSlop={12}>
+              <Ionicons name="close-circle" size={32} color="#fff" />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      ) : null}
 
       <DeleteAccountModal
         visible={deleteModalVisible}
