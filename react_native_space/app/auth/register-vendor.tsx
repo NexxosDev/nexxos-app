@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable, Alert, Image, Modal, ActivityIndicator, Linking } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useCatalog } from '../../src/contexts/CatalogContext';
 import { getErrorMessage } from '../../src/services/api';
@@ -30,6 +31,18 @@ import EmailVerification from '../../src/components/EmailVerification';
 import type { CatalogItem } from '../../src/types';
 
 const TOTAL_STEPS = 6;
+const DRAFT_KEY = 'nexxos_vendor_registration_draft';
+
+interface RegistrationDraft {
+  step: number;
+  personal: { firstName: string; lastName: string; phone: string; documentId: string; email: string; password: string; confirmPassword: string };
+  business: { businessName: string; rif: string; docImageUri: string; docImagePath: string; logoUri: string; logoPath: string };
+  location: { latitude?: number; longitude?: number; country: string; city: string; state: string; municipality: string; parish: string; street: string; postalCode: string; referencePoint: string; fullAddress: string };
+  selectedModels: string[];
+  selectedSubcategories: string[];
+  ageConfirmed: boolean;
+  savedAt: number;
+}
 
 export default function RegisterVendorScreen() {
   const router = useRouter();
@@ -42,6 +55,9 @@ export default function RegisterVendorScreen() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [draftChecked, setDraftChecked] = useState(false);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+  const pendingDraftRef = useRef<RegistrationDraft | null>(null);
 
   const [personal, setPersonal] = useState({ firstName: '', lastName: '', phone: '', documentId: '', email: '', password: '', confirmPassword: '' });
   const [business, setBusiness] = useState({ businessName: '', rif: '', docImageUri: '', docImagePath: '', logoUri: '', logoPath: '' });
@@ -78,6 +94,93 @@ export default function RegisterVendorScreen() {
   const [showLiveness, setShowLiveness] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
+
+  // --- Draft persistence ---
+  const saveDraft = useCallback(async (currentStep: number) => {
+    try {
+      const draft: RegistrationDraft = {
+        step: currentStep,
+        personal: { ...personal, password: '', confirmPassword: '' }, // Never persist passwords
+        business: { ...business, docImageUri: '', logoUri: '' }, // Image URIs are temporary
+        location,
+        selectedModels,
+        selectedSubcategories,
+        ageConfirmed,
+        savedAt: Date.now(),
+      };
+      await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch { /* silently fail */ }
+  }, [personal, business, location, selectedModels, selectedSubcategories, ageConfirmed]);
+
+  const clearDraft = useCallback(async () => {
+    try { await AsyncStorage.removeItem(DRAFT_KEY); } catch { }
+  }, []);
+
+  const restoreDraft = useCallback((draft: RegistrationDraft) => {
+    setStep(draft?.step ?? 1);
+    if (draft?.personal) {
+      setPersonal((p) => ({
+        ...(p ?? {}),
+        firstName: draft.personal?.firstName ?? '',
+        lastName: draft.personal?.lastName ?? '',
+        phone: draft.personal?.phone ?? '',
+        documentId: draft.personal?.documentId ?? '',
+        email: draft.personal?.email ?? '',
+        password: '',
+        confirmPassword: '',
+      }));
+    }
+    if (draft?.business) {
+      setBusiness((p) => ({
+        ...(p ?? {}),
+        businessName: draft.business?.businessName ?? '',
+        rif: draft.business?.rif ?? '',
+        docImageUri: '',
+        docImagePath: '',
+        logoUri: '',
+        logoPath: '',
+      }));
+    }
+    if (draft?.location) setLocation({
+      latitude: draft.location?.latitude ?? undefined,
+      longitude: draft.location?.longitude ?? undefined,
+      country: draft.location?.country ?? '',
+      city: draft.location?.city ?? '',
+      state: draft.location?.state ?? '',
+      municipality: draft.location?.municipality ?? '',
+      parish: draft.location?.parish ?? '',
+      street: draft.location?.street ?? '',
+      postalCode: draft.location?.postalCode ?? '',
+      referencePoint: draft.location?.referencePoint ?? '',
+      fullAddress: draft.location?.fullAddress ?? '',
+    });
+    if (draft?.selectedModels) setSelectedModels(draft.selectedModels);
+    if (draft?.selectedSubcategories) setSelectedSubcategories(draft.selectedSubcategories);
+    if (draft?.ageConfirmed) setAgeConfirmed(draft.ageConfirmed);
+  }, []);
+
+  // Check for existing draft on mount
+  useEffect(() => {
+    if (draftChecked) return;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(DRAFT_KEY);
+        if (raw) {
+          const draft = JSON.parse(raw) as RegistrationDraft;
+          // Only show prompt if draft is less than 7 days old and has meaningful data
+          const ageMs = Date.now() - (draft?.savedAt ?? 0);
+          const hasData = (draft?.personal?.firstName?.trim?.() || draft?.business?.businessName?.trim?.() || (draft?.selectedModels?.length ?? 0) > 0);
+          if (ageMs < 7 * 24 * 60 * 60 * 1000 && hasData) {
+            pendingDraftRef.current = draft;
+            setShowDraftModal(true);
+          } else {
+            await clearDraft();
+          }
+        }
+      } catch { }
+      setDraftChecked(true);
+    })();
+  }, [draftChecked, clearDraft]);
 
   // Pre-fill personal data for existing users
   useEffect(() => {
@@ -337,6 +440,9 @@ export default function RegisterVendorScreen() {
       } catch (imgErr) {
         console.warn('Image upload failed after signup:', imgErr);
       }
+
+      // Clear draft on successful registration
+      await clearDraft();
 
       if (isExisting) {
         await refreshUser?.();
@@ -628,7 +734,7 @@ export default function RegisterVendorScreen() {
 
         <View style={styles.footer}>
           {step < TOTAL_STEPS ? (
-            <Button title="Siguiente" onPress={() => setStep((s) => s + 1)} disabled={!canNext()} />
+            <Button title="Siguiente" onPress={() => { const nextStep = step + 1; setStep(nextStep); saveDraft(nextStep); }} disabled={!canNext()} />
           ) : (
             <>
               <Button title="Crear Cuenta" onPress={handleSubmit} loading={loading} disabled={!canNext()} />
@@ -642,6 +748,62 @@ export default function RegisterVendorScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
+      {/* Draft restoration modal */}
+      <Modal visible={showDraftModal} transparent animationType="fade">
+        <View style={styles.draftOverlay}>
+          <View style={styles.draftCard}>
+            <View style={styles.draftIconCircle}>
+              <Ionicons name="document-text-outline" size={32} color={colors.primary} />
+            </View>
+            <Text style={styles.draftTitle}>Registro pendiente</Text>
+            <Text style={styles.draftDesc}>
+              Encontramos un registro que no completaste.{'\n'}¿Deseas continuar donde lo dejaste?
+            </Text>
+            {pendingDraftRef.current?.personal?.firstName ? (
+              <View style={styles.draftInfoRow}>
+                <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.draftInfoText}>
+                  {pendingDraftRef.current.personal.firstName} {pendingDraftRef.current.personal.lastName ?? ''}
+                </Text>
+              </View>
+            ) : null}
+            {pendingDraftRef.current?.business?.businessName ? (
+              <View style={styles.draftInfoRow}>
+                <Ionicons name="storefront-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.draftInfoText}>{pendingDraftRef.current.business.businessName}</Text>
+              </View>
+            ) : null}
+            <View style={styles.draftInfoRow}>
+              <Ionicons name="layers-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.draftInfoText}>Paso {pendingDraftRef.current?.step ?? 1} de {TOTAL_STEPS}</Text>
+            </View>
+
+            <Pressable
+              style={styles.draftContinueBtn}
+              onPress={() => {
+                if (pendingDraftRef.current) restoreDraft(pendingDraftRef.current);
+                pendingDraftRef.current = null;
+                setShowDraftModal(false);
+              }}
+            >
+              <Ionicons name="arrow-forward" size={20} color="#000" />
+              <Text style={styles.draftContinueBtnText}>Continuar registro</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.draftNewBtn}
+              onPress={() => {
+                pendingDraftRef.current = null;
+                clearDraft();
+                setShowDraftModal(false);
+              }}
+            >
+              <Text style={styles.draftNewBtnText}>Empezar de nuevo</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <ImagePreviewModal
         visible={!!previewImageUri}
         imageUri={previewImageUri}
@@ -842,5 +1004,80 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.textSecondary,
     flex: 1,
     lineHeight: 18,
+  },
+  // Draft modal styles
+  draftOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  draftCard: {
+    backgroundColor: c.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+  },
+  draftIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: c.primary + '18',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  draftTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: c.textPrimary,
+    marginBottom: 6,
+  },
+  draftDesc: {
+    fontSize: 14,
+    color: c.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.md,
+  },
+  draftInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+    width: '100%',
+  },
+  draftInfoText: {
+    fontSize: 14,
+    color: c.textSubtitle,
+    flex: 1,
+  },
+  draftContinueBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: c.primary,
+    paddingVertical: 14,
+    borderRadius: BorderRadius.md,
+    width: '100%',
+    marginTop: Spacing.lg,
+  },
+  draftContinueBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+  },
+  draftNewBtn: {
+    paddingVertical: 12,
+    marginTop: Spacing.sm,
+  },
+  draftNewBtnText: {
+    fontSize: 14,
+    color: c.textSecondary,
+    fontWeight: '500',
   },
 });
